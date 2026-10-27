@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Optima CRM Sync
  * Description:       Keeps one customer record per person in FluentCRM, on your own site. Everyone who buys a ticket, signs up, volunteers, applies as a vendor or presenter, or joins the membership is added and tagged by what they did, the event and its region, ready for your own emails and segments. New people are added as transactional, never as marketing subscribers.
- * Version:           0.1.0.1
+ * Version:           0.1.0.2
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Author:            Optima Digital
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OPTIMA_CRM_VERSION', '0.1.0.1' );
+define( 'OPTIMA_CRM_VERSION', '0.1.0.2' );
 
 // Self-updating from the Optima Plugins releases (see includes/class-optima-plugin-updater.php).
 add_action(

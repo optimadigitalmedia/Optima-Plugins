@@ -61,11 +61,11 @@ final class Optima_Events_Editor {
 		}
 		if ( in_array( $hook, array( 'post.php', 'post-new.php' ), true ) ) {
 			Optima_Admin_UI::enqueue( OPTIMA_EVENTS_URL . 'assets/optima-admin.css' );
-			wp_enqueue_style( 'optima-events-admin', OPTIMA_EVENTS_URL . 'assets/events-admin.css', array( 'optima-admin' ), OPTIMA_EVENTS_VERSION );
+			wp_enqueue_style( 'optima-events-admin', OPTIMA_EVENTS_URL . 'assets/events-admin.css', array( 'optima-admin-kit' ), OPTIMA_EVENTS_VERSION );
 		} elseif ( 'edit.php' === $hook ) {
 			// The list screens show the Optima tabs too, so they need the kit.
 			Optima_Admin_UI::enqueue( OPTIMA_EVENTS_URL . 'assets/optima-admin.css' );
-			wp_enqueue_style( 'optima-events-admin', OPTIMA_EVENTS_URL . 'assets/events-admin.css', array( 'optima-admin' ), OPTIMA_EVENTS_VERSION );
+			wp_enqueue_style( 'optima-events-admin', OPTIMA_EVENTS_URL . 'assets/events-admin.css', array( 'optima-admin-kit' ), OPTIMA_EVENTS_VERSION );
 		}
 	}
 

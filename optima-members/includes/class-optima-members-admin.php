@@ -62,7 +62,7 @@ final class Optima_Members_Admin {
 			return;
 		}
 		Optima_Admin_UI::enqueue( OPTIMA_MEMBERS_URL . 'assets/optima-admin.css' );
-		wp_enqueue_style( 'optima-members-admin', OPTIMA_MEMBERS_URL . 'assets/members-admin.css', array( 'optima-admin' ), OPTIMA_MEMBERS_VERSION );
+		wp_enqueue_style( 'optima-members-admin', OPTIMA_MEMBERS_URL . 'assets/members-admin.css', array( 'optima-admin-kit' ), OPTIMA_MEMBERS_VERSION );
 	}
 
 	public static function action_link( array $links ): array {

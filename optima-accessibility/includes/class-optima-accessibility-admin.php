@@ -47,7 +47,7 @@ final class Optima_Accessibility_Admin {
 	public static function assets( string $hook ): void {
 		if ( false !== strpos( $hook, self::SLUG ) ) {
 			Optima_Admin_UI::enqueue( OPTIMA_ACCESSIBILITY_URL . 'assets/optima-admin.css' );
-			wp_enqueue_style( 'optima-accessibility-admin', OPTIMA_ACCESSIBILITY_URL . 'assets/admin.css', array( 'optima-admin' ), OPTIMA_ACCESSIBILITY_VERSION );
+			wp_enqueue_style( 'optima-accessibility-admin', OPTIMA_ACCESSIBILITY_URL . 'assets/admin.css', array( 'optima-admin-kit' ), OPTIMA_ACCESSIBILITY_VERSION );
 		}
 	}
 

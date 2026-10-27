@@ -57,7 +57,7 @@ final class Optima_Team_Editor {
 		}
 		if ( in_array( $hook, array( 'post.php', 'post-new.php' ), true ) ) {
 			Optima_Admin_UI::enqueue( OPTIMA_TEAM_URL . 'assets/optima-admin.css' );
-			wp_enqueue_style( 'optima-team-editor', OPTIMA_TEAM_URL . 'assets/optima-team-editor.css', array( 'optima-admin' ), OPTIMA_TEAM_VERSION );
+			wp_enqueue_style( 'optima-team-editor', OPTIMA_TEAM_URL . 'assets/optima-team-editor.css', array( 'optima-admin-kit' ), OPTIMA_TEAM_VERSION );
 			wp_enqueue_script( 'optima-team-editor', OPTIMA_TEAM_URL . 'assets/optima-team-editor.js', array(), OPTIMA_TEAM_VERSION, true );
 		} elseif ( 'edit.php' === $hook ) {
 			wp_enqueue_style( 'optima-team-editor', OPTIMA_TEAM_URL . 'assets/optima-team-editor.css', array(), OPTIMA_TEAM_VERSION );

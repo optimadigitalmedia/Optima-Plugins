@@ -56,7 +56,7 @@ final class Optima_Hours_Admin {
 			return;
 		}
 		Optima_Admin_UI::enqueue( OPTIMA_HOURS_URL . 'assets/optima-admin.css' );
-		wp_enqueue_style( 'optima-hours-admin', OPTIMA_HOURS_URL . 'assets/hours-admin.css', array( 'optima-admin' ), OPTIMA_HOURS_VERSION );
+		wp_enqueue_style( 'optima-hours-admin', OPTIMA_HOURS_URL . 'assets/hours-admin.css', array( 'optima-admin-kit' ), OPTIMA_HOURS_VERSION );
 		wp_enqueue_script( 'optima-hours-admin', OPTIMA_HOURS_URL . 'assets/hours-admin.js', array(), OPTIMA_HOURS_VERSION, true );
 	}
 

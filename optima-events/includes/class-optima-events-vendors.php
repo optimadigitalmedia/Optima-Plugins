@@ -81,7 +81,7 @@ final class Optima_Events_Vendors {
 		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
 		if ( $screen && self::TYPE === $screen->post_type ) {
 			Optima_Admin_UI::enqueue( OPTIMA_EVENTS_URL . 'assets/optima-admin.css' );
-			wp_enqueue_style( 'optima-events-admin', OPTIMA_EVENTS_URL . 'assets/events-admin.css', array( 'optima-admin' ), OPTIMA_EVENTS_VERSION );
+			wp_enqueue_style( 'optima-events-admin', OPTIMA_EVENTS_URL . 'assets/events-admin.css', array( 'optima-admin-kit' ), OPTIMA_EVENTS_VERSION );
 		}
 	}
 

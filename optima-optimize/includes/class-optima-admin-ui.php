@@ -39,7 +39,7 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 
 	final class Optima_Admin_UI {
 
-		const VERSION = '1.5.0.1';
+		const VERSION = '1.5.0.2';
 
 		/** Show the Optima mark and sign-off. */
 		public static function branded(): bool {
@@ -53,14 +53,14 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 		 */
 		public static function enqueue( string $url ): void {
 			self::$kit = true;
-			if ( wp_style_is( 'optima-admin', 'enqueued' ) ) {
+			if ( wp_style_is( 'optima-admin-kit', 'enqueued' ) ) {
 				return;
 			}
 			$own = dirname( __DIR__ ) . '/assets/optima-admin.css';
 			if ( defined( 'WP_PLUGIN_DIR' ) && is_readable( $own ) && 0 === strpos( wp_normalize_path( $own ), wp_normalize_path( WP_PLUGIN_DIR ) ) ) {
 				$url = plugins_url( 'assets/optima-admin.css', __DIR__ );
 			}
-			wp_enqueue_style( 'optima-admin', $url, array(), self::VERSION );
+			wp_enqueue_style( 'optima-admin-kit', $url, array(), self::VERSION );
 		}
 
 		/**
@@ -264,7 +264,7 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 			self::$screen_slug = $slug;
 			$own = dirname( __DIR__ ) . '/assets/optima-admin.css';
 			if ( is_readable( $own ) && defined( 'WP_PLUGIN_DIR' ) && 0 === strpos( wp_normalize_path( $own ), wp_normalize_path( WP_PLUGIN_DIR ) ) ) {
-				wp_enqueue_style( 'optima-admin', plugins_url( 'assets/optima-admin.css', __DIR__ ), array(), self::VERSION );
+				wp_enqueue_style( 'optima-admin-kit', plugins_url( 'assets/optima-admin.css', __DIR__ ), array(), self::VERSION );
 			}
 		}
 

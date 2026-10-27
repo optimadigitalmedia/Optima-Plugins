@@ -173,7 +173,7 @@ final class Optima_Events_Admin {
 			return;
 		}
 		Optima_Admin_UI::enqueue( OPTIMA_EVENTS_URL . 'assets/optima-admin.css' );
-		wp_enqueue_style( 'optima-events-admin', OPTIMA_EVENTS_URL . 'assets/events-admin.css', array( 'optima-admin' ), OPTIMA_EVENTS_VERSION );
+		wp_enqueue_style( 'optima-events-admin', OPTIMA_EVENTS_URL . 'assets/events-admin.css', array( 'optima-admin-kit' ), OPTIMA_EVENTS_VERSION );
 	}
 
 	public static function action_link( array $links ): array {

@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Optima Redirects
  * Description:       Forward old page addresses to new ones, see which redirects get used, and catch missing pages people ask for so each one can become a redirect in one click.
- * Version:           0.1.6.1
+ * Version:           0.1.6.2
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Author:            Optima Digital
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OPTIMA_REDIRECTS_VERSION', '0.1.6.1' );
+define( 'OPTIMA_REDIRECTS_VERSION', '0.1.6.2' );
 define( 'OPTIMA_REDIRECTS_FILE', __FILE__ );
 define( 'OPTIMA_REDIRECTS_URL', plugin_dir_url( __FILE__ ) );
 

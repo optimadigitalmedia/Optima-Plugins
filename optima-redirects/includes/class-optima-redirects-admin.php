@@ -50,7 +50,7 @@ final class Optima_Redirects_Admin {
 			return;
 		}
 		Optima_Admin_UI::enqueue( OPTIMA_REDIRECTS_URL . 'assets/optima-admin.css' );
-		wp_enqueue_style( 'optima-redirects-admin', OPTIMA_REDIRECTS_URL . 'assets/optima-redirects-admin.css', array( 'optima-admin' ), OPTIMA_REDIRECTS_VERSION );
+		wp_enqueue_style( 'optima-redirects-admin', OPTIMA_REDIRECTS_URL . 'assets/optima-redirects-admin.css', array( 'optima-admin-kit' ), OPTIMA_REDIRECTS_VERSION );
 		wp_enqueue_script( 'optima-redirects-admin', OPTIMA_REDIRECTS_URL . 'assets/optima-redirects-admin.js', array(), OPTIMA_REDIRECTS_VERSION, true );
 	}
 

@@ -3,7 +3,7 @@
  * Plugin Name:       Optima Optimize
  * Plugin URI:        https://optimadigitalmedia.com
  * Description:       Optima-owned media optimization. Compresses, resizes, and reformats images on upload, with batch optimization for existing libraries. Part of the Optima plugin suite.
- * Version:           0.9.1.1
+ * Version:           0.9.1.2
  * Requires at least: 6.5
  * Requires PHP:      8.1
  * Author:            Optima Digital
@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OPTIMA_OPTIMIZE_VERSION', '0.9.1.1' );
+define( 'OPTIMA_OPTIMIZE_VERSION', '0.9.1.2' );
 define( 'OPTIMA_OPTIMIZE_FILE', __FILE__ );
 define( 'OPTIMA_OPTIMIZE_DIR', plugin_dir_path( __FILE__ ) );
 define( 'OPTIMA_OPTIMIZE_URL', plugin_dir_url( __FILE__ ) );

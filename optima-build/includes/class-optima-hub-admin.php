@@ -440,7 +440,7 @@ final class Optima_Hub_Admin {
 		);
 		$included = Optima_Hub_Access::included( $f['tier'] );
 		?>
-		<article class="sh-card is-<?php echo esc_attr( $s['state'] ); ?>">
+		<article class="sh-card is-<?php echo esc_attr( $s['state'] ); ?>" data-feature="<?php echo esc_attr( $slug ); ?>">
 			<div class="sh-cardhead">
 				<h2><?php if ( $step ) : ?><span class="sh-step"><?php echo esc_html( $step . '. ' ); ?></span><?php endif; ?><?php echo esc_html( $f['name'] ); ?></h2>
 				<span class="sh-pill is-<?php echo esc_attr( $s['state'] ); ?>"><?php echo esc_html( $states[ $s['state'] ] ); ?></span>
