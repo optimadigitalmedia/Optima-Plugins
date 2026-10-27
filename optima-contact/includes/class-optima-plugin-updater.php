@@ -62,7 +62,7 @@ final class Optima_Plugin_Updater {
 	const FEED_KEY = 'optima_updater_feed';
 
 	/** The version list the Release workflow publishes (see .github/workflows/release.yml). */
-	const FEED_URL = 'https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/feed/releases.json';
+	const FEED_URL = 'https://raw.githubusercontent.com/optimadigitalmedia/Optima-Plugins/version-list/releases.json';
 
 	/**
 	 * The shared list for this request, so each copy reads it at most once.
@@ -314,8 +314,8 @@ final class Optima_Plugin_Updater {
 			self::$feed_ok = (bool) $cached['ok'];
 			return self::$feed = (array) $cached['releases'];
 		}
-		// First choice: the version list the Release workflow attaches to the
-		// "feed" release. It is a plain download, so it is not held to GitHub's
+		// First choice: the version list the Release workflow writes to the
+		// version-list branch. It is a plain download, so it is not held to GitHub's
 		// 60-calls-an-hour API limit that shared hosts run out of.
 		$data = null;
 		$response = wp_remote_get( self::FEED_URL, array( 'timeout' => 10, 'headers' => array( 'User-Agent' => 'OptimaPluginUpdater' ) ) );

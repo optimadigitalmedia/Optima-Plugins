@@ -21,7 +21,7 @@ if ( ! class_exists( 'Optima_Theme_Requires_Build' ) ) {
 	final class Optima_Theme_Requires_Build {
 
 		const FILE   = 'optima-build/optima-build.php';
-		const FEED   = 'https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/feed/releases.json';
+		const FEED   = 'https://raw.githubusercontent.com/optimadigitalmedia/Optima-Plugins/version-list/releases.json';
 		const ACTION = 'optima_theme_install_build';
 
 		public static function boot(): void {

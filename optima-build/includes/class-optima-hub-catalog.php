@@ -105,7 +105,7 @@ final class Optima_Hub_Catalog {
 		if ( is_array( $shared ) && ! empty( $shared['ok'] ) && ! empty( $shared['releases'] ) ) {
 			$data = (array) $shared['releases'];
 		} else {
-			$response = wp_remote_get( 'https://github.com/' . self::REPO . '/releases/download/feed/releases.json', array( 'timeout' => 10, 'headers' => array( 'User-Agent' => 'OptimaBuild/' . OPTIMA_HUB_VERSION ) ) );
+			$response = wp_remote_get( 'https://raw.githubusercontent.com/' . self::REPO . '/version-list/releases.json', array( 'timeout' => 10, 'headers' => array( 'User-Agent' => 'OptimaBuild/' . OPTIMA_HUB_VERSION ) ) );
 			if ( ! is_wp_error( $response ) && 200 === (int) wp_remote_retrieve_response_code( $response ) ) {
 				$decoded = json_decode( wp_remote_retrieve_body( $response ), true );
 				$data    = is_array( $decoded ) ? $decoded : array();
