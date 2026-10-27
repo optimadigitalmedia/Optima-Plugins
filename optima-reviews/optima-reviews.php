@@ -3,7 +3,7 @@
  * Plugin Name:       Optima Reviews
  * Plugin URI:        https://optimadigitalmedia.com
  * Description:       Reviews from Google, Facebook, Yelp, Clutch, and anywhere else, kept in one place and shown on the site in a custom design. Every review links back to where it was posted, and the rating summary uses the real totals from each platform.
- * Version:           0.5.3
+ * Version:           0.5.3.1
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Author:            Optima Digital
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OPTIMA_REVIEWS_VERSION', '0.5.3' );
+define( 'OPTIMA_REVIEWS_VERSION', '0.5.3.1' );
 define( 'OPTIMA_REVIEWS_DIR', plugin_dir_path( __FILE__ ) );
 define( 'OPTIMA_REVIEWS_URL', plugin_dir_url( __FILE__ ) );
 define( 'OPTIMA_REVIEWS_FILE', __FILE__ );

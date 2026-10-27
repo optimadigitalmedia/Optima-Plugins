@@ -39,7 +39,7 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 
 	final class Optima_Admin_UI {
 
-		const VERSION = '1.5.0';
+		const VERSION = '1.5.0.1';
 
 		/** Show the Optima mark and sign-off. */
 		public static function branded(): bool {
@@ -74,18 +74,19 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 		public static function open( string $title, string $lede = '', string $section = '', string $nav = '' ): void {
 			$brand = self::branded() ? 'Optima' : 'Site Build';
 			echo '<div class="wrap sh">';
-			echo '<header class="sh-head"><div>';
+			echo '<div class="sh-hero"><header class="sh-head"><div>';
 			echo '<p class="sh-eyebrow">' . esc_html( $brand . ' · ' . ( '' !== $section ? $section : $title ) ) . '</p>';
 			echo '<h1>' . esc_html( $title ) . '</h1>';
+			if ( '' !== $lede ) {
+				echo '<p class="sh-lede">' . esc_html( $lede ) . '</p>';
+			}
 			echo '</div>';
 			self::lockup();
 			echo '</header>';
 			if ( ! self::$nav_printed ) {
 				self::nav( $nav );
 			}
-			if ( '' !== $lede ) {
-				echo '<p class="sh-lede">' . esc_html( $lede ) . '</p>';
-			}
+			echo '</div>';
 			// WordPress prints admin notices right after the first heading in .wrap.
 			echo '<hr class="wp-header-end" style="display:none">';
 		}
