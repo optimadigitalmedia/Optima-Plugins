@@ -1,0 +1,62 @@
+/* Optima Call Buttons. Design: Optima features DESIGN.md 5.9 (screen 4b).
+   Reads the site's tokens when they exist (Optima themes) and falls back to
+   the Optima dark palette, so a client theme can restyle it with --odc-*. */
+.scc {
+  --odc-surface: var(--surface, #1B2150); --odc-surface-2: var(--surface-2, #232B38);
+  --odc-text: var(--text, #F6F8FB); --odc-text-2: var(--text-2, #B7C0D6);
+  --odc-line: var(--line, rgba(255,255,255,.10)); --odc-accent: var(--accent, #1272C4);
+  --odc-fill: var(--accent-fill, #0F63AB); --odc-on: var(--on-accent, #FFFFFF); --odc-accent-text: var(--accent-text, #FDC134);
+  --odc-mono: var(--font-mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
+  font: 16px/1.4 var(--font-sans, 'Nunito Sans', -apple-system, Helvetica, Arial, sans-serif);
+}
+.scc *, .scc *::before, .scc *::after { box-sizing: border-box; }
+.odc-bar {
+  position: fixed; left: 12px; right: 12px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 9997;
+  display: flex; align-items: center; gap: 4px; padding: 6px; border-radius: 980px;
+  background: rgba(35,43,56,.85); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  border: 1px solid rgba(255,255,255,.10); box-shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+.odc-btn, .odc-main { min-height: 48px; border-radius: 980px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font: inherit; font-weight: 500; text-decoration: none; cursor: pointer; }
+.odc-btn { flex: 1 1 0; color: #F6F8FB; padding: 0 14px; }
+.odc-btn svg { color: var(--odc-accent-text); }
+.odc-btn:hover, .odc-btn:focus-visible { background: rgba(255,255,255,.08); color: #F6F8FB; }
+.odc-main { flex: 1.3 1 0; border: 0; background: var(--odc-fill); color: var(--odc-on); padding: 0 20px; }
+.odc-main:hover { filter: brightness(1.08); }
+.scc a:focus-visible, .scc button:focus-visible { outline: 2px solid var(--odc-accent); outline-offset: 2px; }
+
+/* The sheet */
+.odc-sheet {
+  margin: auto 0 0; width: 100%; max-width: 100%; max-height: 88vh; border: 0; padding: 10px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  border-radius: 28px 28px 0 0; background: var(--odc-surface); color: var(--odc-text);
+  border-top: 1px solid var(--odc-line); overflow: auto;
+}
+.odc-sheet[open] { animation: odc-up .26s cubic-bezier(.2,.65,.25,1); }
+.odc-sheet::backdrop { background: rgba(0,0,0,.55); }
+@keyframes odc-up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.odc-grab { width: 40px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.22); margin: 0 auto 18px; }
+.odc-head { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.odc-faces { display: flex; flex: none; }
+.odc-faces img { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--odc-surface); }
+.odc-faces img + img { margin-left: -14px; }
+.odc-titles { flex: 1; min-width: 0; }
+.odc-titles h2 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; color: var(--odc-text); text-wrap: balance; }
+.odc-titles p { margin: 4px 0 0; color: var(--odc-text-2); font-size: 15px; }
+.odc-close { flex: none; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--odc-line); background: transparent; color: var(--odc-text-2); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.odc-opts { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.odc-opt { display: flex; align-items: center; gap: 14px; padding: 14px; min-height: 72px; border-radius: 18px; background: var(--odc-surface-2); border: 1px solid transparent; color: var(--odc-text); text-decoration: none; }
+.odc-opt:hover, .odc-opt:focus-visible { border-color: var(--odc-accent); color: var(--odc-text); }
+.odc-opt.is-book { border-color: var(--odc-accent); }
+.odc-n { flex: none; width: 44px; height: 44px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font: 500 15px/1 var(--odc-mono); color: var(--odc-accent-text); background: rgba(18,114,196,.14); }
+.odc-opt.is-book .odc-n { background: var(--odc-fill); color: var(--odc-on); }
+.odc-txt { display: flex; flex-direction: column; gap: 2px; }
+.odc-txt strong { font-weight: 600; font-size: 17px; }
+.odc-txt span { color: var(--odc-text-2); font-size: 15px; }
+
+/* Phones only. Keep page content, the cookie notice and the chat button clear of the bar. */
+@media (max-width: 760px) {
+  body.odc-on { padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+  body.odc-on .optima-consent { bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
+  body.odc-on .oc-root { bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (min-width: 761px) { .scc { display: none; } }
+@media (prefers-reduced-motion: reduce) { .odc-sheet[open] { animation: none; } }

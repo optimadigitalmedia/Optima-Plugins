@@ -1,0 +1,27 @@
+/* Optima Core admin: fieldsets, sections, controls. Scoped, no globals. */
+.optima-fieldset { margin: 0; }
+.optima-fieldset__intro { margin: 0 0 12px; color: #50575e; }
+details.optima-section { border: 1px solid #DDE4EE; border-radius: 6px; margin: 0 0 10px; background: #fff; }
+details.optima-section > summary { cursor: pointer; list-style: none; padding: 10px 14px; font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+details.optima-section > summary::-webkit-details-marker { display: none; }
+details.optima-section > summary::before { content: ""; width: 0; height: 0; border-left: 5px solid #50575e; border-top: 4px solid transparent; border-bottom: 4px solid transparent; transition: transform .15s; }
+details.optima-section[open] > summary::before { transform: rotate(90deg); }
+details.optima-section > summary .optima-section__hint { font-weight: 400; color: #787c82; margin-left: auto; font-size: 12px; }
+.optima-section__body { padding: 4px 14px 14px; border-top: 1px solid #f0f0f1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
+.optima-control { min-width: 0; }
+.optima-control--full { grid-column: 1 / -1; }
+.optima-control__label { display: block; font-weight: 600; margin: 8px 0 4px; }
+.optima-control__help { margin: 4px 0 0; }
+.optima-control input.large-text, .optima-control textarea.large-text { width: 100%; }
+.optima-control .wp-editor-wrap { border-radius: 4px; }
+.optima-image { display: flex; gap: 14px; align-items: flex-start; }
+.optima-image__preview { width: 160px; min-height: 90px; background: #f0f0f1 repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(0,0,0,.03) 8px, rgba(0,0,0,.03) 16px); border: 1px solid #DDE4EE; border-radius: 4px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.optima-image__preview img { max-width: 100%; height: auto; display: block; }
+.optima-image__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 6px; }
+.optima-image__remove { color: #b32d2e; display: none; }
+.optima-image.has-image .optima-image__remove { display: inline; }
+.optima-image__file { color: #787c82; font-size: 12px; width: 100%; word-break: break-all; }
+.optima-control--checkbox { display: flex; align-items: center; padding-top: 22px; }
+@media (max-width: 782px) { .optima-section__body { grid-template-columns: 1fr; } }
+/* Settings group pages reuse the same section chrome inside the Optima admin. */
+.optima-admin .optima-fieldset { max-width: 900px; }

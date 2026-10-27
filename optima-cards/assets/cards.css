@@ -1,0 +1,136 @@
+/* Optima Cards: card, share mode, and link-in-bio pages.
+   Everything is scoped under .scc so a client theme's styles cannot reshape it.
+   Brand comes from two settings: --odc-accent (the client's color) and the page
+   mode (dark or light). The font is inherited from the theme unless set. */
+
+body.odc-page { margin: 0; background: #12163A; }
+body.odc-page:has(.scc[data-mode="light"]) { background: #F6F8FB; }
+
+.scc {
+  --odc-bg: #12163A; --odc-surface: #1B2150; --odc-surface-2: #232B38;
+  --odc-text: #F6F8FB; --odc-text-2: #B7C0D6; --odc-text-3: #9AA6B8;
+  --odc-line: rgba(255,255,255,.10); --odc-on-accent: #FFFFFF;
+  display: block; min-height: 100vh; background: var(--odc-bg); color: var(--odc-text);
+  font-family: var(--odc-font, inherit); font-size: 16px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased; text-align: left;
+}
+.scc[data-mode="light"] {
+  --odc-bg: #F6F8FB; --odc-surface: #FFFFFF; --odc-surface-2: #EEF2F7;
+  --odc-text: #141A24; --odc-text-2: #4D5768; --odc-text-3: #9AA6B8;
+  --odc-line: rgba(0,0,0,.08);
+}
+.scc *, .scc *::before, .scc *::after { box-sizing: border-box; }
+.scc a { color: inherit; text-decoration: none; }
+.scc h1, .scc h2, .scc p, .scc dl, .scc dd { margin: 0; padding: 0; }
+.scc h1, .scc h2 { font-family: inherit; color: var(--odc-text); font-weight: 600; text-transform: none; }
+.scc svg { flex: none; }
+
+.odc-wrap { max-width: 480px; margin: 0 auto; padding: 28px 16px 40px; display: flex; flex-direction: column; gap: 18px; }
+.odc-brand { align-self: center; font-weight: 600; font-size: 17px; letter-spacing: -0.01em; }
+
+.odc-card { background: var(--odc-surface); border: 1px solid var(--odc-line); border-radius: 18px; padding: 28px 22px 22px; text-align: center; }
+.odc-avatar { width: 112px; height: 112px; border-radius: 50%; object-fit: cover; display: block; margin: 0 auto 16px; border: 2px solid var(--odc-line); }
+.odc-logo { object-fit: contain; background: #fff; padding: 10px; }
+.odc-avatar-mark { display: grid; place-items: center; background: var(--odc-accent); color: var(--odc-on-accent); font-size: 44px; font-weight: 600; border: 0; }
+.odc-eyebrow { color: var(--odc-accent); font-size: 12px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase; margin-bottom: 6px !important; }
+.odc-card h1 { font-size: 32px; line-height: 1.1; letter-spacing: -0.03em; text-wrap: balance; }
+.odc-title { color: var(--odc-text-2); margin-top: 6px !important; font-size: 15px; }
+.odc-intro { color: var(--odc-text-2); margin: 14px 0 20px !important; font-size: 16px; line-height: 1.55; text-wrap: pretty; }
+.odc-intro-last { margin-bottom: 0 !important; }
+
+.odc-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px 20px; border-radius: 980px; background: var(--odc-accent); color: var(--odc-on-accent) !important; font-weight: 600; font-size: 16px; transition: filter .15s ease, transform .15s ease; }
+.odc-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+
+.odc-actions { display: flex; gap: 8px; margin: 12px 0 18px; }
+.odc-actions a { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 4px; border-radius: 12px; background: var(--odc-surface-2); font-size: 13px; font-weight: 500; transition: color .15s ease, transform .15s ease; }
+.odc-actions a:hover { color: var(--odc-accent); transform: translateY(-1px); }
+
+.odc-details { text-align: left; border-top: 1px solid var(--odc-line); }
+.odc-details div { display: flex; justify-content: space-between; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--odc-line); font-size: 15px; }
+.odc-details dt { color: var(--odc-text-3); font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; align-self: center; }
+.odc-details dd { text-align: right; overflow-wrap: anywhere; }
+
+.odc-pick { display: flex; flex-direction: column; gap: 10px; }
+.odc-pick h2 { font-size: 20px; letter-spacing: -0.02em; margin: 6px 2px 2px; }
+.odc-person { display: flex; align-items: center; gap: 14px; padding: 14px; background: var(--odc-surface); border: 1px solid var(--odc-line); border-radius: 18px; transition: border-color .15s ease, transform .15s ease; }
+.odc-person:hover { border-color: var(--odc-accent); transform: translateY(-1px); }
+.odc-person-photo { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; flex: none; }
+.odc-person-photo.odc-avatar-mark { font-size: 26px; }
+.odc-person-body { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.odc-person-body strong { font-weight: 600; font-size: 17px; }
+.odc-person-pick { color: var(--odc-text-2); font-size: 14.5px; line-height: 1.45; text-wrap: pretty; }
+.odc-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.odc-tags span { font-size: 10.5px; text-transform: uppercase; letter-spacing: 1.1px; color: var(--odc-accent); border: 1px solid var(--odc-line); border-radius: 8px; padding: 3px 7px; }
+.odc-person > svg, .odc-link > svg { color: var(--odc-text-3); }
+
+.odc-spot { display: flex; flex-direction: column; gap: 10px; }
+.odc-spot h2 { font-size: 20px; letter-spacing: -0.02em; margin: 6px 2px 0; text-wrap: balance; }
+.odc-spot-text { color: var(--odc-text-2); margin: 0 2px 4px !important; font-size: 16px; line-height: 1.6; text-wrap: pretty; }
+/* Note panel and spotlight link: the card's one rich moment, tinted with the client's accent. */
+.odc-spot.is-note { position: relative; gap: 14px; padding: 26px 22px 22px; border-radius: 18px; border: 1px solid color-mix(in srgb, var(--odc-accent) 30%, transparent); background: radial-gradient(120% 70% at 100% 0%, color-mix(in srgb, var(--odc-accent) 20%, transparent), transparent 60%), var(--odc-surface); overflow: hidden; }
+.odc-spot.is-note::before { content: ""; position: absolute; left: 0; top: 22px; bottom: 22px; width: 3px; border-radius: 0 3px 3px 0; background: linear-gradient(180deg, var(--odc-accent), transparent); }
+.odc-spot-eyebrow { color: var(--odc-accent); font-size: 11.5px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase; }
+.odc-spot.is-note h2 { font-size: 26px; line-height: 1.12; letter-spacing: -0.03em; margin: 0; }
+.odc-spot-lead { font-size: 19px; line-height: 1.45; font-weight: 500; color: var(--odc-text); text-wrap: pretty; }
+.odc-spot.is-note .odc-spot-text { margin: 0 !important; }
+.odc-spot-sign { display: flex; align-items: center; gap: 12px; margin: 4px 0 6px !important; padding-top: 16px !important; border-top: 1px solid var(--odc-line); }
+.odc-spot-sign img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+.odc-spot-sign > span { display: flex; flex-direction: column; gap: 2px; }
+.odc-spot-sign strong { font-size: 15px; font-weight: 600; }
+.odc-spot-sign > span > span { font-size: 13px; color: var(--odc-text-3); }
+.odc-spot-link { padding: 18px; border-color: color-mix(in srgb, var(--odc-accent) 45%, transparent); background: radial-gradient(130% 160% at 0% 0%, color-mix(in srgb, var(--odc-accent) 28%, transparent), transparent 80%), var(--odc-surface); box-shadow: 0 12px 32px -14px color-mix(in srgb, var(--odc-accent) 55%, transparent); }
+.odc-spot-link:hover { border-color: var(--odc-accent); }
+.odc-spot-host { font-style: normal; font-size: 11px; font-weight: 600; letter-spacing: 1.3px; text-transform: uppercase; color: var(--odc-accent); }
+.odc-spot-link strong { font-size: 18px; }
+.odc-spot-link > svg { width: 34px; height: 34px; padding: 7px; border-radius: 50%; background: color-mix(in srgb, var(--odc-accent) 18%, transparent); color: var(--odc-accent) !important; transition: transform .15s ease; }
+.odc-spot-link:hover > svg { transform: translateX(3px); }
+
+.odc-backlink { text-align: center; color: var(--odc-accent) !important; font-size: 15px; }
+
+.odc-share { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.odc-share-btn { display: inline-flex; align-items: center; gap: 8px; background: none; border: 1px solid var(--odc-line); color: var(--odc-text); border-radius: 980px; padding: 10px 18px; font: inherit; font-size: 15px; cursor: pointer; }
+.odc-share-btn:hover { border-color: var(--odc-accent); color: var(--odc-accent); }
+.odc-qr { text-align: center; }
+.odc-qr summary { cursor: pointer; color: var(--odc-accent); font-size: 14px; list-style: none; }
+.odc-qr summary::-webkit-details-marker { display: none; }
+.odc-qr-code { width: 220px; margin: 12px auto 0; }
+.odc-qr-code svg, .odc-qr-big svg { display: block; width: 100%; height: auto; background: #fff; border-radius: 14px; padding: 8px; }
+.odc-qr-big { width: min(300px, 78vw); margin: 16px auto 4px; }
+
+.odc-linklist { display: flex; flex-direction: column; gap: 10px; }
+/* Themes often style every <nav> (a centered header row). Keep the list full width either way. */
+.scc nav.odc-linklist { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 10px; flex-wrap: nowrap; }
+.scc nav.odc-linklist > a.odc-link { width: 100%; margin: 0; color: inherit; font-size: inherit; font-weight: inherit; text-transform: none; letter-spacing: normal; }
+.odc-link { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 16px; background: var(--odc-surface); border: 1px solid var(--odc-line); border-radius: 18px; transition: border-color .15s ease, transform .15s ease; }
+.odc-link:hover { border-color: var(--odc-accent); transform: translateY(-1px); }
+.odc-link > span { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.odc-link strong { font-weight: 600; font-size: 16px; }
+.odc-link > span > span { color: var(--odc-text-2); font-size: 14px; text-wrap: balance; }
+.odc-link.is-featured { border-color: var(--odc-accent); }
+.odc-link.is-featured strong { color: var(--odc-accent); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.3px; }
+.odc-link.is-featured > span > span { color: var(--odc-text); font-size: 16px; font-weight: 500; }
+
+.odc-tip { color: var(--odc-text-3); font-size: 13.5px; line-height: 1.5; text-align: center; margin: 4px 8px 0 !important; text-wrap: pretty; }
+.odc-social { display: flex; justify-content: center; gap: 14px; margin-top: 6px; }
+.odc-social a { color: var(--odc-text-3); display: inline-flex; transition: color .15s ease; }
+.odc-social a:hover { color: var(--odc-accent); }
+.odc-foot { text-align: center; color: var(--odc-text-3); font-size: 13px; }
+.odc-foot a { color: var(--odc-text-3) !important; }
+
+/* Full-photo person card (1.0.18), ported from the Optima Digital theme's team cards. */
+.odc-hero-card { background: var(--odc-surface); border: 1px solid var(--odc-line); border-radius: 22px; overflow: hidden; text-align: left; }
+.odc-hero { position: relative; aspect-ratio: 4 / 5; max-height: 560px; overflow: hidden; background: #111; }
+.odc-hero > img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 15%; display: block; }
+.odc-hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.45) 0%, rgba(0,0,0,0) 22%, rgba(0,0,0,0) 50%, rgba(0,0,0,.82) 100%); pointer-events: none; }
+.scc .odc-hero-brand { position: absolute; z-index: 1; top: 16px; left: 16px; right: 16px; display: flex; align-items: center; gap: 10px; color: #fff; font-weight: 600; font-size: 15px; }
+.odc-hero-brand img { width: 36px; height: 36px; border-radius: 50%; background: #fff; padding: 3px; object-fit: contain; }
+.odc-hero-name { position: absolute; z-index: 1; left: 22px; right: 22px; bottom: 20px; color: #fff; }
+.scc .odc-hero-name h1 { color: #fff; font-size: 34px; line-height: 1.05; letter-spacing: -0.03em; }
+.odc-role { margin-top: 8px !important; font-size: 12px; font-weight: 600; letter-spacing: 1.3px; text-transform: uppercase; color: rgba(255,255,255,.88); text-wrap: balance; }
+.odc-hero-body { padding: 22px; }
+.odc-hero-body .odc-btn { min-height: 52px; }
+.odc-actions-3 a { min-height: 64px; justify-content: center; border: 1px solid var(--odc-line); }
+.odc-actions-3 a svg { color: var(--odc-accent); }
+.odc-hero-body .odc-intro { margin: 4px 0 16px !important; }
+.odc-hero-tags { justify-content: flex-start; margin: 0 0 18px !important; }
+.odc-wrap:has(.odc-hero-card) > .odc-brand { display: none; } /* the photo carries the business name */

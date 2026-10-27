@@ -1,0 +1,169 @@
+{
+  "version": 1,
+  "updated": "2026-10-22",
+  "about": "The feature list the Site Build hub (optima-build) shows on every site. Fetched from this repo's main branch; optima-build/catalog.json is the offline copy. Keep the two identical. Tiers: core, growth, portfolio, addon. client_specific features only appear on sites that already have them installed. not_with_themes lists theme folders that already do the job; the hub will not turn the feature on there.",
+  "features": [
+    {
+      "slug": "optima-core",
+      "name": "Business info and SEO",
+      "summary": "Enter your business details once and they show up correctly everywhere Google looks: titles, schema, sitemap and social previews.",
+      "tier": "core",
+      "law": false,
+      "requires": [],
+      "not_with_themes": [
+        "optima-digital",
+        "optima-recon"
+      ],
+      "not_with_note": "Not used on this site. The theme already handles business info and SEO, and running both doubles the tags."
+    },
+    {
+      "slug": "optima-aeo",
+      "name": "AI search",
+      "summary": "Helps ChatGPT, Google's AI answers, Perplexity and Claude find the site, read it, and name it in their answers. Adds a question-and-answer box to every page.",
+      "tier": "core",
+      "law": false,
+      "requires": []
+    },
+    {
+      "slug": "optima-optimize",
+      "name": "Automatic image optimizer",
+      "summary": "Every photo you upload is resized and compressed so the site stays fast. The original is kept as a backup.",
+      "tier": "core",
+      "law": false,
+      "requires": []
+    },
+    {
+      "slug": "optima-forms-guard",
+      "name": "Spam-free forms",
+      "summary": "Blocks spam on your forms quietly, so visitors never have to solve a puzzle.",
+      "tier": "core",
+      "law": false,
+      "requires": []
+    },
+    {
+      "slug": "optima-analytics",
+      "name": "Analytics and cookie notice",
+      "summary": "Google Tag Manager on your live site with privacy set up the right way: a small cookie notice, an easy opt out, and click counts for your cards, links and booking.",
+      "tier": "core",
+      "law": false,
+      "requires": []
+    },
+    {
+      "slug": "optima-contact",
+      "name": "Call buttons",
+      "summary": "A call, text and booking bar pinned to the bottom of the screen on phones, so visitors can reach you with one tap from any page.",
+      "tier": "core",
+      "law": false,
+      "requires": []
+    },
+    {
+      "slug": "optima-redirects",
+      "name": "Redirects and missing pages",
+      "summary": "Forward old page addresses to new ones, see which missing pages people hit, and fix a broken link with one click.",
+      "tier": "core",
+      "law": false,
+      "requires": []
+    },
+    {
+      "slug": "optima-hours",
+      "name": "Hours and holiday closures",
+      "summary": "Set your hours and holiday closures once. The site shows an up-to-date Open now line, Google reads the hours, and you get a reminder to update your Google profile before each holiday.",
+      "tier": "core",
+      "law": false,
+      "requires": []
+    },
+    {
+      "slug": "optima-accessibility",
+      "name": "Accessibility statement and checks",
+      "summary": "An honest accessibility statement page, weekly checks for image descriptions, heading order and form labels, and a launch checklist for contrast and keyboard use.",
+      "tier": "core",
+      "law": false,
+      "requires": []
+    },
+    {
+      "slug": "optima-team",
+      "name": "Team credentials",
+      "summary": "A profile page for each person with their real credentials, such as bar admissions, education, awards and military service, plus a team grid that tells Google who your people are.",
+      "tier": "core",
+      "law": true,
+      "requires": []
+    },
+    {
+      "slug": "optima-results",
+      "name": "Case results",
+      "summary": "Show the firm's case results with the firm's approval on each one and the disclaimer next to every result. Visitors can filter by practice area.",
+      "tier": "addon",
+      "law": true,
+      "requires": []
+    },
+    {
+      "slug": "optima-chat",
+      "name": "Chat assistant",
+      "summary": "A chat in the corner of your site that answers common questions, books calls and takes change requests. Every other question lands in your inbox with the visitor's email, and AI answers start once it's connected.",
+      "tier": "addon",
+      "law": false,
+      "requires": []
+    },
+    {
+      "slug": "optima-cards",
+      "name": "Digital business cards and link page",
+      "summary": "A card for each person that saves to a phone in one tap, a QR code to share it, and a link page for your social bios.",
+      "tier": "addon",
+      "law": false,
+      "requires": [],
+      "not_with_themes": [
+        "optima-digital"
+      ],
+      "not_with_note": "Not used on this site. The theme already makes the cards and the links page."
+    },
+    {
+      "slug": "optima-reviews",
+      "name": "Reviews and review requests",
+      "summary": "Shows your Google, Yelp and Facebook reviews on the site, plus one review link with a QR code, printable cards and ready-to-send messages.",
+      "tier": "growth",
+      "law": false,
+      "requires": []
+    },
+    {
+      "slug": "optima-sitecheck",
+      "name": "Free site check",
+      "summary": "A free website check visitors run from your site. They see the results right away and get the full report by email, and every request lands in your inbox so you can follow up.",
+      "tier": "core",
+      "law": false,
+      "requires": [],
+      "client_specific": true
+    },
+    {
+      "slug": "optima-events",
+      "name": "Events and schedule",
+      "summary": "Event pages with dates, venue, ticket button and what to know, a day-by-day schedule, speaker pages, and event listings Google can show. Edit a date or mark an event sold out and the site follows.",
+      "tier": "addon",
+      "law": false,
+      "requires": []
+    },
+    {
+      "slug": "optima-members",
+      "name": "Membership",
+      "summary": "People apply on the site, you approve each one, and members sign in to see members-only pages and events. Plans, renewal dates and a members list you run from the dashboard.",
+      "tier": "addon",
+      "law": false,
+      "requires": []
+    },
+    {
+      "slug": "optima-partners",
+      "name": "Partners and sponsors",
+      "summary": "Partners by level, such as Founding, National and Regional, each with a logo, link and the places they appear. Change a partner once and every placement follows, with monthly click counts to show them.",
+      "tier": "addon",
+      "law": false,
+      "requires": []
+    },
+    {
+      "slug": "optima-crm",
+      "name": "Customer list sync",
+      "summary": "Everyone who buys a ticket, signs up, volunteers, applies or joins goes into one customer list in FluentCRM on your own site, tagged by what they did, the event and its region.",
+      "tier": "addon",
+      "law": false,
+      "requires": []
+    }
+  ]
+}

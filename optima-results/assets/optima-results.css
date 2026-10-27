@@ -1,0 +1,66 @@
+/* Optima Case Results: the results grid on a client site. It inherits the
+   theme's fonts and colors; every value below is a custom property with a
+   neutral fallback, so a theme can restyle it from its own stylesheet:
+
+   .optima-results {
+     --optima-results-surface: #fff;
+     --optima-results-border: #e2e2e2;
+     --optima-results-accent: #0F63AB;
+     --optima-results-radius: 12px;
+   }
+*/
+
+.optima-results {
+	text-align: start;
+	--sr-surface: var(--optima-results-surface, transparent);
+	--sr-border: var(--optima-results-border, rgba(127, 127, 127, .35));
+	--sr-accent: var(--optima-results-accent, currentColor);
+	--sr-radius: var(--optima-results-radius, 12px);
+	--sr-gap: var(--optima-results-gap, 1.25rem);
+	margin: 0 0 2rem;
+}
+.optima-results *, .optima-results *::before, .optima-results *::after { box-sizing: border-box; }
+.optima-results__heading { margin: 0 0 1rem; text-wrap: balance; }
+.optima-results__empty { margin: 0; }
+
+.optima-results__filters ul { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0 0 var(--sr-gap); padding: 0; list-style: none; }
+.optima-results__filters li { margin: 0; padding: 0; }
+.optima-results__filter {
+	display: inline-flex; align-items: center; min-height: 44px; padding: .5rem 1.1rem;
+	border: 1px solid var(--sr-border); border-radius: 980px;
+	color: inherit; font: inherit; font-size: .9375em; line-height: 1.2; text-decoration: none !important;
+	background: var(--sr-surface);
+	transition: border-color .15s ease, background-color .15s ease;
+}
+.optima-results__filter:hover { border-color: var(--sr-accent); }
+.optima-results__filter:focus-visible { outline: 3px solid var(--sr-accent); outline-offset: 2px; }
+.optima-results__filter[aria-current="true"] { border: 2px solid var(--sr-accent); padding: calc(.5rem - 1px) calc(1.1rem - 1px); font-weight: 600; }
+
+.optima-results__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: var(--sr-gap); }
+
+.optima-results .optima-result {
+	display: flex; flex-direction: column; gap: .6rem; min-width: 0; margin: 0;
+	padding: 1.25rem 1.35rem; border: 1px solid var(--sr-border); border-radius: var(--sr-radius);
+	background: var(--sr-surface); color: inherit; text-align: start;
+}
+.optima-results .optima-result[hidden] { display: none; }
+.optima-results .optima-result > * { margin: 0; text-align: start; }
+.optima-results .optima-result [hidden] { display: none; }
+.optima-results .optima-result__type { font-size: .75em; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; line-height: 1.4; }
+.optima-results .optima-result__headline { font-size: 1.2em; line-height: 1.3; text-wrap: balance; }
+.optima-results .optima-result__amount { font-size: 1.15em; font-weight: 600; font-variant-numeric: tabular-nums; }
+.optima-results .optima-result__description { line-height: 1.55; text-wrap: pretty; }
+.optima-results .optima-result__meta { display: flex; flex-wrap: wrap; gap: .25rem 1rem; font-size: .875em; line-height: 1.4; }
+.optima-results .optima-result__disclaimer {
+	margin-top: auto; padding-top: .75rem; border-top: 1px solid var(--sr-border);
+	font-size: .8125em; line-height: 1.5; text-wrap: pretty;
+}
+
+.optima-results .screen-reader-text {
+	position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+	overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.optima-results__filter { transition: none; }
+}

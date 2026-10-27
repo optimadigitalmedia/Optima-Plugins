@@ -1,0 +1,81 @@
+name: Lint
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  php-syntax:
+    name: PHP syntax check
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ['8.0', '8.1', '8.2', '8.3']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP ${{ matrix.php-version }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          coverage: none
+
+      # Each plugin is linted only on the PHP versions its "Requires PHP" header
+      # supports (optima-optimize needs 8.1, so it skips the 8.0 run).
+      - name: Lint every PHP file
+        run: |
+          status=0
+          for dir in */; do
+            dir=${dir%/}
+            main="$dir/$dir.php"
+            req=$(grep -m1 -oP 'Requires PHP:\s*\K[0-9.]+' "$main" 2>/dev/null || echo 0)
+            if php -r "exit(version_compare(PHP_VERSION, '$req', '>=') ? 0 : 1);"; then
+              find "$dir" -name '*.php' -not -path '*/vendor/*' -print0 | xargs -0 -n1 -P4 php -l || status=1
+            else
+              echo "Skipping $dir: needs PHP $req"
+            fi
+          done
+          exit $status
+
+  core-contract:
+    name: Optima Core contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the Optima Core APIs other plugins depend on
+        run: bash tools/core-contract.sh
+
+  catalog:
+    name: Feature catalog copies match
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: catalog.json and optima-build/catalog.json are identical, valid JSON
+        run: |
+          python3 -m json.tool catalog.json > /dev/null
+          cmp catalog.json optima-build/catalog.json || { echo "::error::optima-build/catalog.json differs from catalog.json. Copy the root file over."; exit 1; }
+
+  admin-kit:
+    name: Admin kit copies match
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Every plugin's copy of the Optima admin kit matches tools/admin-kit
+        run: |
+          status=0
+          for f in */assets/optima-admin.css; do cmp -s "$f" tools/admin-kit/optima-admin.css || { echo "::error file=$f::differs from tools/admin-kit/optima-admin.css. Copy the kit file over."; status=1; }; done
+          for f in */includes/class-optima-admin-ui.php; do cmp -s "$f" tools/admin-kit/class-optima-admin-ui.php || { echo "::error file=$f::differs from tools/admin-kit/class-optima-admin-ui.php. Copy the kit file over."; status=1; }; done
+          exit $status
+
+  slop-check:
+    name: Code slop check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Emoji, placeholders, debug output and stray copy files fail; filler
+      # comments and visible em dashes warn. Rules: tools/slop-check.py.
+      - name: Check for code slop
+        run: python3 tools/slop-check.py

@@ -1,0 +1,213 @@
+<?php
+/**
+ * The "AI search" settings screen, nested in the site's Build section, and
+ * the "Questions this page answers" box in the page editor.
+ *
+ * @package Optima_AEO
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+final class Optima_AEO_Admin {
+
+	const SLUG  = 'optima-ai-search';
+	const NONCE = 'optima_aeo_faq_nonce';
+
+	public static function boot(): void {
+		add_action( 'admin_menu', array( __CLASS__, 'menu' ), 30 );
+		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
+		add_action( 'admin_init', array( __CLASS__, 'register' ) );
+		add_action( 'add_meta_boxes', array( __CLASS__, 'meta_box' ) );
+		add_action( 'save_post', array( __CLASS__, 'save_post' ), 10, 2 );
+		add_filter( 'plugin_action_links_' . plugin_basename( OPTIMA_AEO_FILE ), array( __CLASS__, 'action_link' ) );
+	}
+
+	/** Nest under the hub or theme Build section; fall back to Settings. */
+	public static function parent(): string {
+		global $admin_page_hooks;
+		foreach ( array( 'optima-build', 'recon-build', 'site-build', 'optima' ) as $slug ) {
+			if ( isset( $admin_page_hooks[ $slug ] ) ) {
+				return $slug;
+			}
+		}
+		return 'options-general.php';
+	}
+
+	public static function url(): string {
+		return 'options-general.php' === self::parent() ? admin_url( 'options-general.php?page=' . self::SLUG ) : admin_url( 'admin.php?page=' . self::SLUG );
+	}
+
+	public static function menu(): void {
+		add_submenu_page( self::parent(), __( 'AI search', 'optima-aeo' ), __( 'AI search', 'optima-aeo' ), 'manage_options', self::SLUG, array( __CLASS__, 'render' ) );
+	}
+
+	public static function assets( string $hook ): void {
+		if ( false !== strpos( $hook, self::SLUG ) ) {
+			Optima_Admin_UI::enqueue( plugins_url( 'assets/optima-admin.css', OPTIMA_AEO_FILE ) );
+		}
+	}
+
+	public static function action_link( array $links ): array {
+		array_unshift( $links, '<a href="' . esc_url( self::url() ) . '">' . esc_html__( 'Settings', 'optima-aeo' ) . '</a>' );
+		return $links;
+	}
+
+	public static function register(): void {
+		register_setting( 'optima_aeo_group', Optima_AEO::OPTION, array( 'sanitize_callback' => array( __CLASS__, 'sanitize' ) ) );
+	}
+
+	public static function sanitize( $in ): array {
+		$in = (array) $in;
+		return array(
+			'search'   => ! empty( $in['search'] ) ? 1 : 0,
+			'training' => ! empty( $in['training'] ) ? 1 : 0,
+			'llms'     => ! empty( $in['llms'] ) ? 1 : 0,
+			'indexnow' => ! empty( $in['indexnow'] ) ? 1 : 0,
+			'intro'    => sanitize_textarea_field( (string) ( $in['intro'] ?? '' ) ),
+			'pages'    => array_values( array_filter( array_map( 'absint', (array) ( $in['pages'] ?? array() ) ) ) ),
+			'posts'    => max( 0, min( 50, (int) ( $in['posts'] ?? 20 ) ) ),
+		);
+	}
+
+	public static function render(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+		$s     = Optima_AEO::settings();
+		$o     = Optima_AEO::OPTION;
+		$pages = get_pages( array( 'sort_column' => 'menu_order,post_title' ) );
+		$custom = has_filter( 'optima_aeo_llms_txt' );
+		?>
+		<?php Optima_Admin_UI::open( __( 'AI search', 'optima-aeo' ), __( 'More people now ask ChatGPT, Google\'s AI answers, Perplexity or Claude instead of searching. These settings help those tools find this site, read it, and name it in their answers.', 'optima-aeo' ) ); ?>
+			<?php if ( ! Optima_AEO::is_live() ) : ?>
+				<div class="notice notice-info inline"><p><?php esc_html_e( 'This copy of the site is not live (staging, or search engines are switched off), so robots.txt is left alone here. Everything below takes effect on the live site.', 'optima-aeo' ); ?></p></div>
+			<?php endif; ?>
+			<form method="post" action="options.php" class="sh-box">
+				<h2 class="sh-title"><?php esc_html_e( 'Who can read the site', 'optima-aeo' ); ?></h2>
+				<?php settings_fields( 'optima_aeo_group' ); ?>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><?php esc_html_e( 'AI search tools', 'optima-aeo' ); ?></th>
+						<td><label><input type="checkbox" name="<?php echo esc_attr( $o ); ?>[search]" value="1" <?php checked( $s['search'] ); ?>> <?php esc_html_e( 'Let AI search tools read the site to answer people\'s questions', 'optima-aeo' ); ?></label>
+							<p class="description"><?php esc_html_e( 'This is how the site gets quoted and linked in AI answers. Leave it on.', 'optima-aeo' ); ?></p></td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'AI model training', 'optima-aeo' ); ?></th>
+						<td><label><input type="checkbox" name="<?php echo esc_attr( $o ); ?>[training]" value="1" <?php checked( $s['training'] ); ?>> <?php esc_html_e( 'Let AI companies learn from the site\'s public pages', 'optima-aeo' ); ?></label>
+							<p class="description"><?php esc_html_e( 'Helps the AI know the business by name. Switching it off does not affect AI search above.', 'optima-aeo' ); ?></p>
+							<p class="description"><?php esc_html_e( 'Both choices are also written into robots.txt as a Content-Signal line, the standard way to tell AI companies how pages may be used.', 'optima-aeo' ); ?></p></td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Instant updates', 'optima-aeo' ); ?></th>
+						<td><label><input type="checkbox" name="<?php echo esc_attr( $o ); ?>[indexnow]" value="1" <?php checked( $s['indexnow'] ); ?>> <?php esc_html_e( 'Tell Bing and Copilot right away when a page is published or updated (IndexNow)', 'optima-aeo' ); ?></label>
+							<p class="description"><?php esc_html_e( 'ChatGPT search also draws on Bing, so changes reach AI answers sooner. Runs on the live site only.', 'optima-aeo' ); ?></p></td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Guide for AI tools', 'optima-aeo' ); ?></th>
+						<td><label><input type="checkbox" name="<?php echo esc_attr( $o ); ?>[llms]" value="1" <?php checked( $s['llms'] ); ?>> <?php esc_html_e( 'Publish a plain-text guide to the site at /llms.txt', 'optima-aeo' ); ?></label>
+							<?php if ( $s['llms'] ) : ?>
+								<p class="description"><a href="<?php echo esc_url( home_url( '/llms.txt' ) ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'View the guide', 'optima-aeo' ); ?></a> · <a href="<?php echo esc_url( home_url( '/robots.txt' ) ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'View robots.txt', 'optima-aeo' ); ?></a></p>
+							<?php endif; ?></td>
+					</tr>
+					<?php if ( $custom ) : ?>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'What the guide says', 'optima-aeo' ); ?></th>
+						<td><p><?php esc_html_e( 'This site\'s theme writes its own guide, so its wording, pages and posts come from the theme. Open the guide above to read it.', 'optima-aeo' ); ?></p></td>
+					</tr>
+					<?php else : ?>
+					<tr>
+						<th scope="row"><label for="optima-aeo-intro"><?php esc_html_e( 'Short description', 'optima-aeo' ); ?></label></th>
+						<td><textarea id="optima-aeo-intro" name="<?php echo esc_attr( $o ); ?>[intro]" rows="4" class="large-text" placeholder="<?php echo esc_attr( Optima_AEO::summary() ); ?>"><?php echo esc_textarea( $s['intro'] ); ?></textarea>
+							<p class="description"><?php esc_html_e( 'Two or three plain sentences: who the business is, what it does, where. AI tools read this first. Leave empty to use the business name, location and tagline.', 'optima-aeo' ); ?></p></td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Pages to list', 'optima-aeo' ); ?></th>
+						<td><fieldset style="max-height:280px;overflow:auto;border:1px solid var(--sh-border-strong);border-radius:12px;padding:10px 14px;max-width:520px;background:#fff">
+							<?php foreach ( $pages as $p ) : ?>
+								<label style="display:block;margin:4px 0;padding-left:<?php echo (int) ( count( get_post_ancestors( $p ) ) * 18 ); ?>px"><input type="checkbox" name="<?php echo esc_attr( $o ); ?>[pages][]" value="<?php echo (int) $p->ID; ?>" <?php checked( in_array( (int) $p->ID, $s['pages'], true ) ); ?>> <?php echo esc_html( get_the_title( $p ) ); ?></label>
+							<?php endforeach; ?>
+						</fieldset>
+							<p class="description"><?php esc_html_e( 'None ticked lists the main pages automatically. Pages hidden from search are always left out.', 'optima-aeo' ); ?></p></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="optima-aeo-posts"><?php esc_html_e( 'Recent posts to list', 'optima-aeo' ); ?></label></th>
+						<td><input id="optima-aeo-posts" type="number" min="0" max="50" name="<?php echo esc_attr( $o ); ?>[posts]" value="<?php echo (int) $s['posts']; ?>" class="small-text"></td>
+					</tr>
+					<?php endif; ?>
+				</table>
+				<?php submit_button(); ?>
+			</form>
+			<section class="sh-box">
+			<h2><?php esc_html_e( 'Questions and answers', 'optima-aeo' ); ?></h2>
+			<p><?php esc_html_e( 'AI tools quote short, direct answers. Every page and post has a "Questions this page answers" box in the editor. Answers show at the end of the page (or wherever you put [optima_faq]) with the matching schema.', 'optima-aeo' ); ?></p>
+			<?php
+			$with = Optima_AEO_FAQ::pages_with_answers();
+			if ( $with ) {
+				echo '<ul style="list-style:disc;padding-left:20px;margin:0">';
+				foreach ( $with as $id ) {
+					echo '<li><a href="' . esc_url( (string) get_edit_post_link( $id ) ) . '">' . esc_html( get_the_title( $id ) ) . '</a> (' . count( Optima_AEO_FAQ::get( $id ) ) . ')</li>';
+				}
+				echo '</ul>';
+			} else {
+				echo '<p class="sh-note">' . esc_html__( 'No pages have answers yet. Start with the pages that bring in the most business.', 'optima-aeo' ) . '</p>';
+			}
+			?>
+			</section>
+		<?php
+		Optima_Admin_UI::close();
+	}
+
+	public static function meta_box(): void {
+		foreach ( get_post_types( array( 'public' => true ), 'names' ) as $type ) {
+			if ( 'attachment' === $type ) {
+				continue;
+			}
+			add_meta_box( 'optima-aeo-faq', __( 'Questions this page answers', 'optima-aeo' ), array( __CLASS__, 'render_box' ), $type, 'normal', 'default' );
+		}
+	}
+
+	public static function render_box( WP_Post $post ): void {
+		wp_nonce_field( self::NONCE, self::NONCE );
+		$rows    = Optima_AEO_FAQ::get( (int) $post->ID );
+		$heading = (string) get_post_meta( $post->ID, Optima_AEO_FAQ::HEADING, true );
+		$show    = max( 3, min( Optima_AEO_FAQ::MAX, count( $rows ) + 1 ) );
+		?>
+		<p><?php esc_html_e( 'Write the questions people really ask, then answer each one in two or three plain sentences that make sense on their own. AI tools often quote exactly these.', 'optima-aeo' ); ?></p>
+		<p><label><strong><?php esc_html_e( 'Section heading', 'optima-aeo' ); ?></strong><br>
+			<input type="text" class="widefat" name="optima_aeo_heading" value="<?php echo esc_attr( $heading ); ?>" placeholder="<?php esc_attr_e( 'Common questions', 'optima-aeo' ); ?>"></label></p>
+		<?php for ( $i = 0; $i < Optima_AEO_FAQ::MAX; $i++ ) : ?>
+			<div class="optima-aeo-row" style="border-top:1px solid #DDE4EE;padding:10px 0;<?php echo $i >= $show ? 'display:none' : ''; ?>">
+				<label><?php /* translators: %d: question number */ printf( esc_html__( 'Question %d', 'optima-aeo' ), (int) $i + 1 ); ?><br>
+					<input type="text" class="widefat" name="optima_aeo_faq[<?php echo (int) $i; ?>][q]" value="<?php echo esc_attr( $rows[ $i ]['q'] ?? '' ); ?>"></label>
+				<label style="display:block;margin-top:6px"><?php esc_html_e( 'Answer', 'optima-aeo' ); ?><br>
+					<textarea class="widefat" rows="3" name="optima_aeo_faq[<?php echo (int) $i; ?>][a]"><?php echo esc_textarea( $rows[ $i ]['a'] ?? '' ); ?></textarea></label>
+			</div>
+		<?php endfor; ?>
+		<?php if ( $show < Optima_AEO_FAQ::MAX ) : ?>
+			<p><button type="button" class="button" onclick="var r=this.closest('.inside').querySelector('.optima-aeo-row[style*=&quot;display:none&quot;]');if(r){r.style.display='';}if(!this.closest('.inside').querySelector('.optima-aeo-row[style*=&quot;display:none&quot;]')){this.remove();}"><?php esc_html_e( 'Add another question', 'optima-aeo' ); ?></button></p>
+		<?php endif; ?>
+		<?php
+	}
+
+	public static function save_post( int $post_id, WP_Post $post ): void {
+		if ( ! isset( $_POST[ self::NONCE ] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST[ self::NONCE ] ) ), self::NONCE ) ) {
+			return;
+		}
+		if ( ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) || wp_is_post_revision( $post_id ) || ! current_user_can( 'edit_post', $post_id ) ) {
+			return;
+		}
+		$rows = array();
+		foreach ( (array) wp_unslash( $_POST['optima_aeo_faq'] ?? array() ) as $row ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitized per field below.
+			$q = sanitize_text_field( (string) ( $row['q'] ?? '' ) );
+			$a = sanitize_textarea_field( (string) ( $row['a'] ?? '' ) );
+			if ( '' !== $q && '' !== $a ) {
+				$rows[] = array( 'q' => $q, 'a' => $a );
+			}
+		}
+		$rows ? update_post_meta( $post_id, Optima_AEO_FAQ::META, array_slice( $rows, 0, Optima_AEO_FAQ::MAX ) ) : delete_post_meta( $post_id, Optima_AEO_FAQ::META );
+		$heading = sanitize_text_field( (string) wp_unslash( $_POST['optima_aeo_heading'] ?? '' ) );
+		'' !== $heading ? update_post_meta( $post_id, Optima_AEO_FAQ::HEADING, $heading ) : delete_post_meta( $post_id, Optima_AEO_FAQ::HEADING );
+	}
+}

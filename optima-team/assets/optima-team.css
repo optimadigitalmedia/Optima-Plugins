@@ -1,0 +1,85 @@
+/* Optima Team on the client site. Inherits the theme's fonts and colors.
+   Restyle from the theme with these custom properties:
+     --optima-team-accent   links and the role line (default: the theme's link color)
+     --optima-team-muted    secondary text
+     --optima-team-line     hairlines and card borders
+     --optima-team-surface  card background
+     --optima-team-radius   photo and card corners
+     --optima-team-gap      grid gap */
+
+.optima-team-profile,
+.optima-team-grid {
+	--optima-team-accent: var(--wp--preset--color--primary, currentColor);
+	--optima-team-muted: color-mix(in srgb, currentColor 72%, transparent);
+	--optima-team-line: color-mix(in srgb, currentColor 16%, transparent);
+	--optima-team-surface: transparent;
+	--optima-team-radius: 12px;
+	--optima-team-gap: clamp(16px, 3vw, 32px);
+	font: inherit;
+	color: inherit;
+}
+.optima-team-profile *,
+.optima-team-grid * { box-sizing: border-box; }
+.optima-team-profile a,
+.optima-team-grid a { color: inherit; text-underline-offset: .18em; }
+.optima-team-profile a:focus-visible,
+.optima-team-grid a:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 4px; }
+
+/* ---- Profile page ---- */
+.optima-team-profile { display: grid; gap: var(--optima-team-gap); }
+.optima-team-profile__head { display: grid; gap: var(--optima-team-gap); align-items: start; }
+@media (min-width: 700px) {
+	.optima-team-profile__head { grid-template-columns: minmax(180px, 280px) 1fr; }
+}
+.optima-team-profile__photo { margin: 0; max-width: 320px; }
+.optima-team-profile__photo img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--optima-team-radius); }
+.optima-team-profile__intro > * { margin: 0 0 .75em; }
+.optima-team-profile__role { font-size: .85em; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--optima-team-accent); }
+.optima-team-profile__bio { font-size: 1.15em; line-height: 1.55; text-wrap: pretty; }
+.optima-team-profile__contact { display: flex; flex-wrap: wrap; gap: 10px; }
+.optima-team-button { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 18px; border: 1px solid var(--optima-team-line); border-radius: 980px; text-decoration: none; overflow-wrap: anywhere; }
+.optima-team-button:hover { border-color: currentColor; }
+.optima-team-profile__body > :first-child { margin-top: 0; }
+.optima-team-profile__body > :last-child { margin-bottom: 0; }
+
+.optima-team-profile__facts { display: grid; gap: var(--optima-team-gap); }
+@media (min-width: 700px) {
+	.optima-team-profile__facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.optima-team-facts { border-top: 1px solid var(--optima-team-line); padding-top: 14px; min-width: 0; }
+.optima-team-profile .optima-team-facts__title { font-size: 1em; line-height: 1.3; margin: 0 0 8px; text-wrap: balance; }
+.optima-team-facts__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; line-height: 1.5; }
+.optima-team-facts__list li { margin: 0; overflow-wrap: anywhere; }
+.optima-team-muted, .optima-team-sub { color: var(--optima-team-muted); }
+.optima-team-sub { display: block; font-size: .9em; }
+.optima-team-facts__list a { color: var(--optima-team-accent); }
+.optima-team-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.optima-team-links a { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 16px; border: 1px solid var(--optima-team-line); border-radius: 980px; text-decoration: none; color: inherit; }
+.optima-team-links a:hover { border-color: currentColor; }
+
+/* ---- Grid ---- */
+.optima-team-grid { list-style: none; margin: 1.5em 0; padding: 0; display: grid; gap: var(--optima-team-gap); grid-template-columns: 1fr; }
+@media (min-width: 600px) {
+	.optima-team-grid { grid-template-columns: repeat(min(2, var(--optima-team-cols, 3)), minmax(0, 1fr)); }
+}
+@media (min-width: 960px) {
+	.optima-team-grid { grid-template-columns: repeat(var(--optima-team-cols, 3), minmax(0, 1fr)); }
+}
+.optima-team-card { margin: 0; display: flex; flex-direction: column; gap: 14px; background: var(--optima-team-surface); min-width: 0; }
+.optima-team-card__photo { display: block; border-radius: var(--optima-team-radius); overflow: hidden; }
+.optima-team-card__photo img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; transition: transform .3s ease; }
+.optima-team-card__photo:hover img { transform: scale(1.02); }
+.optima-team-card__text > * { margin: 0 0 6px; }
+.optima-team-grid .optima-team-card__name { font-size: 1.2em; line-height: 1.25; margin: 0 0 4px; text-wrap: balance; }
+.optima-team-card__name a { text-decoration: none; display: inline-block; min-height: 44px; padding-top: 10px; margin-top: -10px; }
+.optima-team-card__name a:hover { text-decoration: underline; }
+.optima-team-card__role { font-size: .85em; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--optima-team-accent); }
+.optima-team-card__meta { font-size: .9em; color: var(--optima-team-muted); }
+.optima-team-card__bio { line-height: 1.55; text-wrap: pretty; }
+
+@media (prefers-reduced-motion: reduce) {
+	.optima-team-card__photo img { transition: none; }
+	.optima-team-card__photo:hover img { transform: none; }
+}
+
+.optima-team-profile .screen-reader-text { border: 0; clip: rect(1px, 1px, 1px, 1px); clip-path: inset(50%); height: 1px; margin: -1px; overflow: hidden; padding: 0; position: absolute; width: 1px; word-wrap: normal !important; }
