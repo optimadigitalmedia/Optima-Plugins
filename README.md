@@ -16,7 +16,7 @@ a theme never orphans content.
 | `optima-cards` | 1.0.19.3 |
 | `optima-chat` | 0.2.2.3 |
 | `optima-contact` | 0.1.9.3 |
-| `optima-core` | 1.5.1.3 |
+| `optima-core` | 1.6.0.1 |
 | `optima-crm` | 0.1.0.2 |
 | `optima-events` | 0.14.1.3 |
 | `optima-forms-guard` | 0.2.0.2 |
