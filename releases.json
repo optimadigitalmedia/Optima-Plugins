@@ -1,0 +1,998 @@
+[
+  {
+    "tag_name": "optima-team-v0.1.7.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.7.3 (2026-10-28)\n\n- Optima release of upstream 0.1.7.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-team.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-team-v0.1.7.3/optima-team.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-sitecheck-v0.2.2.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.2.3 (2026-10-28)\n\n- Optima release of upstream 0.2.2.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.\n- The emailed site check report uses IBM Plex Sans (email clients cannot inherit a site font), with system-ui, Helvetica and Arial as fallbacks.",
+    "assets": [
+      {
+        "name": "optima-sitecheck.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-sitecheck-v0.2.2.3/optima-sitecheck.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-reviews-v0.5.3.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.5.3.3 (2026-10-28)\n\n- Optima release of upstream 0.5.3.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.\n- Ask for reviews and Inbox screens load and use IBM Plex Sans in place of Nunito Sans. The review page's default heading and body font is now IBM Plex Sans (added to the font list). Saved font choices, including Nunito Sans, are kept.",
+    "assets": [
+      {
+        "name": "optima-reviews.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-reviews-v0.5.3.3/optima-reviews.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-results-v0.1.7.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.7.3 (2026-10-28)\n\n- Optima release of upstream 0.1.7.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-results.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-results-v0.1.7.3/optima-results.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-redirects-v0.1.6.4",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.6.4 (2026-10-28)\n\n- **Fix: a new redirect works the moment it is saved.** Saving a redirect checked the old address first, which cached \"no redirect here\", and the cache clear that followed did nothing on WP Engine's object cache. New and imported redirects returned 404 for up to an hour (found on staging after the 27-row import). Lookups now use a generation number that every change bumps. Same fix as upstream 0.1.8.",
+    "assets": [
+      {
+        "name": "optima-redirects.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-redirects-v0.1.6.4/optima-redirects.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-redirects-v0.1.6.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.6.3 (2026-10-28)\n\n- Optima release of upstream 0.1.6.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-redirects.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-redirects-v0.1.6.3/optima-redirects.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-partners-v0.1.0.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.0.3 (2026-10-28)\n\n- Optima release of upstream 0.1.0.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-partners.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-partners-v0.1.0.3/optima-partners.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-optimize-v0.9.1.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.9.1.3 (2026-10-28)\n\n- Optima release of upstream 0.9.1.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-optimize.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-optimize-v0.9.1.3/optima-optimize.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-members-v0.3.1.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.3.1.3 (2026-10-28)\n\n- Optima release of upstream 0.3.1.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-members.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-members-v0.3.1.3/optima-members.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-hours-v0.1.6.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.6.3 (2026-10-28)\n\n- Optima release of upstream 0.1.6.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-hours.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-hours-v0.1.6.3/optima-hours.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-events-v0.14.1.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.14.1.3 (2026-10-28)\n\n- Optima release of upstream 0.14.1.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-events.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-events-v0.14.1.3/optima-events.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-core-v1.6.0.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.6.0.1 (2026-10-28)\n\n- Editable pages (upstream 1.6.0 feature, Optima revision 1). A designed page's words and photos are edited on the page in the block editor; the layout, icons and theme parts stay locked with WordPress's content-only lock. Themes opt in with `add_theme_support( 'optima-editable-pages', array( 'content_dir' => ..., 'editor_css' => array( ... ) ) )` and call `optima_core_render_editable()` where the page body goes. Five blocks (`optima/box`, `optima/text`, `optima/image`, `optima/frozen`, `optima/part`), a Page photos panel, theme parts through the `optima_core_editable_part` filter, import that fills empty pages and refreshes untouched ones but never overwrites an edited page, and FAQ structured data rebuilt from the visible questions (`optima_schema_graph`, or `optima_core_editable_faq()` for themes that print their own schema).\n- Administrators can rearrange a page with WordPress's \"Edit pattern\" button; clients and editors get the lock on the whole editor and no unlock button.\n- Build tool for client repos: `tools/editable-pages/build_blocks.py` (not shipped in the plugin).\n- Nothing changes for themes that do not opt in.",
+    "assets": [
+      {
+        "name": "optima-core.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-core-v1.6.0.1/optima-core.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-core-v1.5.1.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.5.1.3 (2026-10-28)\n\n- Optima release of upstream 1.5.1.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-core.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-core-v1.5.1.3/optima-core.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-contact-v0.1.9.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.9.3 (2026-10-28)\n\n- Optima release of upstream 0.1.9.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.\n- The call buttons take their font from the site (`font-family: inherit`) instead of naming Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-contact.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-contact-v0.1.9.3/optima-contact.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-chat-v0.2.2.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.2.3 (2026-10-28)\n\n- Optima release of upstream 0.2.2.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.\n- The chat widget takes its font from the site (`font-family: inherit`) instead of naming Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-chat.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-chat-v0.2.2.3/optima-chat.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-cards-v1.0.19.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.0.19.3 (2026-10-28)\n\n- Optima release of upstream 1.0.19.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.\n- The Font field's example names IBM Plex Sans instead of Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-cards.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-cards-v1.0.19.3/optima-cards.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.4.6",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.4.6 (2026-10-28)\n\n- **Fix: Direct answers no longer counts password-protected pages.** A private partner page (WordPress page password) is read by no visitor and no AI tool, but it was checked as a main page and counted as one without answers. It is skipped like the legal pages. The count catches up at the next scan (within 12 hours).",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.4.6/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.4.5",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.4.5 (2026-10-28)\n\n- Brings two fixes from a side branch into the main line, on top of revision 3 (staging ran 0.7.4.4 from that branch, so the main line now moves past it):\n  - Site health, Search engines: a staging copy behind the host's password protection, or one the theme already marks noindex, reads \"Kept out on staging\" instead of asking for a password that is already on.\n  - Features screen: recommended cards no longer show a stray \"01\" counter.\n- Features screen: AI search is listed under \"Not used on this site\" with the Optima Digital theme, which already runs llms.txt, the AI crawler rules and the question-and-answer blocks. Running both replaced the theme's guide with a generic one.\n- Revision 3 (already in 0.7.4.3): IBM Plex Sans on admin screens; the section nav shows on every list screen; settings tabs say \"settings\".",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.4.5/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.4.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.4.3 (2026-10-28)\n\n- Optima release of upstream 0.7.4.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.4.3/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-analytics-v0.1.13.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.13.3 (2026-10-28)\n\n- Optima release of upstream 0.1.13.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.\n- The cookie notice takes its font from the site (`font-family: inherit`) instead of naming Nunito Sans, so it matches whatever theme it sits on.",
+    "assets": [
+      {
+        "name": "optima-analytics.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-analytics-v0.1.13.3/optima-analytics.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-aeo-v0.2.2.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.2.3 (2026-10-28)\n\n- Optima release of upstream 0.2.2.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-aeo.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-aeo-v0.2.2.3/optima-aeo.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-accessibility-v0.1.10.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.10.3 (2026-10-28)\n\n- Optima release of upstream 0.1.10.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-accessibility.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-accessibility-v0.1.10.3/optima-accessibility.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-team-v0.1.7.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.7.2 (2026-10-27)\n\n- Optima release of upstream 0.1.7.",
+    "assets": [
+      {
+        "name": "optima-team.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-team-v0.1.7.2/optima-team.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-team-v0.1.7.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.7.1 (2026-10-27)\n\n- Optima release of upstream 0.1.7.",
+    "assets": [
+      {
+        "name": "optima-team.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-team-v0.1.7.1/optima-team.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-team-v0.1.7",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.7 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-team.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-team-v0.1.7/optima-team.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-sitecheck-v0.2.2.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.2.2 (2026-10-27)\n\n- Optima release of upstream 0.2.2.",
+    "assets": [
+      {
+        "name": "optima-sitecheck.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-sitecheck-v0.2.2.2/optima-sitecheck.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-sitecheck-v0.2.2.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.2.1 (2026-10-27)\n\n- Optima release of upstream 0.2.2.",
+    "assets": [
+      {
+        "name": "optima-sitecheck.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-sitecheck-v0.2.2.1/optima-sitecheck.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-sitecheck-v0.2.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.2 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-sitecheck.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-sitecheck-v0.2.2/optima-sitecheck.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-reviews-v0.5.3.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.5.3.2 (2026-10-27)\n\n- Optima release of upstream 0.5.3.",
+    "assets": [
+      {
+        "name": "optima-reviews.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-reviews-v0.5.3.2/optima-reviews.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-reviews-v0.5.3.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.5.3.1 (2026-10-27)\n\n- Optima release of upstream 0.5.3.",
+    "assets": [
+      {
+        "name": "optima-reviews.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-reviews-v0.5.3.1/optima-reviews.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-reviews-v0.5.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.5.3 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-reviews.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-reviews-v0.5.3/optima-reviews.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-results-v0.1.7.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.7.2 (2026-10-27)\n\n- Optima release of upstream 0.1.7.",
+    "assets": [
+      {
+        "name": "optima-results.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-results-v0.1.7.2/optima-results.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-results-v0.1.7.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.7.1 (2026-10-27)\n\n- Optima release of upstream 0.1.7.",
+    "assets": [
+      {
+        "name": "optima-results.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-results-v0.1.7.1/optima-results.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-results-v0.1.7",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.7 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-results.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-results-v0.1.7/optima-results.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-redirects-v0.1.6.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.6.2 (2026-10-27)\n\n- Optima release of upstream 0.1.6.",
+    "assets": [
+      {
+        "name": "optima-redirects.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-redirects-v0.1.6.2/optima-redirects.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-redirects-v0.1.6.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.6.1 (2026-10-27)\n\n- Optima release of upstream 0.1.6.",
+    "assets": [
+      {
+        "name": "optima-redirects.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-redirects-v0.1.6.1/optima-redirects.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-redirects-v0.1.6",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.6 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-redirects.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-redirects-v0.1.6/optima-redirects.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-partners-v0.1.0.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.0.2 (2026-10-27)\n\n- Optima release of upstream 0.1.0.",
+    "assets": [
+      {
+        "name": "optima-partners.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-partners-v0.1.0.2/optima-partners.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-partners-v0.1.0.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.0.1 (2026-10-27)\n\n- Optima release of upstream 0.1.0.",
+    "assets": [
+      {
+        "name": "optima-partners.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-partners-v0.1.0.1/optima-partners.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-partners-v0.1.0",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.0 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-partners.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-partners-v0.1.0/optima-partners.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-optimize-v0.9.1.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.9.1.2 (2026-10-27)\n\n- Optima release of upstream 0.9.1.",
+    "assets": [
+      {
+        "name": "optima-optimize.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-optimize-v0.9.1.2/optima-optimize.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-optimize-v0.9.1.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.9.1.1 (2026-10-27)\n\n- Optima release of upstream 0.9.1.",
+    "assets": [
+      {
+        "name": "optima-optimize.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-optimize-v0.9.1.1/optima-optimize.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-optimize-v0.9.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.9.1 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-optimize.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-optimize-v0.9.1/optima-optimize.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-members-v0.3.1.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.3.1.2 (2026-10-27)\n\n- Optima release of upstream 0.3.1.",
+    "assets": [
+      {
+        "name": "optima-members.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-members-v0.3.1.2/optima-members.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-members-v0.3.1.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.3.1.1 (2026-10-27)\n\n- Optima release of upstream 0.3.1.",
+    "assets": [
+      {
+        "name": "optima-members.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-members-v0.3.1.1/optima-members.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-members-v0.3.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.3.1 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-members.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-members-v0.3.1/optima-members.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-hours-v0.1.6.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.6.2 (2026-10-27)\n\n- Optima release of upstream 0.1.6.",
+    "assets": [
+      {
+        "name": "optima-hours.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-hours-v0.1.6.2/optima-hours.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-hours-v0.1.6.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.6.1 (2026-10-27)\n\n- Optima release of upstream 0.1.6.",
+    "assets": [
+      {
+        "name": "optima-hours.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-hours-v0.1.6.1/optima-hours.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-hours-v0.1.6",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.6 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-hours.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-hours-v0.1.6/optima-hours.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-forms-guard-v0.2.0.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.0.2 (2026-10-27)\n\n- Optima release of upstream 0.2.0.",
+    "assets": [
+      {
+        "name": "optima-forms-guard.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-forms-guard-v0.2.0.2/optima-forms-guard.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-forms-guard-v0.2.0.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.0.1 (2026-10-27)\n\n- Optima release of upstream 0.2.0.",
+    "assets": [
+      {
+        "name": "optima-forms-guard.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-forms-guard-v0.2.0.1/optima-forms-guard.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-forms-guard-v0.2.0",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.0 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-forms-guard.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-forms-guard-v0.2.0/optima-forms-guard.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-events-v0.14.1.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.14.1.2 (2026-10-27)\n\n- Optima release of upstream 0.14.1.",
+    "assets": [
+      {
+        "name": "optima-events.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-events-v0.14.1.2/optima-events.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-events-v0.14.1.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.14.1.1 (2026-10-27)\n\n- Optima release of upstream 0.14.1.",
+    "assets": [
+      {
+        "name": "optima-events.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-events-v0.14.1.1/optima-events.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-events-v0.14.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.14.1 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-events.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-events-v0.14.1/optima-events.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-crm-v0.1.0.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.0.2 (2026-10-27)\n\n- Optima release of upstream 0.1.0.",
+    "assets": [
+      {
+        "name": "optima-crm.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-crm-v0.1.0.2/optima-crm.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-crm-v0.1.0.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.0.1 (2026-10-27)\n\n- Optima release of upstream 0.1.0.",
+    "assets": [
+      {
+        "name": "optima-crm.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-crm-v0.1.0.1/optima-crm.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-crm-v0.1.0",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.0 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-crm.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-crm-v0.1.0/optima-crm.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-core-v1.5.1.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.5.1.2 (2026-10-27)\n\n- Optima release of upstream 1.5.1.",
+    "assets": [
+      {
+        "name": "optima-core.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-core-v1.5.1.2/optima-core.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-core-v1.5.1.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.5.1.1 (2026-10-27)\n\n- Optima release of upstream 1.5.1.",
+    "assets": [
+      {
+        "name": "optima-core.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-core-v1.5.1.1/optima-core.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-core-v1.5.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.5.1 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-core.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-core-v1.5.1/optima-core.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-contact-v0.1.9.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.9.2 (2026-10-27)\n\n- Optima release of upstream 0.1.9.",
+    "assets": [
+      {
+        "name": "optima-contact.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-contact-v0.1.9.2/optima-contact.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-contact-v0.1.9.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.9.1 (2026-10-27)\n\n- Optima release of upstream 0.1.9.",
+    "assets": [
+      {
+        "name": "optima-contact.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-contact-v0.1.9.1/optima-contact.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-contact-v0.1.9",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.9 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-contact.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-contact-v0.1.9/optima-contact.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-chat-v0.2.2.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.2.2 (2026-10-27)\n\n- Optima release of upstream 0.2.2.",
+    "assets": [
+      {
+        "name": "optima-chat.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-chat-v0.2.2.2/optima-chat.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-chat-v0.2.2.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.2.1 (2026-10-27)\n\n- Optima release of upstream 0.2.2.",
+    "assets": [
+      {
+        "name": "optima-chat.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-chat-v0.2.2.1/optima-chat.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-chat-v0.2.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.2 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-chat.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-chat-v0.2.2/optima-chat.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-cards-v1.0.19.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.0.19.2 (2026-10-27)\n\n- Optima release of upstream 1.0.19.",
+    "assets": [
+      {
+        "name": "optima-cards.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-cards-v1.0.19.2/optima-cards.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-cards-v1.0.19.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.0.19.1 (2026-10-27)\n\n- Optima release of upstream 1.0.19.",
+    "assets": [
+      {
+        "name": "optima-cards.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-cards-v1.0.19.1/optima-cards.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-cards-v1.0.19",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.0.19 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-cards.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-cards-v1.0.19/optima-cards.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.4.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.4.2 (2026-10-27)\n\n- Optima release of upstream 0.7.4.",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.4.2/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.4.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.4.1 (2026-10-27)\n\n- Optima release of upstream 0.7.4.",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.4.1/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.4",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.4 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.4/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.3 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.3/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-analytics-v0.1.13.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.13.2 (2026-10-27)\n\n- Optima release of upstream 0.1.13.",
+    "assets": [
+      {
+        "name": "optima-analytics.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-analytics-v0.1.13.2/optima-analytics.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-analytics-v0.1.13.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.13.1 (2026-10-27)\n\n- Optima release of upstream 0.1.13.",
+    "assets": [
+      {
+        "name": "optima-analytics.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-analytics-v0.1.13.1/optima-analytics.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-analytics-v0.1.13",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.13 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-analytics.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-analytics-v0.1.13/optima-analytics.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-aeo-v0.2.2.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.2.2 (2026-10-27)\n\n- Optima release of upstream 0.2.2.",
+    "assets": [
+      {
+        "name": "optima-aeo.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-aeo-v0.2.2.2/optima-aeo.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-aeo-v0.2.2.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.2.1 (2026-10-27)\n\n- Optima release of upstream 0.2.2.",
+    "assets": [
+      {
+        "name": "optima-aeo.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-aeo-v0.2.2.1/optima-aeo.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-aeo-v0.2.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.2 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-aeo.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-aeo-v0.2.2/optima-aeo.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-accessibility-v0.1.10.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.10.2 (2026-10-27)\n\n- Optima release of upstream 0.1.10.",
+    "assets": [
+      {
+        "name": "optima-accessibility.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-accessibility-v0.1.10.2/optima-accessibility.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-accessibility-v0.1.10.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.10.1 (2026-10-27)\n\n- Optima release of upstream 0.1.10.",
+    "assets": [
+      {
+        "name": "optima-accessibility.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-accessibility-v0.1.10.1/optima-accessibility.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-accessibility-v0.1.10",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.10 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-accessibility.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-accessibility-v0.1.10/optima-accessibility.zip"
+      }
+    ]
+  }
+]
