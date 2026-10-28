@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.4.4 (2026-10-28)
+
+- Site health, Search engines: a staging copy behind the host's password protection, or one the theme already marks noindex, now reads "Kept out on staging" instead of asking for a password that is already on. The check could not see host passwords before, so it warned on every staging site forever.
+
 ## 0.7.4.3 (2026-10-28)
 
 - Features screen: the step number on recommended cards used the class of the Site health checklist, so every card also showed a stray "01" counter. It has its own class now.
