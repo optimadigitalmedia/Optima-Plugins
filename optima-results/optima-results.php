@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Optima Case Results
  * Description:       A law firm's case results with the firm's approval on every one and the state disclaimer printed next to every result, shown in a grid visitors can filter by practice area.
- * Version:           0.1.7.2
+ * Version:           0.1.7.3
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Author:            Optima Digital
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OPTIMA_RESULTS_VERSION', '0.1.7.2' );
+define( 'OPTIMA_RESULTS_VERSION', '0.1.7.3' );
 define( 'OPTIMA_RESULTS_FILE', __FILE__ );
 define( 'OPTIMA_RESULTS_URL', plugin_dir_url( __FILE__ ) );
 

@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Nunito+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap");
 /* Optima admin kit: one look for every Optima screen in the WordPress
    dashboard (Site Build hub, AI search, Reviews, Cards, Core, Optimize, and
    the theme's Build screens). Every plugin ships an identical copy, loaded
@@ -232,13 +232,13 @@ a.sh-link-card h2 { color: var(--sh-accent-text); }
 /* ---- Optima skin (added by the port) ----------------------------------
    The approved Optima dashboard look (Oct 2026): a navy-to-azure hero
    band with the gold arrow, white cards on a cool page, Montserrat display,
-   Nunito Sans body, IBM Plex Mono for numbers. Design source: the "Optima
+   IBM Plex Sans body, IBM Plex Mono for numbers. Design source: the "Optima
    Dashboard Redesign" canvas. Skin source:
    scripts/plugins-port/optima-admin-skin.css (internal). The hero wrapper
    (.sh-hero) comes from optima_patches.py KIT_PATCHES. */
 .sh {
 	--sh-display: "Montserrat", -apple-system, "Segoe UI", Roboto, sans-serif;
-	--sh-body: "Nunito Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
+	--sh-body: "IBM Plex Sans", system-ui, sans-serif;
 	--sh-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
 	--sh-navy: #1B2150;
 	--sh-navy-900: #12163A;

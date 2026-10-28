@@ -17,8 +17,8 @@
 	--positive: #2BA24B;
 	--negative: #E23B2E;
 	--on-accent: #fff;
-	--font-head: "Nunito Sans", -apple-system, "Segoe UI", system-ui, sans-serif;
-	--font-body: "Nunito Sans", -apple-system, "Segoe UI", system-ui, sans-serif;
+	--font-head: "IBM Plex Sans", system-ui, sans-serif;
+	--font-body: "IBM Plex Sans", system-ui, sans-serif;
 	--font-label: "IBM Plex Mono", ui-monospace, Menlo, monospace;
 	color-scheme: dark;
 }

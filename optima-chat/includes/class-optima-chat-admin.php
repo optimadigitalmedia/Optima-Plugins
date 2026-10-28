@@ -60,7 +60,7 @@ final class Optima_Chat_Admin {
 		$n      = self::unanswered();
 		$bubble = $n ? ' <span class="awaiting-mod">' . (int) $n . '</span>' : '';
 		add_submenu_page( $parent, __( 'Chat questions', 'optima-chat' ), __( 'Chat questions', 'optima-chat' ) . $bubble, 'edit_posts', 'edit.php?post_type=' . Optima_Chat::CPT );
-		add_submenu_page( $parent, __( 'Chat', 'optima-chat' ), __( 'Chat', 'optima-chat' ), 'manage_options', self::SLUG, array( __CLASS__, 'render' ) );
+		add_submenu_page( $parent, __( 'Chat settings', 'optima-chat' ), __( 'Chat settings', 'optima-chat' ), 'manage_options', self::SLUG, array( __CLASS__, 'render' ) );
 	}
 
 	/** Keep the Build section open while reading a question. */

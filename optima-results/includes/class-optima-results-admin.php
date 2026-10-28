@@ -38,7 +38,7 @@ final class Optima_Results_Admin {
 	}
 
 	public static function menu(): void {
-		add_submenu_page( self::parent(), __( 'Case results', 'optima-results' ), __( 'Case results', 'optima-results' ), 'manage_options', self::SLUG, array( __CLASS__, 'render' ) );
+		add_submenu_page( self::parent(), __( 'Case results settings', 'optima-results' ), __( 'Case results settings', 'optima-results' ), 'manage_options', self::SLUG, array( __CLASS__, 'render' ) );
 		// The list sits in the Build menu too, so the sidebar keeps one Optima section.
 		if ( 'options-general.php' !== self::parent() ) {
 			$list = 'edit.php?post_type=' . Optima_Results::POST_TYPE;
