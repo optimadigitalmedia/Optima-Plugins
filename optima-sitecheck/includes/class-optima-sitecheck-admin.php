@@ -65,7 +65,7 @@ final class Optima_Sitecheck_Admin {
 		$n      = self::waiting();
 		$bubble = $n ? ' <span class="awaiting-mod">' . (int) $n . '</span>' : '';
 		add_submenu_page( $parent, __( 'Site checks', 'optima-sitecheck' ), __( 'Site checks', 'optima-sitecheck' ) . $bubble, 'edit_posts', 'edit.php?post_type=' . Optima_Sitecheck::CPT );
-		add_submenu_page( $parent, __( 'Site check', 'optima-sitecheck' ), __( 'Site check', 'optima-sitecheck' ), 'manage_options', self::SLUG, array( __CLASS__, 'render' ) );
+		add_submenu_page( $parent, __( 'Site check settings', 'optima-sitecheck' ), __( 'Site check settings', 'optima-sitecheck' ), 'manage_options', self::SLUG, array( __CLASS__, 'render' ) );
 	}
 
 	/** Site checks are leads, so they sit with the business screens. */

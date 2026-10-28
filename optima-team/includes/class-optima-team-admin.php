@@ -38,7 +38,7 @@ final class Optima_Team_Admin {
 	}
 
 	public static function menu(): void {
-		add_submenu_page( self::parent(), __( 'Team', 'optima-team' ), __( 'Team', 'optima-team' ), 'manage_options', self::SLUG, array( __CLASS__, 'render' ) );
+		add_submenu_page( self::parent(), __( 'Team settings', 'optima-team' ), __( 'Team settings', 'optima-team' ), 'manage_options', self::SLUG, array( __CLASS__, 'render' ) );
 		// The list sits in the Build menu too, so the sidebar keeps one Optima section.
 		if ( 'options-general.php' !== self::parent() ) {
 			$list = 'edit.php?post_type=' . Optima_Team::POST_TYPE;

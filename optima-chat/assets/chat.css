@@ -6,7 +6,7 @@
   --oc-line: var(--line, rgba(255,255,255,.10)); --oc-accent: var(--accent, #1272C4); --oc-accent-text: var(--accent-text, #FDC134);
   --oc-mono: var(--font-mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
   position: fixed; right: 20px; bottom: 20px; z-index: 9998; display: flex; flex-direction: column; align-items: flex-end; gap: 12px;
-  font: 15px/1.5 var(--font-sans, 'Nunito Sans', -apple-system, Helvetica, Arial, sans-serif); color: var(--oc-text);
+  font-family: inherit; font-size: 15px; line-height: 1.5; color: var(--oc-text);
 }
 .oc-root *, .oc-root *::before, .oc-root *::after { box-sizing: border-box; }
 .oc-root button, .oc-root input { font: inherit; }

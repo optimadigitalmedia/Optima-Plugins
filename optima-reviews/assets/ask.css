@@ -23,7 +23,7 @@
 	--recon-radius-xs: 8px;
 	--recon-shadow: 0 1px 3px rgba(0, 0, 0, .04);
 	--recon-shadow-pop: 0 30px 60px -20px rgba(18, 114, 196, .22);
-	--recon-font: "Nunito Sans", -apple-system, "Segoe UI", system-ui, sans-serif;
+	--recon-font: "IBM Plex Sans", system-ui, sans-serif;
 	--recon-font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
 	--srk-accent: #1272C4;
 	--srk-ink: #141A24;

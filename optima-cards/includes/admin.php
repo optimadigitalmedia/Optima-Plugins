@@ -154,7 +154,7 @@ final class Optima_Cards_Admin {
 		echo '<h2>Look</h2><table class="form-table" role="presentation">';
 		echo '<tr><th scope="row">Mode</th><td><label><input type="radio" name="' . esc_attr( $n ) . '[mode]" value="dark"' . checked( $s['mode'], 'dark', false ) . '> Dark</label> &nbsp; <label><input type="radio" name="' . esc_attr( $n ) . '[mode]" value="light"' . checked( $s['mode'], 'light', false ) . '> Light</label></td></tr>';
 		echo '<tr><th scope="row"><label for="odc-accent">Accent color</label></th><td><input type="color" id="odc-accent" name="' . esc_attr( $n ) . '[accent]" value="' . esc_attr( $s['accent'] ) . '"><p class="description">The brand color for buttons, links, and tags.</p></td></tr>';
-		self::field( "{$n}[font]", $s['font'], 'Font (optional)', 'text', 'Leave blank to use the site\'s own font. Or a CSS font list, e.g. "Nunito Sans", sans-serif.' );
+		self::field( "{$n}[font]", $s['font'], 'Font (optional)', 'text', 'Leave blank to use the site\'s own font. Or a CSS font list, e.g. "IBM Plex Sans", sans-serif.' );
 		self::photo( "{$n}[share_card_id]", (int) $s['share_card_id'], 'Share picture: card', 'Shows when someone texts or posts the card link. 1200 by 630 pixels.' );
 		self::photo( "{$n}[share_links_id]", (int) $s['share_links_id'], 'Share picture: links page', 'Shows when the links page is shared. Blank uses the card\'s.' );
 		echo '</table>';

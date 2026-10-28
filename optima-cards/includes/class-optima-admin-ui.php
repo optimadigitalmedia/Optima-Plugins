@@ -239,7 +239,9 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 		 * same nav on top, so no screen is a dead end.
 		 */
 		public static function screen_nav_prepare(): void {
-			if ( self::$kit || ! self::$leaders ) {
+			// WordPress's own screens (a post list, an edit screen) load the kit styles
+			// but never print the kit nav; only admin.php?page= screens do (Optima fix).
+			if ( ! self::$leaders || ( self::$kit && ! empty( $_GET['page'] ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- reading the screen address only.
 				return;
 			}
 			global $typenow, $pagenow;

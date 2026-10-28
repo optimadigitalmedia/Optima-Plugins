@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.1.3 (2026-10-28)
+
+- Optima release of upstream 0.9.1.
+- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.
+
 ## 0.9.1.2 (2026-10-27)
 
 - Optima release of upstream 0.9.1.

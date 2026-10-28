@@ -7,7 +7,7 @@
   --odc-line: var(--line, rgba(255,255,255,.10)); --odc-accent: var(--accent, #1272C4);
   --odc-fill: var(--accent-fill, #0F63AB); --odc-on: var(--on-accent, #FFFFFF); --odc-accent-text: var(--accent-text, #FDC134);
   --odc-mono: var(--font-mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
-  font: 16px/1.4 var(--font-sans, 'Nunito Sans', -apple-system, Helvetica, Arial, sans-serif);
+  font-family: inherit; font-size: 16px; line-height: 1.4;
 }
 .scc *, .scc *::before, .scc *::after { box-sizing: border-box; }
 .odc-bar {
