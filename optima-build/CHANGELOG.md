@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.4.6 (2026-10-28)
+
+- **Fix: Direct answers no longer counts password-protected pages.** A private partner page (WordPress page password) is read by no visitor and no AI tool, but it was checked as a main page and counted as one without answers. It is skipped like the legal pages. The count catches up at the next scan (within 12 hours).
+
 ## 0.7.4.5 (2026-10-28)
 
 - Brings two fixes from a side branch into the main line, on top of revision 3 (staging ran 0.7.4.4 from that branch, so the main line now moves past it):
