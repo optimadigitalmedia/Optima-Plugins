@@ -22,7 +22,11 @@
       "summary": "Helps ChatGPT, Google's AI answers, Perplexity and Claude find the site, read it, and name it in their answers. Adds a question-and-answer box to every page.",
       "tier": "core",
       "law": false,
-      "requires": []
+      "requires": [],
+      "not_with_themes": [
+        "optima-digital"
+      ],
+      "not_with_note": "The theme already runs AI search: llms.txt, the AI crawler rules in robots.txt, and question-and-answer blocks with FAQ schema on every page. Running both replaces the theme’s guide with a generic one."
     },
     {
       "slug": "optima-optimize",
