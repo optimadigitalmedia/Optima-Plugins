@@ -283,7 +283,7 @@ final class Optima_Reviews_Requests {
 		if ( false === strpos( $hook, self::PAGE ) && false === strpos( $hook, Optima_Reviews_Inbox::PAGE ) ) {
 			return;
 		}
-		wp_enqueue_style( 'optima-reviews-fonts', 'https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap', array(), null ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion
+		wp_enqueue_style( 'optima-reviews-fonts', 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap', array(), null ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion
 		wp_enqueue_style( 'optima-reviews-ask', OPTIMA_REVIEWS_URL . 'assets/ask.css', array(), OPTIMA_REVIEWS_VERSION );
 		$brand = Optima_Reviews_Brand::fonts_url( self::get() );
 		if ( '' !== $brand ) {

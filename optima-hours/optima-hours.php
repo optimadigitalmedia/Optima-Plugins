@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Optima Hours
  * Description:       Weekly hours and holiday closures in one place: an hours table and a live "Open now" line for the site, opening hours in the schema Google reads, an optional notice bar on closure days, and a reminder to set the same hours on Google.
- * Version:           0.1.6.2
+ * Version:           0.1.6.3
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Author:            Optima Digital
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OPTIMA_HOURS_VERSION', '0.1.6.2' );
+define( 'OPTIMA_HOURS_VERSION', '0.1.6.3' );
 define( 'OPTIMA_HOURS_FILE', __FILE__ );
 define( 'OPTIMA_HOURS_URL', plugin_dir_url( __FILE__ ) );
 

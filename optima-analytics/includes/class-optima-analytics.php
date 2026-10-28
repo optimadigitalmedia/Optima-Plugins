@@ -179,7 +179,7 @@ if(d.readyState==='complete'){idle();}else{w.addEventListener('load',idle);}
 	private static function css(): string {
 		return '.optima-consent{position:fixed;left:16px;right:16px;bottom:16px;z-index:9999;max-width:420px;padding:12px 14px;border-radius:18px;'
 			. 'background:var(--surface,#1B2150);color:var(--text,#F6F8FB);border:1px solid var(--line,rgba(255,255,255,.1));'
-			. 'box-shadow:0 18px 50px -12px rgba(0,0,0,.55);font:14px/1.45 var(--font-sans,"Nunito Sans",-apple-system,Helvetica,Arial,sans-serif)}'
+			. 'box-shadow:0 18px 50px -12px rgba(0,0,0,.55);font-family:inherit;font-size:14px;line-height:1.45}'
 			. '.optima-consent[hidden]{display:none}.optima-consent p{margin:0 0 10px;color:var(--text-2,#B7C0D6);text-wrap:pretty}'
 			. '.optima-consent a{color:var(--accent-text,#FDC134)}.optima-consent-actions{display:flex;gap:8px;justify-content:flex-end}'
 			. '.optima-consent button{font:inherit;font-weight:500;min-height:44px;padding:0 18px;border-radius:980px;cursor:pointer;border:1px solid var(--line,rgba(255,255,255,.1));background:transparent;color:var(--text,#F6F8FB)}'

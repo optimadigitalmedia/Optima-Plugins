@@ -21,7 +21,8 @@ final class Optima_Reviews_Brand {
 		'Bricolage Grotesque' => 'opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700',
 		'DM Sans'             => 'wght@400;500;600;700',
 		'Fraunces'            => 'wght@400;500;600;700',
-		'IBM Plex Mono'          => 'wght@400;500;600',
+		'IBM Plex Mono'       => 'wght@400;500;600',
+		'IBM Plex Sans'       => 'wght@400;500;600;700',
 		'Nunito Sans'      => 'wght@400;500;600;700',
 		'Hepta Slab'          => 'wght@400;500;600;700',
 		'Instrument Sans'     => 'wght@400;500;600;700',
@@ -56,8 +57,8 @@ final class Optima_Reviews_Brand {
 			'accent'       => '#1272C4',
 			'background'   => '#12163A',
 			'text_color'   => '',
-			'heading_font' => 'Nunito Sans',
-			'body_font'    => 'Nunito Sans',
+			'heading_font' => 'IBM Plex Sans',
+			'body_font'    => 'IBM Plex Sans',
 			'label_font'   => 'IBM Plex Mono',
 		);
 		/**

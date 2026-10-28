@@ -137,7 +137,7 @@ final class Optima_Sitecheck_Report {
 		$first  = trim( (string) strtok( $name, ' ' ) );
 		$photo  = Optima_Sitecheck::settings()['lead_photo'];
 		$logo   = function_exists( 'get_site_icon_url' ) ? get_site_icon_url( 64 ) : '';
-		$font   = "'Nunito Sans',Helvetica,Arial,sans-serif";
+		$font   = "'IBM Plex Sans',system-ui,Helvetica,Arial,sans-serif";
 		$mono   = "'IBM Plex Mono',Menlo,monospace";
 		$date   = wp_date( get_option( 'date_format' ), (int) ( get_post_meta( $id, '_ssc_checked', true ) ?: time() ) );
 		$rows   = '';
