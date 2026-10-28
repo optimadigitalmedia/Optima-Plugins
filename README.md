@@ -24,7 +24,7 @@ a theme never orphans content.
 | `optima-members` | 0.3.1.3 |
 | `optima-optimize` | 0.9.1.3 |
 | `optima-partners` | 0.1.0.3 |
-| `optima-redirects` | 0.1.6.3 |
+| `optima-redirects` | 0.1.6.4 |
 | `optima-results` | 0.1.7.3 |
 | `optima-reviews` | 0.5.3.3 |
 | `optima-sitecheck` | 0.2.2.3 |
