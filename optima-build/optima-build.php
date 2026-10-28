@@ -3,7 +3,7 @@
  * Plugin Name:       Optima Build
  * Plugin URI:        https://optimadigitalmedia.com
  * Description:       One screen for the site's features: see what is on, turn features on or off (site operators only), roll one back, request a change, and check the site's health at a glance.
- * Version:           0.7.4.2
+ * Version:           0.7.4.3
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Author:            Optima Digital
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // Prefixed OPTIMA_HUB_ on purpose: the Optima Digital theme already defines a
 // OPTIMA_BUILD_MENU constant for its own menu.
-define( 'OPTIMA_HUB_VERSION', '0.7.4.2' );
+define( 'OPTIMA_HUB_VERSION', '0.7.4.3' );
 define( 'OPTIMA_HUB_FILE', __FILE__ );
 define( 'OPTIMA_HUB_DIR', plugin_dir_path( __FILE__ ) );
 define( 'OPTIMA_HUB_URL', plugin_dir_url( __FILE__ ) );

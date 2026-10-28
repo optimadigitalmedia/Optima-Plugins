@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.4.3 (2026-10-28)
+
+- Features screen: the step number on recommended cards used the class of the Site health checklist, so every card also showed a stray "01" counter. It has its own class now.
+
 ## 0.7.4.2 (2026-10-27)
 
 - Optima release of upstream 0.7.4.

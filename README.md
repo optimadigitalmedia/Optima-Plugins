@@ -12,7 +12,7 @@ a theme never orphans content.
 | `optima-accessibility` | 0.1.10.2 |
 | `optima-aeo` | 0.2.2.2 |
 | `optima-analytics` | 0.1.13.2 |
-| `optima-build` | 0.7.4.2 |
+| `optima-build` | 0.7.4.3 |
 | `optima-cards` | 1.0.19.2 |
 | `optima-chat` | 0.2.2.2 |
 | `optima-contact` | 0.1.9.2 |
