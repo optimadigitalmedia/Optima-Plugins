@@ -165,7 +165,7 @@ if(d.readyState==='complete'){idle();}else{w.addEventListener('load',idle);}
 		<button type="button" class="optima-consent-yes" data-optima-consent="granted"><?php echo esc_html( $yes ); ?></button>
 	</div>
 </div>
-<style id="optima-consent-css"><?php echo self::css(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static CSS. ?></style>
+<style id="optima-consent-css"><?php echo self::css( self::accent() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static CSS, the color is a validated hex. ?></style>
 <script id="optima-consent-js"><?php echo self::js(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static JS. ?></script>
 		<?php
 	}
@@ -176,15 +176,45 @@ if(d.readyState==='complete'){idle();}else{w.addEventListener('load',idle);}
 		return '<a href="#privacy-choices" data-optima-privacy>' . esc_html( $atts['text'] ) . '</a>';
 	}
 
-	private static function css(): string {
-		return '.optima-consent{position:fixed;left:16px;right:16px;bottom:16px;z-index:9999;max-width:420px;padding:12px 14px;border-radius:18px;'
-			. 'background:var(--surface,#1B2150);color:var(--text,#F6F8FB);border:1px solid var(--line,rgba(255,255,255,.1));'
-			. 'box-shadow:0 18px 50px -12px rgba(0,0,0,.55);font-family:inherit;font-size:14px;line-height:1.45}'
-			. '.optima-consent[hidden]{display:none}.optima-consent p{margin:0 0 10px;color:var(--text-2,#B7C0D6);text-wrap:pretty}'
-			. '.optima-consent a{color:var(--accent-text,#FDC134)}.optima-consent-actions{display:flex;gap:8px;justify-content:flex-end}'
-			. '.optima-consent button{font:inherit;font-weight:500;min-height:44px;padding:0 18px;border-radius:980px;cursor:pointer;border:1px solid var(--line,rgba(255,255,255,.1));background:transparent;color:var(--text,#F6F8FB)}'
-			. '.optima-consent .optima-consent-yes{background:var(--accent,#0F63AB);border-color:var(--accent,#0F63AB);color:var(--on-accent,#fff)}'
-			. '.optima-consent button:focus-visible{outline:2px solid var(--accent,#1272C4);outline-offset:2px}'
+	/**
+	 * The button color: the site's brand color from Optima Build (the Email
+	 * screen's pick or the detected one), else the optima_brand_accent filter,
+	 * else Optima's darker azure.
+	 */
+	private static function accent(): string {
+		$hex = class_exists( 'Optima_Hub_Mail' ) && method_exists( 'Optima_Hub_Mail', 'brand_color' )
+			? Optima_Hub_Mail::brand_color()
+			: (string) apply_filters( 'optima_brand_accent', '' );
+		return preg_match( '/^#[0-9a-fA-F]{6}$/', $hex ) ? $hex : '#0F63AB';
+	}
+
+	/** White text on the brand color when it reads at 4.5:1 (WCAG AA), else near-black. */
+	private static function ink( string $hex ): string {
+		$lum = 0.0;
+		foreach ( array( 0.2126, 0.7152, 0.0722 ) as $i => $w ) {
+			$c    = hexdec( substr( ltrim( $hex, '#' ), $i * 2, 2 ) ) / 255;
+			$lum += $w * ( $c <= 0.03928 ? $c / 12.92 : ( ( $c + 0.055 ) / 1.055 ) ** 2.4 );
+		}
+		return 1.05 / ( $lum + 0.05 ) >= 4.5 ? '#FFFFFF' : '#141A24';
+	}
+
+	/**
+	 * The notice keeps its own colors instead of borrowing the theme's: a site
+	 * that defines --surface but not --text (a client site) got a white panel with
+	 * light gray text and an invisible "No thanks". Light by default, dark when
+	 * the page sets data-theme="dark", and the button in the site's color.
+	 */
+	private static function css( string $accent ): string {
+		return '.optima-consent{--oc-bg:#FFFFFF;--oc-text:#141A24;--oc-muted:#4D5768;--oc-line:rgba(0,0,0,.16);--oc-accent:' . $accent . ';--oc-on:' . self::ink( $accent ) . ';'
+			. 'position:fixed;left:16px;right:16px;bottom:16px;z-index:9999;max-width:420px;padding:12px 14px;border-radius:18px;'
+			. 'background:var(--oc-bg);color:var(--oc-text);border:1px solid var(--oc-line);'
+			. 'box-shadow:0 18px 50px -12px rgba(0,0,0,.35);font-size:14px;line-height:1.45;font-family:inherit}'
+			. ':root[data-theme="dark"] .optima-consent{--oc-bg:#1B2150;--oc-text:#F6F8FB;--oc-muted:#B7C0D6;--oc-line:rgba(255,255,255,.16)}'
+			. '.optima-consent[hidden]{display:none}.optima-consent p{margin:0 0 10px;color:var(--oc-muted);text-wrap:pretty}'
+			. '.optima-consent a{color:var(--oc-text);text-decoration:underline}.optima-consent-actions{display:flex;gap:8px;justify-content:flex-end}'
+			. '.optima-consent button{font:inherit;font-weight:500;min-height:44px;padding:0 18px;border-radius:980px;cursor:pointer;border:1px solid var(--oc-line);background:transparent;color:var(--oc-text)}'
+			. '.optima-consent .optima-consent-yes{background:var(--oc-accent);border-color:var(--oc-accent);color:var(--oc-on)}'
+			. '.optima-consent button:focus-visible{outline:2px solid var(--oc-accent);outline-offset:2px}'
 			. '@media (min-width:600px){.optima-consent{right:auto;left:24px;bottom:24px;padding:16px 18px;font-size:15px}}';
 	}
 

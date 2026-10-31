@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.9.4 (2026-10-31)
+
+- Optima release of upstream 0.1.9.
+- **The Plugins screen shows auto-updates as on.** The updater now reports the newest release even when the plugin is already on it, so WordPress lists Optima plugins as up to date and shows "Auto-updates enabled" instead of a blank column and an "Auto-updates Disabled" count. Optima plugins were already updating themselves; only the label was wrong.
+- Optima layer revision 4: the port now carries the Optima-only work itself: editable pages in Optima Core, site-font widgets, full changelog history.
+
 ## 0.1.6.4 (2026-10-28)
 
 - **Fix: a new redirect works the moment it is saved.** Saving a redirect checked the old address first, which cached "no redirect here", and the cache clear that followed did nothing on WP Engine's object cache. New and imported redirects returned 404 for up to an hour (found on staging after the 27-row import). Lookups now use a generation number that every change bumps. Same fix as upstream 0.1.8.

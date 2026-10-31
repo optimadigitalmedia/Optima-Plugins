@@ -39,7 +39,7 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 
 	final class Optima_Admin_UI {
 
-		const VERSION = '1.5.0.2';
+		const VERSION = '1.5.1.4';
 
 		/** Show the Optima mark and sign-off. */
 		public static function branded(): bool {
@@ -240,7 +240,7 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 		 */
 		public static function screen_nav_prepare(): void {
 			// WordPress's own screens (a post list, an edit screen) load the kit styles
-			// but never print the kit nav; only admin.php?page= screens do (Optima fix).
+			// but never print the kit nav; only admin.php?page= screens do.
 			if ( ! self::$leaders || ( self::$kit && ! empty( $_GET['page'] ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- reading the screen address only.
 				return;
 			}
