@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.0.5 (2026-10-31)
+
+- **Editable pages now take over pages that came from the old site.** A staging site copied from a live site keeps the old site's page text. The theme already shows its approved design on those pages, so that old text is never seen, but the import only filled empty pages, which left the old text in the editor. Editors changed text nobody could see (found on the GJNOLA staging site: 30 of 33 pages). The import now replaces any page text that is not editable-page blocks with the approved blocks. The old text is kept in the page's revisions and in the `_optima_editable_legacy` field. Pages already edited in the new format are never overwritten, as before.
+- Takes effect on the next admin visit after the update.
+
 ## 1.6.0.4 (2026-10-31)
 
 - Optima release of upstream 1.6.0.
