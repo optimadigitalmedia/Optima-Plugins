@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.15.4 (2026-10-31)
+
+- Optima release of upstream 0.1.15.
+- **The cookie notice is readable on every site.** The notice now carries its own colors: light by default, dark when the page sets `data-theme="dark"`, and the OK button in the site's brand color from Optima Build 0.7.8, with dark text when that color is too light for white.
+- **The Plugins screen shows auto-updates as on.** The updater now reports the newest release even when the plugin is already on it, so WordPress lists Optima plugins as up to date and shows "Auto-updates enabled" instead of a blank column and an "Auto-updates Disabled" count. Optima plugins were already updating themselves; only the label was wrong.
+- Optima layer revision 4: the port now carries the Optima-only work itself: editable pages in Optima Core, site-font widgets, full changelog history.
+
 ## 0.1.13.3 (2026-10-28)
 
 - Optima release of upstream 0.1.13.

@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Optima Analytics
  * Description:       Google Tag Manager (or a GA4 tag) on the live site with Google consent mode set up first, a small cookie notice that lets visitors opt out, and one way for every Optima feature to report clicks.
- * Version:           0.1.13.3
+ * Version:           0.1.15.4
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Author:            Optima Digital
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OPTIMA_ANALYTICS_VERSION', '0.1.13.3' );
+define( 'OPTIMA_ANALYTICS_VERSION', '0.1.15.4' );
 define( 'OPTIMA_ANALYTICS_FILE', __FILE__ );
 define( 'OPTIMA_ANALYTICS_URL', plugin_dir_url( __FILE__ ) );
 

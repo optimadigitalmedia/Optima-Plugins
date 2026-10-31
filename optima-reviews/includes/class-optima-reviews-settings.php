@@ -21,6 +21,9 @@ final class Optima_Reviews_Settings {
 	const OPTION = 'optima_reviews_settings';
 	const PAGE   = 'optima-reviews-settings';
 
+	/** When the totals were last saved (a Unix time). Optima Build's Site health reads it to flag stale counts. */
+	const STAMP = 'optima_reviews_totals_updated';
+
 	/** @var bool True while code (not the form) writes the option. */
 	private static $internal_write = false;
 
@@ -86,6 +89,7 @@ final class Optima_Reviews_Settings {
 		self::$internal_write          = true;
 		update_option( self::OPTION, $settings );
 		self::$internal_write = false;
+		update_option( self::STAMP, time(), false );
 		Optima_Reviews_Query::flush();
 	}
 
@@ -126,6 +130,8 @@ final class Optima_Reviews_Settings {
 		$out['auto_add_five']      = ! empty( $input['auto_add_five'] );
 		$out['purge_on_uninstall'] = ! empty( $input['purge_on_uninstall'] );
 
+		// Saving the form means someone looked at the totals, so note when.
+		update_option( self::STAMP, time(), false );
 		Optima_Reviews_Query::flush();
 		return $out;
 	}

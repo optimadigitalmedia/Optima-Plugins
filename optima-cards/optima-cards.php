@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Optima Cards
  * Description:       Digital business cards and a social "link in bio" page, built into the client's own site: a team card, a card per person, Save contact (vCard with photo), share mode with a big QR code, a home-screen icon, and /links/. Reads the business identity from Optima Core; edited in Optima -> Cards & Links.
- * Version:           1.0.19.3
+ * Version:           1.0.21.4
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Author:            Optima Digital
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OPTIMA_CARDS_VERSION', '1.0.19.3' );
+define( 'OPTIMA_CARDS_VERSION', '1.0.21.4' );
 define( 'OPTIMA_CARDS_DIR', plugin_dir_path( __FILE__ ) );
 define( 'OPTIMA_CARDS_URL', plugin_dir_url( __FILE__ ) );
 define( 'OPTIMA_CARDS_FILE', __FILE__ );
