@@ -37,6 +37,7 @@ if ( ! $optima_core_purge ) {
 
 delete_option( 'optima_business' );
 delete_option( 'optima_seo_defaults' );
+delete_option( 'optima_core_protection' );
 delete_option( 'optima_seo_sitemap_found' );
 wp_clear_scheduled_hook( 'optima_seo_sitemap_check' );
 

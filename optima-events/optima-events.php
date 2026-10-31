@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Optima Events
  * Description:       Events, sessions and speakers the owner edits in plain forms: event pages with dates, venue, ticket button and what to know, a day-by-day schedule, speaker pages, and Event schema so the event can appear in Google. Works with any ticket link today and is built to sit in front of a WooCommerce ticket engine later.
- * Version:           0.14.1.3
+ * Version:           0.14.3.4
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Author:            Optima Digital
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OPTIMA_EVENTS_VERSION', '0.14.1.3' );
+define( 'OPTIMA_EVENTS_VERSION', '0.14.3.4' );
 define( 'OPTIMA_EVENTS_FILE', __FILE__ );
 define( 'OPTIMA_EVENTS_URL', plugin_dir_url( __FILE__ ) );
 define( 'OPTIMA_EVENTS_DIR', plugin_dir_path( __FILE__ ) );

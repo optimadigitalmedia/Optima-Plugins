@@ -54,4 +54,5 @@ if ( is_array( $optima_reviews_terms ) ) {
 }
 
 delete_option( 'optima_reviews_settings' );
+delete_option( 'optima_reviews_totals_updated' );
 delete_option( 'optima_reviews_seen_slots' );
