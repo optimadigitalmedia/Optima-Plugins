@@ -20,8 +20,21 @@ final class Optima_Contact {
 
 	public static function boot(): void {
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'assets' ) );
-		add_action( 'wp_footer', array( __CLASS__, 'render' ), 20 );
+		// Plugin first: render in the theme's body-end slot; themes without slots still get the bar from wp_footer.
+		add_action( 'optima_slot_body-end', array( __CLASS__, 'render_once' ) );
+		add_action( 'wp_footer', array( __CLASS__, 'render_once' ), 20 );
 		add_filter( 'body_class', array( __CLASS__, 'body_class' ) );
+	}
+
+	/** @var bool The bar prints once per page, whichever hook reaches it first. */
+	private static $rendered = false;
+
+	public static function render_once(): void {
+		if ( self::$rendered ) {
+			return;
+		}
+		self::$rendered = true;
+		self::render();
 	}
 
 	public static function defaults(): array {

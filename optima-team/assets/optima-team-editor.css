@@ -2,16 +2,16 @@
    scoped to the optima_team screens only. */
 
 .post-type-optima_team {
-	--st-text: #141A24;
-	--st-text-2: #4D5768;
-	--st-text-3: #6C7688;
+	--st-text: var(--optima-ink);
+	--st-text-2: var(--optima-ink-2);
+	--st-text-3: var(--optima-ink-2);
 	--st-line: rgba(0, 0, 0, .08);
-	--st-line-strong: #DDE4EE;
-	--st-inset: #F6F8FB;
-	--st-accent: #1272C4;
-	--st-accent-text: #0F63AB;
-	--st-good: #0B6B3A;
-	--st-warn: #8A5A00;
+	--st-line-strong: var(--optima-line);
+	--st-inset: var(--optima-canvas);
+	--st-accent: var(--optima-accent);
+	--st-accent-text: var(--optima-accent);
+	--st-good: var(--optima-positive);
+	--st-warn: var(--optima-caution);
 	--st-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
@@ -42,7 +42,7 @@
 .st-cols-4 { --st-cols: 4; }
 .st-row .st-field { margin-bottom: 0; }
 .st-col-year { max-width: 130px; }
-.st-remove.button-link { min-height: 44px; padding: 0 8px; color: #B32D2E; text-decoration: underline; }
+.st-remove.button-link { min-height: 44px; padding: 0 8px; color: var(--optima-negative); text-decoration: underline; }
 .st-remove.button-link:focus-visible, .st-add:focus-visible { outline: 2px solid var(--st-accent-text); outline-offset: 2px; box-shadow: none; }
 .optima-team-form .button.st-add { margin: 12px 0 12px; min-height: 44px; }
 .st-check { margin: 0 0 12px; }
@@ -59,15 +59,15 @@
 }
 
 /* Preview card: dark, like the profile card in the design. */
-.st-card { display: flex; gap: 14px; align-items: center; padding: 14px; background: #12163A; color: #F6F8FB; border-radius: 14px; }
-.st-card__photo { flex: none; width: 72px; height: 72px; border-radius: 12px; overflow: hidden; background: #232B38; }
+.st-card { display: flex; gap: 14px; align-items: center; padding: 14px; background: var(--optima-ink); color: var(--optima-canvas); border-radius: 14px; }
+.st-card__photo { flex: none; width: 72px; height: 72px; border-radius: 12px; overflow: hidden; background: var(--optima-ink); }
 .st-card__photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.st-card__empty { display: block; width: 100%; height: 100%; background: linear-gradient(135deg, #232B38, #2A2A2A); }
+.st-card__empty { display: block; width: 100%; height: 100%; background: linear-gradient(135deg, var(--optima-ink), var(--optima-ink)); }
 .st-card__text { min-width: 0; }
 .st-card p { margin: 0; }
-.st-card__role { font-family: var(--st-mono); font-size: 11px; letter-spacing: 1.3px; text-transform: uppercase; color: #FDC134; }
+.st-card__role { font-family: var(--st-mono); font-size: 11px; letter-spacing: 1.3px; text-transform: uppercase; color: var(--optima-highlight); }
 .st-card__name { font-size: 18px; font-weight: 600; letter-spacing: -.02em; line-height: 1.2; margin-top: 4px !important; overflow-wrap: anywhere; }
-.st-card__meta { font-size: 13px; color: #B7C0D6; margin-top: 4px !important; }
+.st-card__meta { font-size: 13px; color: var(--optima-night-ink-2); margin-top: 4px !important; }
 .st-card__meta:empty { display: none; }
 #optima-team-preview .description { margin: 10px 0 0; }
 
@@ -88,8 +88,8 @@
 /* List screen. */
 .post-type-optima_team .column-st_photo { width: 52px; }
 .post-type-optima_team .st-thumb { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; }
-.post-type-optima_team .st-count { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 980px; background: rgba(253, 193, 52, .2); color: #8A5A00; }
-.post-type-optima_team .st-count.is-done { background: rgba(43, 162, 75, .14); color: #0B6B3A; }
+.post-type-optima_team .st-count { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 980px; background: rgba(253, 193, 52, .2); color: var(--optima-caution); }
+.post-type-optima_team .st-count.is-done { background: rgba(43, 162, 75, .14); color: var(--optima-positive); }
 
 @media (prefers-reduced-motion: reduce) {
 	.post-type-optima_team * { transition: none !important; animation: none !important; }

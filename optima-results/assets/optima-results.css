@@ -3,9 +3,9 @@
    neutral fallback, so a theme can restyle it from its own stylesheet:
 
    .optima-results {
-     --optima-results-surface: #fff;
-     --optima-results-border: #e2e2e2;
-     --optima-results-accent: #0F63AB;
+     --optima-results-surface: var(--optima-surface);
+     --optima-results-border: var(--optima-line);
+     --optima-results-accent: var(--optima-accent);
      --optima-results-radius: 12px;
    }
 */

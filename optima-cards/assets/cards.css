@@ -3,20 +3,20 @@
    Brand comes from two settings: --odc-accent (the client's color) and the page
    mode (dark or light). The font is inherited from the theme unless set. */
 
-body.odc-page { margin: 0; background: #12163A; }
-body.odc-page:has(.scc[data-mode="light"]) { background: #F6F8FB; }
+body.odc-page { margin: 0; background: var(--optima-ink); }
+body.odc-page:has(.scc[data-mode="light"]) { background: var(--optima-canvas); }
 
 .scc {
-  --odc-bg: #12163A; --odc-surface: #1B2150; --odc-surface-2: #232B38;
-  --odc-text: #F6F8FB; --odc-text-2: #B7C0D6; --odc-text-3: #9AA6B8;
-  --odc-line: rgba(255,255,255,.10); --odc-on-accent: #FFFFFF;
+  --odc-bg: var(--optima-ink); --odc-surface: var(--optima-ink); --odc-surface-2: var(--optima-ink);
+  --odc-text: var(--optima-canvas); --odc-text-2: var(--optima-night-ink-2); --odc-text-3: var(--optima-ink-2);
+  --odc-line: rgba(255,255,255,.10); --odc-on-accent: var(--optima-surface);
   display: block; min-height: 100vh; background: var(--odc-bg); color: var(--odc-text);
   font-family: var(--odc-font, inherit); font-size: 16px; line-height: 1.5;
   -webkit-font-smoothing: antialiased; text-align: left;
 }
 .scc[data-mode="light"] {
-  --odc-bg: #F6F8FB; --odc-surface: #FFFFFF; --odc-surface-2: #EEF2F7;
-  --odc-text: #141A24; --odc-text-2: #4D5768; --odc-text-3: #9AA6B8;
+  --odc-bg: var(--optima-canvas); --odc-surface: var(--optima-surface); --odc-surface-2: var(--optima-canvas);
+  --odc-text: var(--optima-ink); --odc-text-2: var(--optima-ink-2); --odc-text-3: var(--optima-ink-2);
   --odc-line: rgba(0,0,0,.08);
 }
 .scc *, .scc *::before, .scc *::after { box-sizing: border-box; }
@@ -30,7 +30,7 @@ body.odc-page:has(.scc[data-mode="light"]) { background: #F6F8FB; }
 
 .odc-card { background: var(--odc-surface); border: 1px solid var(--odc-line); border-radius: 18px; padding: 28px 22px 22px; text-align: center; }
 .odc-avatar { width: 112px; height: 112px; border-radius: 50%; object-fit: cover; display: block; margin: 0 auto 16px; border: 2px solid var(--odc-line); }
-.odc-logo { object-fit: contain; background: #fff; padding: 10px; }
+.odc-logo { object-fit: contain; background: var(--optima-surface); padding: 10px; }
 .odc-avatar-mark { display: grid; place-items: center; background: var(--odc-accent); color: var(--odc-on-accent); font-size: 44px; font-weight: 600; border: 0; }
 .odc-eyebrow { color: var(--odc-accent); font-size: 12px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase; margin-bottom: 6px !important; }
 .odc-card h1 { font-size: 32px; line-height: 1.1; letter-spacing: -0.03em; text-wrap: balance; }
@@ -94,7 +94,7 @@ body.odc-page:has(.scc[data-mode="light"]) { background: #F6F8FB; }
 .odc-qr summary { cursor: pointer; color: var(--odc-accent); font-size: 14px; list-style: none; }
 .odc-qr summary::-webkit-details-marker { display: none; }
 .odc-qr-code { width: 220px; margin: 12px auto 0; }
-.odc-qr-code svg, .odc-qr-big svg { display: block; width: 100%; height: auto; background: #fff; border-radius: 14px; padding: 8px; }
+.odc-qr-code svg, .odc-qr-big svg { display: block; width: 100%; height: auto; background: var(--optima-surface); border-radius: 14px; padding: 8px; }
 .odc-qr-big { width: min(300px, 78vw); margin: 16px auto 4px; }
 
 .odc-linklist { display: flex; flex-direction: column; gap: 10px; }
@@ -119,13 +119,13 @@ body.odc-page:has(.scc[data-mode="light"]) { background: #F6F8FB; }
 
 /* Full-photo person card (1.0.18), ported from the Optima Digital theme's team cards. */
 .odc-hero-card { background: var(--odc-surface); border: 1px solid var(--odc-line); border-radius: 22px; overflow: hidden; text-align: left; }
-.odc-hero { position: relative; aspect-ratio: 4 / 5; max-height: 560px; overflow: hidden; background: #111; }
+.odc-hero { position: relative; aspect-ratio: 4 / 5; max-height: 560px; overflow: hidden; background: var(--optima-ink); }
 .odc-hero > img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 15%; display: block; }
 .odc-hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.45) 0%, rgba(0,0,0,0) 22%, rgba(0,0,0,0) 50%, rgba(0,0,0,.82) 100%); pointer-events: none; }
-.scc .odc-hero-brand { position: absolute; z-index: 1; top: 16px; left: 16px; right: 16px; display: flex; align-items: center; gap: 10px; color: #fff; font-weight: 600; font-size: 15px; }
-.odc-hero-brand img { width: 36px; height: 36px; border-radius: 50%; background: #fff; padding: 3px; object-fit: contain; }
-.odc-hero-name { position: absolute; z-index: 1; left: 22px; right: 22px; bottom: 20px; color: #fff; }
-.scc .odc-hero-name h1 { color: #fff; font-size: 34px; line-height: 1.05; letter-spacing: -0.03em; }
+.scc .odc-hero-brand { position: absolute; z-index: 1; top: 16px; left: 16px; right: 16px; display: flex; align-items: center; gap: 10px; color: var(--optima-accent-ink); font-weight: 600; font-size: 15px; }
+.odc-hero-brand img { width: 36px; height: 36px; border-radius: 50%; background: var(--optima-surface); padding: 3px; object-fit: contain; }
+.odc-hero-name { position: absolute; z-index: 1; left: 22px; right: 22px; bottom: 20px; color: var(--optima-accent-ink); }
+.scc .odc-hero-name h1 { color: var(--optima-accent-ink); font-size: 34px; line-height: 1.05; letter-spacing: -0.03em; }
 .odc-role { margin-top: 8px !important; font-size: 12px; font-weight: 600; letter-spacing: 1.3px; text-transform: uppercase; color: rgba(255,255,255,.88); text-wrap: balance; }
 .odc-hero-body { padding: 22px; }
 .odc-hero-body .odc-btn { min-height: 52px; }

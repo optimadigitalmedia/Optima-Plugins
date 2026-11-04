@@ -1,9 +1,9 @@
 /* Optima Chat. Design: Optima features DESIGN.md 5.1. Reads the site's tokens
    when they exist (Optima themes) and falls back to the Optima dark palette. */
 .oc-root {
-  --oc-bg: var(--bg, #12163A); --oc-surface: var(--surface, #1B2150); --oc-surface-2: var(--surface-2, #232B38);
-  --oc-text: var(--text, #F6F8FB); --oc-text-2: var(--text-2, #B7C0D6); --oc-text-3: var(--text-3, #9AA6B8);
-  --oc-line: var(--line, rgba(255,255,255,.10)); --oc-accent: var(--accent, #1272C4); --oc-accent-text: var(--accent-text, #FDC134);
+  --oc-bg: var(--bg, var(--optima-ink)); --oc-surface: var(--surface, var(--optima-ink)); --oc-surface-2: var(--surface-2, var(--optima-ink));
+  --oc-text: var(--text, var(--optima-canvas)); --oc-text-2: var(--text-2, var(--optima-night-ink-2)); --oc-text-3: var(--text-3, var(--optima-ink-2));
+  --oc-line: var(--line, rgba(255,255,255,.10)); --oc-accent: var(--accent, var(--optima-accent)); --oc-accent-text: var(--accent-text, var(--optima-highlight));
   --oc-mono: var(--font-mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
   position: fixed; right: 20px; bottom: 20px; z-index: 9998; display: flex; flex-direction: column; align-items: flex-end; gap: 12px;
   font-family: inherit; font-size: 15px; line-height: 1.5; color: var(--oc-text);
@@ -14,7 +14,7 @@
 .oc-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* Arrow mark and avatar stack */
-.oc-mark { display: block; width: 45%; height: 45%; background: #fff; clip-path: polygon(35% 0,100% 0,100% 65%,76% 41%,17% 100%,0 83%,59% 24%); }
+.oc-mark { display: block; width: 45%; height: 45%; background: var(--optima-surface); clip-path: polygon(35% 0,100% 0,100% 65%,76% 41%,17% 100%,0 83%,59% 24%); }
 .oc-stack { display: inline-flex; align-items: center; }
 .oc-stack > * { border-radius: 50%; border: 2px solid var(--oc-surface); flex: none; object-fit: cover; }
 .oc-stack > * + * { margin-left: -8px; }
@@ -54,9 +54,9 @@
 .oc-head-text strong { font-size: 15.5px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .oc-status { display: inline-flex; align-items: center; gap: 6px; font-family: var(--oc-mono); font-size: 10.5px; letter-spacing: .4px; line-height: 1.35; color: var(--oc-text-3); }
 .oc-status .oc-dot { flex: none; }
-.oc-dot { width: 6px; height: 6px; border-radius: 50%; background: #2BA24B; flex: none; }
+.oc-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--optima-positive); flex: none; }
 .oc-person { flex: none; min-height: 34px; padding: 0 12px; border-radius: 980px; border: 1px solid rgba(18,114,196,.55); background: none; color: var(--oc-accent-text); font-size: 13px; font-weight: 500; cursor: pointer; }
-.oc-person:hover { background: var(--oc-accent); border-color: var(--oc-accent); color: #fff; }
+.oc-person:hover { background: var(--oc-accent); border-color: var(--oc-accent); color: var(--optima-accent-ink); }
 .oc-min { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 0; background: none; color: var(--oc-text-2); cursor: pointer; display: grid; place-items: center; }
 .oc-min:hover { background: var(--oc-surface-2); }
 
@@ -66,7 +66,7 @@
 .oc-user { justify-content: flex-end; }
 .oc-bubble { max-width: 85%; padding: 10px 14px; border-radius: 18px; font-size: 15px; line-height: 1.5; text-wrap: pretty; white-space: pre-wrap; }
 .oc-bot .oc-bubble { background: var(--oc-surface-2); border-bottom-left-radius: 6px; }
-.oc-user .oc-bubble { background: var(--oc-accent); color: #fff; border-bottom-right-radius: 6px; }
+.oc-user .oc-bubble { background: var(--oc-accent); color: var(--optima-accent-ink); border-bottom-right-radius: 6px; }
 .oc-caret { display: inline-block; width: 2px; height: 1em; margin-left: 2px; vertical-align: -2px; background: var(--oc-accent); }
 .oc-typing { gap: 4px; padding: 12px 14px; background: var(--oc-surface-2); border-radius: 18px; border-bottom-left-radius: 6px; align-self: flex-start; }
 .oc-typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--oc-text-3); animation: oc-blink 1s infinite; }
@@ -75,7 +75,7 @@
 
 .oc-chips { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 2px; }
 .oc-chip { min-height: 38px; padding: 8px 14px; border-radius: 980px; border: 1px solid rgba(18,114,196,.55); background: none; color: var(--oc-accent-text); font-size: 14px; font-weight: 500; cursor: pointer; transition: background .15s ease, color .15s ease, transform .15s ease; }
-.oc-chip:hover { background: var(--oc-accent); color: #fff; transform: translateY(-1px); }
+.oc-chip:hover { background: var(--oc-accent); color: var(--optima-accent-ink); transform: translateY(-1px); }
 
 .oc-card { width: 100%; padding: 14px; background: var(--oc-surface); border: 1px solid var(--oc-line); border-radius: 16px; }
 .oc-eyebrow { margin: 0 0 8px; font-family: var(--oc-mono); font-size: 11px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--oc-accent-text); }
@@ -85,21 +85,21 @@
 .oc-tier div { display: flex; flex-direction: column; gap: 2px; }
 .oc-tier strong { font-weight: 600; }
 .oc-tier span:not(.oc-num) { color: var(--oc-text-2); font-size: 14px; }
-.oc-linkbtn { display: inline-flex; align-items: center; min-height: 44px; padding: 0 20px; border-radius: 980px; background: var(--oc-accent); color: #fff; text-decoration: none; font-weight: 500; }
-.oc-linkbtn:hover { background: #0F63AB; color: #fff; }
+.oc-linkbtn { display: inline-flex; align-items: center; min-height: 44px; padding: 0 20px; border-radius: 980px; background: var(--oc-accent); color: var(--optima-accent-ink); text-decoration: none; font-weight: 500; }
+.oc-linkbtn:hover { background: var(--optima-accent); color: var(--optima-accent-ink); }
 
 .oc-form { width: 100%; display: flex; flex-direction: column; gap: 6px; padding: 14px; background: var(--oc-surface); border: 1px solid var(--oc-line); border-radius: 16px; }
 .oc-form label { font-family: var(--oc-mono); font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--oc-text-3); margin-top: 4px; }
 .oc-form input { height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--oc-line); background: var(--oc-bg); color: var(--oc-text); }
 .oc-form input:focus { border-color: var(--oc-accent); outline: none; }
 .oc-hp { position: absolute !important; left: -9999px !important; width: 1px !important; height: 1px !important; }
-.oc-err { margin: 2px 0 0; min-height: 0; color: #E23B2E; font-size: 13.5px; }
+.oc-err { margin: 2px 0 0; min-height: 0; color: var(--optima-negative); font-size: 13.5px; }
 .oc-err:empty { display: none; }
-.oc-submit { margin-top: 8px; min-height: 44px; border-radius: 980px; border: 0; background: var(--oc-accent); color: #fff; font-weight: 500; cursor: pointer; }
+.oc-submit { margin-top: 8px; min-height: 44px; border-radius: 980px; border: 0; background: var(--oc-accent); color: var(--optima-accent-ink); font-weight: 500; cursor: pointer; }
 .oc-submit:disabled { opacity: .6; cursor: default; }
 
 .oc-done { width: 100%; display: flex; gap: 12px; padding: 14px; border-radius: 16px; background: var(--oc-surface); border: 1px solid var(--oc-accent); box-shadow: 0 12px 32px -14px rgba(18,114,196,.55); }
-.oc-check { width: 28px; height: 28px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--oc-accent); color: #fff; }
+.oc-check { width: 28px; height: 28px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--oc-accent); color: var(--optima-accent-ink); }
 .oc-done div { display: flex; flex-direction: column; gap: 2px; }
 .oc-done span:not(.oc-check) { color: var(--oc-text-2); font-size: 14px; text-wrap: pretty; }
 
@@ -107,7 +107,7 @@
 .oc-composer { display: flex; align-items: center; gap: 6px; margin: 0 12px; padding: 4px 4px 4px 16px; border-radius: 980px; background: var(--oc-surface-2); border: 1px solid var(--oc-line); }
 .oc-composer:focus-within { border-color: var(--oc-accent); }
 .oc-composer input { flex: 1; min-width: 0; height: 40px; border: 0; background: none; color: var(--oc-text); outline: none; font-size: 16px; }
-.oc-send { width: 40px; height: 40px; flex: none; border-radius: 50%; border: 0; background: var(--oc-accent); color: #fff; display: grid; place-items: center; cursor: pointer; }
+.oc-send { width: 40px; height: 40px; flex: none; border-radius: 50%; border: 0; background: var(--oc-accent); color: var(--optima-accent-ink); display: grid; place-items: center; cursor: pointer; }
 .oc-foot { margin: 8px 16px 12px; text-align: center; font-size: 12px; color: var(--oc-text-3); text-wrap: balance; }
 
 @media (max-width: 480px) {

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.9.5 (2026-11-04)
+
+- Optima layer revision 5: the plugin-first foundation (`docs/plugin-first.md`).
+- **`optima_owns( $job )`.** Tells a theme whether a plugin owns a job (SEO, schema, content sync, AI search, redirects, accessibility, team, cards, call bar, results, hours, reviews, analytics, spam guard, chat). Themes run their own version only when it returns false. Filter: `optima_owns`.
+- **`optima_slot( $name )`.** The fixed spots a theme offers for plugin blocks (header, after-hero, before-close, footer, footer-contact, body-end), so a feature lands in the same place on every site. Plugins attach with `add_action( 'optima_slot_<name>', ... )`.
+- **Design from the theme.** Optima Build reads the `optima-design` block in the theme's `DESIGN.md` (cached until the file changes) and prints it once as `--optima-*` CSS variables on the site and in the dashboard. Without the file, the Optima design system values apply. New screen: Optima Build → Design shows the colors, fonts and corners every feature uses.
+- **One menu, the same on every site.** Optima Build tidies the Optima menu last: one fixed order (Features, Business info, the features with settings, then Design, Updates, Site health, Request a change) and plain names ("Team", "Chat", "Case results", "Site check" instead of "... settings"). No plugin changes needed.
+- **Updates: every update tool on one screen.** New Optima Build → Updates holds Check for new versions, the theme (version and its read-only key), Fill from theme again, and the way to apply approved copy (Optima Core's Site Sync, or the theme's Content updates screen when Core is off). Site Sync and Content updates leave the sidebar but keep their addresses. The Features screen keeps the plan and a link to Updates.
+- **The theme's setup file fills the call buttons.** A `contact` section in `optima-setup.json` (phone, text, book_url, label, title, subtitle, text_note, book_note) fills Optima Call buttons where a value is blank or still the default.
+
 ## 0.7.9.4 (2026-10-31)
 
 - Optima release of upstream 0.7.9.
