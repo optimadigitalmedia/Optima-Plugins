@@ -303,6 +303,10 @@ When a theme hands its SEO head and JSON-LD to Optima Core (jobs `seo` and `sche
 
 ## 5. Order (each step on staging, head-and-schema diff before and after)
 
+**Every release from Nov 4, 2026:** everything lands on staging first, on every site, and the agency's own site (Optima Digital) is the first place each release is checked. Client sites follow once it looks right there. Live sites get changes only at their go-live. (Plugins update themselves on every site at once, so "first" means first reviewed, not first installed.)
+
+The original conversion order, kept for the record:
+
 1. Optima Build: `optima_owns()`, `optima_slot()`, the `DESIGN.md` reader, the uniform menu and `tools/uniform-check.sh`. Nothing changes on any site yet.
 2. **The client site with the most features on goes first**, so it tests the most.
 3. The other client sites, one at a time.
