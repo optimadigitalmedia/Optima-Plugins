@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.9.9 (2026-11-04)
+
+- Optima admin footer: no personal email address. It reads "Built and looked after by Optima Digital" with a Request a change link (shared admin kit 1.5.1.5).
+- Business info sits under Business in the Optima menu, next to Call buttons, Hours and Team (it was under Search).
+
 ## 0.7.9.8 (2026-11-04)
 
 - **The `seo` section is no longer autoloaded.** A big site's section runs to hundreds of KB; Core reads it only on the front end.
