@@ -1,7 +1,7 @@
 <?php
 /**
- * Optima Build uninstall: settings and caches only. Change requests are the
- * client's own record, so they stay.
+ * Optima Build uninstall: settings and caches only. Change requests and the
+ * Site log are the client's own record, so they stay.
  *
  * @package Optima_Build
  */
@@ -16,6 +16,8 @@ delete_option( 'optima_hub_log' );
 delete_option( 'optima_hub_answer_seen' );
 delete_option( 'optima_hub_page' );
 delete_option( 'optima_hub_hidden_alert_sent' );
+delete_option( 'optima_hub_log_imported' );
+delete_option( 'optima_hub_log_keys' );
 wp_clear_scheduled_hook( 'optima_hub_daily_watch' );
 delete_transient( 'optima_hub_catalog' );
 delete_transient( 'optima_hub_releases' );

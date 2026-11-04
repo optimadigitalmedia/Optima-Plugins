@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name:       Optima Members
- * Description:       A membership the owner runs from the dashboard: people apply on the site, the owner approves each one, and members sign in to see members-only pages and events, and post invitations to each other. Works alongside Optima Events, which marks events as members only. Card billing for dues is planned for a later version.
- * Version:           0.3.3.7
+ * Description:       A membership the owner runs from the dashboard: people apply on the site, the owner approves each one, and members sign in to see members-only pages and events, and post invitations to each other. Works alongside Optima Events, which marks events as members only. With WooCommerce, members pay their dues and renew through the site's own checkout.
+ * Version:           0.4.3.8
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Author:            Optima Digital
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OPTIMA_MEMBERS_VERSION', '0.3.3.7' );
+define( 'OPTIMA_MEMBERS_VERSION', '0.4.3.8' );
 define( 'OPTIMA_MEMBERS_FILE', __FILE__ );
 define( 'OPTIMA_MEMBERS_URL', plugin_dir_url( __FILE__ ) );
 
@@ -39,13 +39,18 @@ require_once __DIR__ . '/includes/class-optima-members-front.php';
 require_once __DIR__ . '/includes/class-optima-members-admin.php';
 require_once __DIR__ . '/includes/class-optima-members-events.php';
 require_once __DIR__ . '/includes/class-optima-members-invitations.php';
+require_once __DIR__ . '/includes/class-optima-members-renewals.php';
+require_once __DIR__ . '/includes/class-optima-members-woo.php';
 
 Optima_Members::boot();
 Optima_Members_Front::boot();
 Optima_Members_Admin::boot();
 Optima_Members_Invitations::boot();
-// Members-only events need Optima Events, which may load after this plugin.
+Optima_Members_Renewals::boot();
+// Members-only events need Optima Events, and dues need WooCommerce; both may load after this plugin.
 add_action( 'plugins_loaded', array( 'Optima_Members_Events', 'boot' ), 20 );
+add_action( 'plugins_loaded', array( 'Optima_Members_Woo', 'boot' ), 20 );
+add_action( 'before_woocommerce_init', array( 'Optima_Members_Woo', 'declare_compatibility' ) );
 
 register_activation_hook(
 	__FILE__,
@@ -53,3 +58,4 @@ register_activation_hook(
 		Optima_Members::role();
 	}
 );
+register_deactivation_hook( __FILE__, array( 'Optima_Members_Renewals', 'unschedule' ) );

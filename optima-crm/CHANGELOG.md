@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2.8 (2026-11-04)
+
+- Optima release of upstream 0.1.2.
+- The update check, the release feed and the plugin details now use `optimadigitalmedia/Optima-Plugins`. GitHub still forwards the old address, which is how this release reached the site.
+- Optima layer revision 8: upstream b2d477b: release rings, Site log and Your site, seven-item menu, Site Sync creates pages; Booking, Newsletter and Writing not carried yet.
+
 ## 0.1.1.4 (2026-10-31)
 
 - Optima release of upstream 0.1.1.

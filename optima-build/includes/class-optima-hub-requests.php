@@ -69,8 +69,8 @@ final class Optima_Hub_Requests {
 
 	/**
 	 * A Optima menu in the toolbar: the arrow and "Optima" (or "Site Build" on
-	 * unbranded sites), opening Overview, with Build (operators only), Site
-	 * health and Request a change under it.
+	 * unbranded sites), opening Features, with Site health and Request a
+	 * change under it.
 	 */
 	public static function admin_bar( WP_Admin_Bar $bar ): void {
 		if ( ! current_user_can( Optima_Hub_Lock::VIEW ) ) {
@@ -84,27 +84,17 @@ final class Optima_Hub_Requests {
 			array(
 				'id'    => 'optima-hub',
 				'title' => $title,
-				'href'  => Optima_Hub_Overview::url(),
+				'href'  => Optima_Hub_Admin::url( 'features' ),
 			)
 		);
 		$bar->add_node(
 			array(
 				'parent' => 'optima-hub',
-				'id'     => 'optima-hub-overview',
-				'title'  => __( 'Overview', 'optima-build' ),
-				'href'   => Optima_Hub_Overview::url(),
+				'id'     => 'optima-hub-features',
+				'title'  => __( 'Features', 'optima-build' ),
+				'href'   => Optima_Hub_Admin::url( 'features' ),
 			)
 		);
-		if ( Optima_Hub_Access::is_operator() ) {
-			$bar->add_node(
-				array(
-					'parent' => 'optima-hub',
-					'id'     => 'optima-hub-features',
-					'title'  => __( 'Build', 'optima-build' ),
-					'href'   => Optima_Hub_Admin::url( 'updates' ),
-				)
-			);
-		}
 		$bar->add_node(
 			array(
 				'parent' => 'optima-hub',
@@ -162,7 +152,17 @@ final class Optima_Hub_Requests {
 			$id     = (int) ( $_POST['request'] ?? 0 );
 			$status = sanitize_key( wp_unslash( (string) ( $_POST['status'] ?? '' ) ) );
 			if ( self::TYPE === get_post_type( $id ) && isset( self::STATUSES[ $status ] ) ) {
+				$was = (string) get_post_meta( $id, self::META_STATUS, true );
 				update_post_meta( $id, self::META_STATUS, $status );
+				if ( $was !== $status ) {
+					/**
+					 * A request moved to another status. The Site log listens.
+					 *
+					 * @param int    $id     Request post ID.
+					 * @param string $status received | progress | done.
+					 */
+					do_action( 'optima_hub_request_status', $id, $status );
+				}
 			}
 			self::back( __( 'Status updated.', 'optima-build' ) );
 		}
@@ -177,22 +177,10 @@ final class Optima_Hub_Requests {
 
 		$user  = wp_get_current_user();
 		$title = wp_trim_words( $what, 10, '…' );
-		$id    = wp_insert_post(
-			array(
-				'post_type'    => self::TYPE,
-				'post_status'  => 'private',
-				'post_title'   => $title,
-				'post_content' => $what,
-				'post_author'  => $user->ID,
-			),
-			true
-		);
-		if ( is_wp_error( $id ) ) {
+		$id    = self::create( $what, $page, $when, $user->ID, $user->display_name );
+		if ( ! $id ) {
 			self::back( __( 'The request could not be saved. Please email us instead.', 'optima-build' ), 'error' );
 		}
-		update_post_meta( $id, self::META_PAGE, $page );
-		update_post_meta( $id, self::META_WHEN, $when );
-		update_post_meta( $id, self::META_STATUS, 'received' );
 
 		$attachments = array();
 		if ( ! empty( $_FILES['file']['name'] ) && current_user_can( 'upload_files' ) ) {
@@ -227,20 +215,58 @@ final class Optima_Hub_Requests {
 			array( 'Reply-To: ' . $user->display_name . ' <' . $user->user_email . '>' ),
 			$attachments
 		);
-		if ( self::from_overview() ) {
-			self::back( __( 'Sent. We will reply by email, and you can follow it under With Optima.', 'optima-build' ) );
-		}
 		self::back( __( 'Sent. We will reply by email, and you can follow it in the list below.', 'optima-build' ) );
 	}
 
-	/** The request box on Overview asks to come back there. */
-	private static function from_overview(): bool {
-		return 'overview' === sanitize_key( wp_unslash( (string) ( $_POST['back'] ?? '' ) ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- checked in handle().
+	/**
+	 * Save a request and tell the log. Used by the form above and by Optima
+	 * Chat when a visitor asks for a change there, so one list holds every
+	 * request however it came in. Sends no email: each caller does its own.
+	 *
+	 * @param string $what   The request, in the person's words.
+	 * @param string $page   The page it is about, or ''.
+	 * @param string $when   A key of WHEN.
+	 * @param int    $author WordPress user ID, or 0 for a visitor.
+	 * @param string $by     The person's name, for the log line.
+	 * @return int The request post ID, or 0 when it could not be saved.
+	 */
+	public static function create( string $what, string $page = '', string $when = 'whenever', int $author = 0, string $by = '' ): int {
+		$what = trim( $what );
+		if ( '' === $what ) {
+			return 0;
+		}
+		$when  = isset( self::WHEN[ $when ] ) ? $when : 'whenever';
+		$title = wp_trim_words( $what, 10, '…' );
+		$id    = wp_insert_post(
+			array(
+				'post_type'    => self::TYPE,
+				'post_status'  => 'private',
+				'post_title'   => $title,
+				'post_content' => $what,
+				'post_author'  => $author,
+			),
+			true
+		);
+		if ( is_wp_error( $id ) || ! $id ) {
+			return 0;
+		}
+		update_post_meta( $id, self::META_PAGE, esc_url_raw( $page ) );
+		update_post_meta( $id, self::META_WHEN, $when );
+		update_post_meta( $id, self::META_STATUS, 'received' );
+		/**
+		 * A change request came in. The Site log listens.
+		 *
+		 * @param int    $id    Request post ID.
+		 * @param string $title Short title.
+		 * @param string $by    Who asked.
+		 */
+		do_action( 'optima_hub_request_opened', (int) $id, $title, $by );
+		return (int) $id;
 	}
 
 	private static function back( string $message, string $type = 'success' ): void {
 		set_transient( 'optima_hub_notice_' . get_current_user_id(), array( 'message' => $message, 'type' => $type ), MINUTE_IN_SECONDS );
-		wp_safe_redirect( self::from_overview() ? Optima_Hub_Overview::url() : Optima_Hub_Admin::url( 'requests' ) );
+		wp_safe_redirect( Optima_Hub_Admin::url( 'requests' ) );
 		exit;
 	}
 }

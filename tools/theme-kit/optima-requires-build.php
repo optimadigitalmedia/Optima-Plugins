@@ -109,3 +109,14 @@ if ( ! class_exists( 'Optima_Theme_Requires_Build' ) ) {
 
 	Optima_Theme_Requires_Build::boot();
 }
+
+/**
+ * Stand-in for Optima Core's optima_core_owns() (Site Standard rule 6), so a theme
+ * can write `if ( ! optima_core_owns( 'hours' ) )` around a fallback and never
+ * fatal while Optima Core is off. With no plugin loaded, nothing owns the job.
+ */
+if ( ! function_exists( 'optima_core_owns' ) ) {
+	function optima_core_owns( string $job ): bool {
+		return false;
+	}
+}

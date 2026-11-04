@@ -101,6 +101,7 @@ final class Optima_Hub_Setup {
 			update_option( self::DONE, $done, false );
 		}
 		$changed = false;
+		$filled  = array();
 		foreach ( $jobs as $section => $job ) {
 			if ( empty( $data[ $section ] ) || ! is_array( $data[ $section ] ) ) {
 				continue;
@@ -114,10 +115,17 @@ final class Optima_Hub_Setup {
 			if ( call_user_func( $job, $data[ $section ] ) ) {
 				$done[ $section ] = $hash;
 				$changed          = true;
+				$filled[]         = $section;
 			}
 		}
 		if ( $changed ) {
 			update_option( self::DONE, $done, false );
+			/**
+			 * The setup file filled something in. The Site log listens.
+			 *
+			 * @param string[] $filled The sections that ran: team, reviews, chat, hours, analytics, cards.
+			 */
+			do_action( 'optima_hub_setup_done', $filled );
 		}
 	}
 

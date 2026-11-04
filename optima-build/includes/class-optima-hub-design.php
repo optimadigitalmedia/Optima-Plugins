@@ -156,11 +156,11 @@ final class Optima_Hub_Design {
 	}
 
 	public static function menu(): void {
-		add_submenu_page( Optima_Hub_Admin::parent(), __( 'Design', 'optima-build' ), __( 'Design', 'optima-build' ), 'edit_posts', self::PAGE, array( __CLASS__, 'render' ) );
+		add_submenu_page( Optima_Hub_Admin::parent(), __( 'Design', 'optima-build' ), __( 'Design', 'optima-build' ), Optima_Hub_Lock::VIEW, self::PAGE, array( __CLASS__, 'render' ) );
 	}
 
 	public static function render(): void {
-		if ( ! current_user_can( 'edit_posts' ) ) {
+		if ( ! current_user_can( Optima_Hub_Lock::VIEW ) ) {
 			return;
 		}
 		$path   = self::file();

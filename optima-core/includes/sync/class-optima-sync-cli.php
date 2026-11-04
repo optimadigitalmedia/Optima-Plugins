@@ -63,7 +63,7 @@ final class Optima_Sync_CLI {
 		$ready = array_filter(
 			$plan['rows'],
 			static function ( $r ) {
-				return Optima_Sync::UPDATE === $r['state'];
+				return in_array( $r['state'], array( Optima_Sync::UPDATE, Optima_Sync::CREATE ), true );
 			}
 		);
 		foreach ( $ready as $row ) {

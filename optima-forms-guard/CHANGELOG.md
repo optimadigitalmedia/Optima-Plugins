@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.4.8 (2026-11-04)
+
+- Optima release of upstream 0.3.4.
+- The update check, the release feed and the plugin details now use `optimadigitalmedia/Optima-Plugins`. GitHub still forwards the old address, which is how this release reached the site.
+- **Website fields take "www.example.com".** Gravity Forms refused any address without https:// ("Please enter a valid Website URL"), which real visitors never type. Forms Guard now adds https:// before Gravity Forms checks the field, so www.example.com and example.com both go through.
+- **Fix: a visitor's own website no longer marks the entry as spam.** 0.3.2's link check read every field, so a law firm that filled in the "Current website" field would have landed in Spam. Website fields are now left out of that check; links typed in the message still count.
+- Optima layer revision 8: upstream b2d477b: release rings, Site log and Your site, seven-item menu, Site Sync creates pages; Booking, Newsletter and Writing not carried yet.
+
 ## 0.3.2.4 (2026-10-31)
 
 - Optima release of upstream 0.3.2.
