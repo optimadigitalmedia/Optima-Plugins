@@ -21,8 +21,14 @@
  *                "footer", "note", "team_intro", "links_intro", "photo", "spot_heading", "spot_text",
  *                "pick_heading", "spot_label", "spot_sub", "spot_url", "logo", "share_card", "share_links",
  *                "people": [ { "name", "slug", "title", "email", "intro", "pick", "tags", "photo", "share" } ],
- *                "links": [ { "label", "sub", "url" } ] }
+ *                "links": [ { "label", "sub", "url" } ] },
+ *   "seo":     { "site": {...}, "pages": { "/": {...} }, "schema": {...} }
  * }
+ * The "seo" section is the theme's SEO head and JSON-LD as data, for Optima Core
+ * (docs/plugin-first.md, section 3a). Unlike the other sections it is a mirror:
+ * it is copied whole into the option Optima Core reads, every time the theme
+ * file or the theme version changes, and on "Fill from theme again". Editors'
+ * own SEO box values live elsewhere and are never touched.
  * "photo" values are a path inside the theme (assets/img/team-member.webp) or a full https:// address.
  *
  * @package Optima_Build
@@ -37,6 +43,7 @@ final class Optima_Hub_Setup {
 	const FILE  = 'optima-setup.json';
 	const DONE  = 'optima_hub_setup_done';  // section => hash of what was applied.
 	const MEDIA = 'optima_hub_setup_media'; // theme path => attachment ID.
+	const SEO_OPTION = 'optima_core_seo_setup'; // the seo section, as Optima Core reads it (Optima_SEO_Setup::OPTION).
 
 	public static function boot(): void {
 		add_action( 'admin_init', array( __CLASS__, 'run' ), 30 );
@@ -85,14 +92,21 @@ final class Optima_Hub_Setup {
 			'analytics' => array( __CLASS__, 'analytics' ),
 			'cards'   => array( __CLASS__, 'cards' ),
 			'contact' => array( __CLASS__, 'contact' ),
+			'seo'     => array( __CLASS__, 'seo' ),
 		);
+		// The theme dropped its seo section: Optima Core goes back to its own defaults.
+		if ( empty( $data['seo'] ) && isset( $done['seo'] ) ) {
+			delete_option( self::SEO_OPTION );
+			unset( $done['seo'] );
+			update_option( self::DONE, $done, false );
+		}
 		$changed = false;
 		foreach ( $jobs as $section => $job ) {
 			if ( empty( $data[ $section ] ) || ! is_array( $data[ $section ] ) ) {
 				continue;
 			}
 			// The reviews section reruns once after 0.4.4, when untouched defaults started counting as blank.
-			$hash = md5( (string) wp_json_encode( $data[ $section ] ) . ( 'reviews' === $section ? '|defaults-blank' : '' ) );
+			$hash = md5( (string) wp_json_encode( $data[ $section ] ) . ( 'reviews' === $section ? '|defaults-blank' : '' ) . ( 'seo' === $section ? '|' . self::theme_version() : '' ) );
 			if ( ( $done[ $section ] ?? '' ) === $hash ) {
 				continue;
 			}
@@ -384,6 +398,157 @@ final class Optima_Hub_Setup {
 		return true;
 	}
 
+	/**
+	 * The SEO head and JSON-LD facts, for Optima Core. Stored whole (cleaned),
+	 * replacing the last copy: this is the theme's data, not anything an editor
+	 * typed. Per-page SEO box values are post meta and stay as they are.
+	 */
+	private static function seo( array $in ): bool {
+		if ( ! class_exists( 'Optima_SEO_Head' ) ) {
+			return false;
+		}
+		$out = array();
+		if ( isset( $in['site'] ) && is_array( $in['site'] ) ) {
+			$out['site'] = self::seo_fields( $in['site'] );
+		}
+		if ( isset( $in['pages'] ) && is_array( $in['pages'] ) ) {
+			$out['pages'] = array();
+			foreach ( $in['pages'] as $path => $page ) {
+				if ( ! is_array( $page ) ) {
+					continue;
+				}
+				$key = self::seo_path( (string) $path );
+				if ( '' !== $key ) {
+					$out['pages'][ $key ] = self::seo_fields( $page );
+				}
+			}
+		}
+		if ( isset( $in['schema'] ) && is_array( $in['schema'] ) ) {
+			$out['schema'] = self::clean_tree( $in['schema'] );
+		}
+		$out['theme'] = array(
+			'stylesheet' => get_stylesheet(),
+			'version'    => self::theme_version(),
+			'filled'     => gmdate( 'c' ),
+		);
+		// Large (every page's JSON-LD), and read only on the front end: never autoloaded.
+		update_option( self::SEO_OPTION, $out, false );
+		if ( function_exists( 'wp_set_option_autoload' ) ) {
+			wp_set_option_autoload( self::SEO_OPTION, false );
+		}
+		if ( class_exists( 'Optima_SEO_Setup' ) ) {
+			Optima_SEO_Setup::flush();
+		}
+		return true;
+	}
+
+	/** One site or page entry: known keys only, each cleaned for what it holds. */
+	private static function seo_fields( array $in ): array {
+		$text = array( 'title', 'title_format', 'site_name', 'og_title', 'og_type', 'og_type_post', 'twitter', 'robots', 'locale', 'image_alt' );
+		$long = array( 'description', 'default_description', 'og_description' );
+		$addr = array( 'canonical', 'og_url', 'image', 'default_image', 'production_url' );
+		$out  = array();
+		foreach ( $in as $key => $value ) {
+			$key = (string) $key;
+			// false means "none" (no canonical, no og:url, no description): kept as false.
+			if ( false === $value && ( in_array( $key, $addr, true ) || in_array( $key, $long, true ) ) ) {
+				$out[ $key ] = false;
+			} elseif ( 'robots_exact' === $key ) {
+				$out[ $key ] = (bool) $value;
+			} elseif ( 'print' === $key && is_array( $value ) ) {
+				$out['print'] = array();
+				foreach ( $value as $tag => $on ) {
+					$tag = sanitize_key( (string) $tag );
+					if ( '' !== $tag && ( is_bool( $on ) || is_string( $on ) ) ) {
+						$out['print'][ $tag ] = is_bool( $on ) ? $on : sanitize_key( $on );
+					}
+				}
+			} elseif ( 'schema_blocks' === $key && is_array( $value ) ) {
+				$out['schema_blocks'] = array_values( array_map( 'absint', array_filter( $value, 'is_numeric' ) ) );
+			} elseif ( in_array( $key, $text, true ) && is_scalar( $value ) ) {
+				// Titles keep their spaces exactly as the theme printed them (" | Example Firm" on an archive,
+				// a doubled space inside); tags and line breaks still go.
+				$out[ $key ] = in_array( $key, array( 'title', 'og_title' ), true )
+					? (string) preg_replace( '/[\r\n\t]+/', ' ', strip_tags( (string) preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', wp_check_invalid_utf8( (string) $value ) ) ) ) // phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags -- wp_strip_all_tags() would trim the spaces we keep.
+					: sanitize_text_field( (string) $value );
+			} elseif ( in_array( $key, $long, true ) && is_scalar( $value ) ) {
+				$out[ $key ] = sanitize_textarea_field( (string) $value );
+			} elseif ( in_array( $key, $addr, true ) && is_scalar( $value ) ) {
+				$out[ $key ] = self::seo_address( (string) $value );
+			} elseif ( in_array( $key, array( 'image_width', 'image_height' ), true ) && is_numeric( $value ) ) {
+				$out[ $key ] = absint( $value );
+			} elseif ( 'meta' === $key && is_array( $value ) ) {
+				$out['meta'] = array();
+				foreach ( $value as $tag ) {
+					if ( ! is_array( $tag ) || ! isset( $tag['content'] ) || ! is_scalar( $tag['content'] ) ) {
+						continue;
+					}
+					$attr = isset( $tag['property'] ) ? 'property' : 'name';
+					$name = preg_replace( '/[^A-Za-z0-9:_\-.]/', '', (string) ( $tag[ $attr ] ?? '' ) );
+					if ( '' !== $name ) {
+						$out['meta'][] = array(
+							$attr     => $name,
+							'content' => sanitize_text_field( (string) $tag['content'] ),
+						);
+					}
+				}
+			} elseif ( 'schema' === $key && is_array( $value ) ) {
+				$out['schema'] = array_values( array_filter( self::clean_tree( $value ), 'is_array' ) );
+			}
+		}
+		return $out;
+	}
+
+	/** A page key: "/about/" style, a prefix pattern ending in "*" ("/blog/*"), or a special key (":search"). */
+	private static function seo_path( string $path ): string {
+		$path = trim( $path );
+		// Requests without a path of their own (search, 404, posts page, archives) keep their special key.
+		if ( in_array( $path, array( ':search', ':404', ':posts', ':category', ':tag', ':date', ':author', ':archive' ), true ) ) {
+			return $path;
+		}
+		if ( '' === $path || preg_match( '#^[a-z]+://#i', $path ) ) {
+			$path = (string) wp_parse_url( $path, PHP_URL_PATH );
+		}
+		$path = '/' . ltrim( preg_replace( '#[^A-Za-z0-9/_\-.~%*]#', '', $path ), '/' );
+		if ( '*' === substr( $path, -1 ) ) {
+			return $path;
+		}
+		return '/' === $path ? '/' : trailingslashit( $path );
+	}
+
+	/** A full https address, a site path ("/about/"), or a theme path ("assets/og/home.png"). */
+	private static function seo_address( string $value ): string {
+		$value = trim( $value );
+		if ( preg_match( '#^https?://#i', $value ) ) {
+			return esc_url_raw( $value );
+		}
+		return str_replace( array( '..', '\\' ), '', sanitize_text_field( $value ) );
+	}
+
+	/** JSON-LD as plain data: keys and strings stripped of tags, numbers and true/false kept. */
+	private static function clean_tree( array $in ): array {
+		$out = array();
+		foreach ( $in as $key => $value ) {
+			$key = is_int( $key ) ? $key : preg_replace( '/[^A-Za-z0-9@_\-:]/', '', (string) $key );
+			if ( '' === $key ) {
+				continue;
+			}
+			if ( is_array( $value ) ) {
+				$out[ $key ] = self::clean_tree( $value );
+			} elseif ( is_bool( $value ) || is_int( $value ) || is_float( $value ) ) {
+				$out[ $key ] = $value;
+			} elseif ( is_string( $value ) ) {
+				$out[ $key ] = sanitize_textarea_field( $value );
+			}
+		}
+		return $out;
+	}
+
+	/** The active theme's version (child theme first). */
+	private static function theme_version(): string {
+		return (string) wp_get_theme()->get( 'Version' );
+	}
+
 	/* ---------- helpers ---------- */
 
 	/** Set keys that are missing or blank in an option; leave everything else. */
@@ -392,9 +557,10 @@ final class Optima_Hub_Setup {
 	 * (from $defaults) also counts as blank, since nobody chose it.
 	 */
 	private static function fill_option( string $option, array $fill, array $defaults = array() ): void {
-		$saved = get_option( $option, array() );
-		$saved = is_array( $saved ) ? $saved : array();
-		$dirty = false;
+		$saved = get_option( $option, null );
+		// A new option starts from the plugin's defaults (enabled included); a saved one is never re-enabled.
+		$dirty = null === $saved && $defaults;
+		$saved = is_array( $saved ) ? $saved : ( null === $saved ? $defaults : array() );
 		foreach ( $fill as $key => $value ) {
 			$current = isset( $saved[ $key ] ) ? (string) $saved[ $key ] : '';
 			$default = isset( $defaults[ $key ] ) && is_scalar( $defaults[ $key ] ) ? (string) $defaults[ $key ] : null;

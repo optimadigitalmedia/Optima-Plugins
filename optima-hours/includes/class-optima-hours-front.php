@@ -16,6 +16,13 @@
  * Until the hours are confirmed nothing renders for visitors. People who can
  * edit the site see a short note in its place.
  *
+ * Footer: when the hours are confirmed and at least one day is open, the
+ * hours fill the theme's `footer-contact` slot (beside the address) as one
+ * line, "Monday to Friday, 9 a.m. to 5 p.m." Only then is the slot hooked, so
+ * optima_slot_has( 'footer-contact' ) is true exactly when there is something
+ * to show. Filter `optima_hours_footer_show` picks 'summary' (default),
+ * 'table', 'status' or 'both'; return '' to keep the hours out of the footer.
+ *
  * @package Optima_Hours
  */
 
@@ -36,6 +43,43 @@ final class Optima_Hours_Front {
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'register' ) );
 		add_action( 'wp_body_open', array( __CLASS__, 'bar_top' ), 5 );
 		add_action( 'wp_footer', array( __CLASS__, 'bar_fallback' ), 5 );
+		add_action( 'wp', array( __CLASS__, 'hook_footer_slot' ) );
+	}
+
+	/**
+	 * Attach the hours to the footer-contact slot, only when visitors may see
+	 * them and there is at least one open day.
+	 */
+	public static function hook_footer_slot(): void {
+		if ( is_admin() || ! Optima_Hours::is_public() || ! Optima_Hours::has_hours() ) {
+			return;
+		}
+		if ( '' === self::footer_show() ) {
+			return;
+		}
+		add_action( 'optima_slot_footer-contact', array( __CLASS__, 'footer_contact' ) );
+	}
+
+	/** What the footer shows: 'summary', 'table', 'status', 'both', or '' for nothing. */
+	private static function footer_show(): string {
+		$show = (string) apply_filters( 'optima_hours_footer_show', 'summary' );
+		return in_array( $show, array( 'summary', 'table', 'status', 'both' ), true ) ? $show : '';
+	}
+
+	/** Prints the hours in the footer-contact slot. */
+	public static function footer_contact(): void {
+		$show = self::footer_show();
+		if ( 'summary' !== $show ) {
+			echo self::html( array( 'show' => $show ) ); // phpcs:ignore WordPress.Security.EscapeOutput -- built from escaped parts.
+			return;
+		}
+		$summary = Optima_Hours::summary();
+		if ( '' === $summary ) {
+			return;
+		}
+		wp_enqueue_style( 'optima-hours' );
+		echo '<p class="optima-hours-summary"><span class="optima-hours-summary-label">' . esc_html__( 'Hours', 'optima-hours' ) . '</span> '
+			. '<span class="optima-hours-summary-text">' . esc_html( $summary ) . '</span></p>';
 	}
 
 	public static function register(): void {

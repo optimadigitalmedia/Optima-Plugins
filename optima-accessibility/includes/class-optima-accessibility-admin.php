@@ -347,7 +347,6 @@ final class Optima_Accessibility_Admin {
 		<?php /* ------------------------------------------------ Weekly */ ?>
 		<div class="sh-section-head sa-head" id="sa-weekly">
 			<div>
-				<p class="sh-eyebrow"><?php esc_html_e( 'Weekly', 'optima-accessibility' ); ?></p>
 				<h2><?php esc_html_e( 'Weekly checks', 'optima-accessibility' ); ?></h2>
 				<p class="sh-note">
 					<?php

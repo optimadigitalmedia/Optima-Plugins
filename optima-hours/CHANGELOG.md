@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.8.6 (2026-11-04)
+
+- Optima layer revision 6: **hours fill the footer beside the address.** When the hours are confirmed and at least one day is open, they print in the theme's `footer-contact` slot as one line ("Monday to Friday, 9 a.m. to 5 p.m."), so `optima_slot_has( 'footer-contact' )` is true only when there is something to show. Filter `optima_hours_footer_show` picks `summary` (default), `table`, `status` or `both`, or `''` for none; `optima_hours_summary` changes the words. Styles use the theme's type and `--optima-*` variables only.
+
 ## 0.1.8.5 (2026-11-04)
 
 - Optima layer revision 5: visitor-facing styles now use the `--optima-*` design variables Optima Build 0.7.9.5 prints from the theme's DESIGN.md, so this feature dresses in each site's brand (plugin-first rule 7). Same look on sites without DESIGN.md.

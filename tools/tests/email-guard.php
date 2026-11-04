@@ -9,6 +9,8 @@ function get_option( $k, $d = false ) { return array_key_exists( $k, $GLOBALS['t
 function wp_parse_args( $a, $d ) { return array_merge( $d, (array) $a ); }
 function apply_filters( $tag, $value ) { return $value; }
 function add_filter( $tag, $cb, $p = 10 ) { $GLOBALS['t_filters'][ $tag ] = $cb; }
+function add_action( $tag, $cb, $p = 10 ) { $GLOBALS['t_actions'][ $tag ][] = $cb; }
+function remove_filter( $tag, $cb, $p = 10 ) { unset( $GLOBALS['t_filters'][ $tag ] ); }
 function is_admin() { return false; }
 require dirname( __DIR__, 2 ) . '/optima-core/includes/protection.php';
 

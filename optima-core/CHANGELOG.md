@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.6.0.7 (2026-11-04)
+
+- Optima layer revision 7: **a theme's head can move to Core with no change in what search engines see.** New keys in the `seo` section of `optima-setup.json` (docs/plugin-first.md, section 3a), each optional; a site without the section prints what it printed before:
+  - `site.production_url`: off the live host, robots gets `noindex, nofollow` and addresses written with the live origin move to the current host (JSON-LD, canonical, `og:url`, images). `site.robots_exact`: a noindex page drops `max-image-preview:large`.
+  - `site.print` switches for tags a theme never printed (`og:locale`, `twitter:title`/`description`/`image`, `article:*_time`, the WebSite SearchAction, and `og:image` sizes as `auto`, `given` or off). `site.og_type` and `site.og_type_post`. `default_description` named as `""` or `false` means no description, never the tagline.
+  - Special page keys `:search`, `:404`, `:posts`, `:category`, `:tag`, `:date`, `:author`, `:archive`. A search is no longer matched to the home page's entry.
+  - Per URL: `canonical: false` (none), `og_url`, `schema_blocks` (print the nodes as separate script blocks or `@graph` groups, as the theme did), and tokens in titles, descriptions, addresses and schema (`%site%`, `%tagline%`, `%query%`, `%url%`, `%link%`, `%title%`, `%published%`, `%modified%`, `%page%`). Titles keep their spaces as written.
+  - Schema: the organization's and website's own `@id` are kept and every reference follows them; a page node with the same `@id` as a site-wide one wins; a page that describes itself (WebPage, Article, `#page` ...) gets no extra WebPage or BlogPosting; `item` and `primaryImageOfPage` resolve like other addresses; a FAQPage follows the page's edited questions.
+  - `schema.mode: "pages"`: each URL prints exactly the nodes it lists, `schema.print` names the site-wide nodes to add, a bare `{ "@id": ... }` stands for a site-wide node in place, and `schema.fallback` covers pages without their own. Business info adds nothing in this mode.
+  - `schema.strip_inline_markers`: old injected JSON-LD blocks with those attributes are dropped from the head.
+- Closing comments no longer removes a post's comment-feed `alternate` link from the head; WordPress prints it as it did before Core.
+- Proved on three client sites against their theme baselines: every URL identical apart from author pages, which Optima Build closes to visitors.
+
+## 1.6.0.6 (2026-11-04)
+
+- Optima layer revision 6: **the theme's SEO facts drive the head.** When Optima Core prints the head (plugin first, jobs `seo` and `schema`), it now reads the `seo` section of the theme's `optima-setup.json`, which Optima Build 0.7.9.7 copies into the `optima_core_seo_setup` option. Per URL: title, meta description, canonical, robots, Open Graph title, description, type and image (with width, height and alt), Twitter card, extra meta tags and extra JSON-LD nodes; site-wide: a title format (`%page% | %site%`), default description and share image, site name, locale, robots and meta tags. Schema: the organization's type and fields are laid over the `#business` node, `sameAs` is merged, and Person and other nodes join the `@graph`. Theme paths (`assets/og/home.png`) resolve to the theme's address, `/about/` and `#id` to the site's. Order: the SEO box wins, then the theme's per-URL values, then Core's own fallbacks, then the theme's site defaults. Sites without the section print exactly what they printed before, plus `og:image:width`, `og:image:height` and `og:image:alt` for featured images. Spec: docs/plugin-first.md, section 3a.
+
 ## 1.6.0.5 (2026-11-04)
 
 - Optima layer revision 5: visitor-facing styles now use the `--optima-*` design variables Optima Build 0.7.9.5 prints from the theme's DESIGN.md, so this feature dresses in each site's brand (plugin-first rule 7). Same look on sites without DESIGN.md.

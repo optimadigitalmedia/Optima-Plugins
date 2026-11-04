@@ -301,6 +301,14 @@ final class Optima_Hub_Admin {
 				<p class="sh-note"><?php esc_html_e( 'Turn on Business info and SEO (Optima Core) to apply approved copy from the theme.', 'optima-build' ); ?></p>
 			<?php endif; ?>
 		</section>
+		<?php $setup = Optima_Hub_Menu::theme_setup_screen(); ?>
+		<?php if ( $setup ) : ?>
+		<section class="sh-card">
+			<h2><?php esc_html_e( 'Theme setup', 'optima-build' ); ?></h2>
+			<p class="sh-note"><?php esc_html_e( 'The theme\'s own one-time setup: pages, menus and starter content it needs.', 'optima-build' ); ?></p>
+			<p><a class="button" href="<?php echo esc_url( $setup['url'] ); ?>"><?php echo esc_html( $setup['label'] ); ?></a></p>
+		</section>
+		<?php endif; ?>
 		<?php
 	}
 

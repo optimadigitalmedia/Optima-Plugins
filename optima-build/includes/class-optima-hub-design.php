@@ -62,6 +62,14 @@ final class Optima_Hub_Design {
 		add_action( 'wp_head', array( __CLASS__, 'print_vars' ), 1 );
 		add_action( 'admin_head', array( __CLASS__, 'print_vars' ), 1 );
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ), 20 );
+		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
+	}
+
+	/** The shared Optima admin look on this screen, like every other Optima screen. */
+	public static function assets( string $hook ): void {
+		if ( false !== strpos( $hook, self::PAGE ) ) {
+			Optima_Admin_UI::enqueue( OPTIMA_HUB_URL . 'assets/optima-admin.css' );
+		}
 	}
 
 	/** The theme's DESIGN.md path (child theme first), or ''. */
@@ -162,25 +170,33 @@ final class Optima_Hub_Design {
 				? __( 'This theme has no DESIGN.md yet, so features use the Optima design system.', 'optima-build' )
 				: __( 'DESIGN.md has no optima-design block yet, so features use the Optima design system.', 'optima-build' ) );
 		$t = self::tokens();
-		echo '<div class="wrap"><h1>' . esc_html__( 'Design', 'optima-build' ) . '</h1>';
-		echo '<p>' . esc_html__( 'Every feature on this site dresses in these colors, fonts and corners.', 'optima-build' ) . ' ' . esc_html( $source ) . '</p>';
-		echo '<h2>' . esc_html__( 'Colors', 'optima-build' ) . '</h2><div style="display:flex;flex-wrap:wrap;gap:12px">';
+		Optima_Admin_UI::open( __( 'Design', 'optima-build' ), __( 'Every feature on this site dresses in these colors, fonts and corners.', 'optima-build' ) . ' ' . $source );
+
+		echo '<section class="sh-card"><h2>' . esc_html__( 'Colors', 'optima-build' ) . '</h2>';
+		echo '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px">';
 		foreach ( $t['color'] as $key => $value ) {
 			$color = sanitize_hex_color( (string) $value );
 			if ( ! $color ) {
 				continue;
 			}
-			echo '<div style="width:140px;border:1px solid var(--optima-line);border-radius:var(--optima-radius-md);overflow:hidden;background:var(--optima-surface)"><div style="height:56px;background:' . esc_attr( $color ) . '"></div><div style="padding:8px 10px;font-size:12px"><strong>' . esc_html( $key ) . '</strong><br><code>' . esc_html( $color ) . '</code></div></div>';
+			echo '<div style="min-width:0;border:1px solid var(--optima-line);border-radius:var(--optima-radius-md);overflow:hidden;background:var(--optima-surface)"><div style="height:48px;background:' . esc_attr( $color ) . '"></div><div style="padding:8px 10px;font-size:12px;line-height:1.5"><strong>' . esc_html( $key ) . '</strong><br><code style="padding:0;background:none">' . esc_html( $color ) . '</code></div></div>';
 		}
-		echo '</div><h2>' . esc_html__( 'Fonts', 'optima-build' ) . '</h2><ul>';
+		echo '</div></section>';
+
+		echo '<div class="sh-grid sh-grid-2">';
+		echo '<section class="sh-card"><h2>' . esc_html__( 'Fonts', 'optima-build' ) . '</h2><ul style="margin:0">';
 		foreach ( $t['font'] as $key => $value ) {
 			echo '<li><strong>' . esc_html( $key ) . ':</strong> ' . esc_html( (string) $value ) . '</li>';
 		}
-		echo '</ul><h2>' . esc_html__( 'Corners and buttons', 'optima-build' ) . '</h2><ul>';
+		echo '</ul></section>';
+		echo '<section class="sh-card"><h2>' . esc_html__( 'Corners and buttons', 'optima-build' ) . '</h2><ul style="margin:0">';
 		foreach ( $t['radius'] as $key => $value ) {
 			echo '<li><strong>' . esc_html( $key ) . ':</strong> ' . absint( $value ) . 'px</li>';
 		}
 		echo '<li><strong>' . esc_html__( 'Button shape', 'optima-build' ) . ':</strong> ' . esc_html( (string) ( $t['button']['shape'] ?? '' ) ) . '</li></ul>';
-		echo '<p><a class="button button-primary" style="border-radius:var(--optima-button-radius);background:var(--optima-accent);border-color:var(--optima-accent);color:var(--optima-accent-ink)">' . esc_html__( 'A button in this design', 'optima-build' ) . '</a></p></div>';
+		echo '<p style="margin:4px 0 0"><span style="display:inline-block;padding:10px 20px;font-weight:600;border-radius:var(--optima-button-radius);background:var(--optima-accent);color:var(--optima-accent-ink)">' . esc_html__( 'A button in this design', 'optima-build' ) . '</span></p></section>';
+		echo '</div>';
+
+		Optima_Admin_UI::close();
 	}
 }
