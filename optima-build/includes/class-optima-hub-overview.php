@@ -21,7 +21,10 @@ final class Optima_Hub_Overview {
 	const PAGE = 'optima-overview';
 
 	public static function boot(): void {
-		add_action( 'admin_menu', array( __CLASS__, 'menu' ), 14 );
+		// After Optima_Hub_Admin::menu (15): on a site without another Optima menu that is
+		// where the Optima section itself is created, and a screen added before its parent
+		// exists gets the wrong address (the top-level link then opens a 404).
+		add_action( 'admin_menu', array( __CLASS__, 'menu' ), 16 );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
 	}
 

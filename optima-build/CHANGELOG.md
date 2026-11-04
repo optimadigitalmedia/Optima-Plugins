@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.9.13 (2026-11-04)
+
+- Fix: clicking Optima in the sidebar opened a 404 on sites without Optima Core (the Optima section is created by Build there). Overview was added before its parent menu existed, so WordPress gave it the wrong address. It is now added after the section, and the menu link opens Overview on every site.
+
 ## 0.7.9.12 (2026-11-04)
 
 - Fix: the web team's own accounts are operators again. 0.7.9.10 limited the default operators to administrators on the agency domain, which left the web team's administrator accounts (on the agency's web-team partner domain) outside Build and inside the site lock. Administrators on that domain are operators by default again; the domain is stored only as a hash. A site's own `OPTIMA_HUB_OPERATORS` list still replaces the defaults.
