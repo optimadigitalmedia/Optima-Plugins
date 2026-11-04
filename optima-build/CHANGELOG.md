@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.9.11 (2026-11-04)
+
+- **The site lock waits for an operator account.** It applies only when at least one user on the site passes the operator check, so a site can never be locked with nobody able to edit it. The answer is kept in a transient (keyed to the operator list) and cleared whenever a user is added, changed, removed or given a new role. While it waits, administrators see "Site lock is waiting: no Optima operator account on this site yet." on Overview and in the WordPress Dashboard box, and the Site lock card on Build reads On, Waiting for an operator account, or Off.
+
 ## 0.7.9.10 (2026-11-04)
 
 Dashboard redesign, release 1 (`docs/dashboard-redesign-plan.md`).

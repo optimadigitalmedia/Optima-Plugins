@@ -131,6 +131,10 @@ final class Optima_Hub_Dashboard {
 				<?php endif; ?>
 			</span>
 		</p>
+		<?php $waiting = Optima_Hub_Lock::waiting_note(); ?>
+		<?php if ( '' !== $waiting ) : ?>
+			<p class="sd-status"><span class="sd-dot is-warn" aria-hidden="true"></span><span><?php echo esc_html( $waiting ); ?></span></p>
+		<?php endif; ?>
 		<?php self::reviews(); ?>
 		<p class="sd-links">
 			<a class="button button-primary" href="<?php echo esc_url( Optima_Hub_Overview::url() ); ?>"><?php esc_html_e( 'Open Overview', 'optima-build' ); ?></a>

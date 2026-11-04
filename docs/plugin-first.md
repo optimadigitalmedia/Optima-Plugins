@@ -273,7 +273,7 @@ When a theme hands its SEO head and JSON-LD to Optima Core (jobs `seo` and `sche
   | Inbox | Client, operator | Everything waiting on a person (change requests, chat questions, new reviews, review requests), one count in the sidebar |
   | Build | Operators only | The update queue (every update, one button each, each returning here), setup file against the site, features, health, theme and key, design tokens, the change log |
 
-- **Only operators edit the site** (site lock, Optima Build, on by default since dashboard release 1). Everyone else sees Overview, Site health and Inbox and sends requests; the lock holds back editing, settings, users and plugin and theme changes without touching roles. Off: the Site lock card on Build or the `optima_build_site_lock` filter. Never applies to WP-CLI, cron or an operator.
+- **Only operators edit the site** (site lock, Optima Build, on by default since dashboard release 1). Everyone else sees Overview, Site health and Inbox and sends requests; the lock holds back editing, settings, users and plugin and theme changes without touching roles. Off: the Site lock card on Build or the `optima_build_site_lock` filter. Never applies to WP-CLI, cron or an operator, and waits (applies to nobody) until the site has at least one operator account.
 - **A feature's settings live in one place:** its tab inside one of the seven items. Never under Settings, Tools, Appearance, or a theme page.
 - **Themes put no feature settings anywhere.** A theme's own screen (if any) holds design only, under Optima → Build → Design.
 - **Look:** the Optima brand with the client's logo (the admin kit's white-label switch stays). DESIGN.md dresses the site, not the dashboard.

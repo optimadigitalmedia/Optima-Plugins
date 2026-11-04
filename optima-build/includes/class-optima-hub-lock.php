@@ -12,7 +12,10 @@
  *
  * Off switches: the toggle on Optima -> Build (operators only), or
  *   add_filter( 'optima_build_site_lock', '__return_false' );
- * The lock never applies to WP-CLI or cron, and never to an operator.
+ * The lock never applies to WP-CLI or cron, and never to an operator. It also
+ * waits until the site has at least one operator account, so a site can never
+ * be locked with nobody able to edit it (checked once and kept in a transient,
+ * cleared whenever a user is added, changed or removed).
  *
  * Optima screens open to everyone who could edit before (Overview, Site health,
  * Inbox) use the capability VIEW, given to anyone whose role can edit posts,
@@ -45,9 +48,65 @@ final class Optima_Hub_Lock {
 	/** @var array<int,bool> Operator answer per user, for this request. */
 	private static $operators = array();
 
+	/** Transient: does the site have an operator account? '1' or '0'. */
+	const HAS_OPERATOR = 'optima_hub_has_operator';
+
+	/** User changes that can add or remove an operator. */
+	const USER_HOOKS = array( 'user_register', 'profile_update', 'delete_user', 'deleted_user', 'set_user_role', 'add_user_role', 'remove_user_role', 'grant_super_admin', 'revoke_super_admin' );
+
 	public static function boot(): void {
 		add_filter( 'user_has_cap', array( __CLASS__, 'caps' ), 999, 4 );
 		add_action( 'admin_post_' . self::ACTION, array( __CLASS__, 'save' ) );
+		foreach ( self::USER_HOOKS as $hook ) {
+			add_action( $hook, array( __CLASS__, 'forget' ) );
+		}
+	}
+
+	/** Ask again on the next check whether the site has an operator account. */
+	public static function forget(): void {
+		delete_transient( self::HAS_OPERATOR );
+		self::$operators = array();
+	}
+
+	/**
+	 * Does at least one user on this site pass the operator check? Kept for a
+	 * day, keyed to the operator list so a wp-config change is seen at once.
+	 */
+	public static function has_operator(): bool {
+		$key    = md5( implode( ',', Optima_Hub_Access::operators() ) );
+		$cached = get_transient( self::HAS_OPERATOR );
+		if ( is_array( $cached ) && ( $cached['key'] ?? '' ) === $key ) {
+			return '1' === $cached['has'];
+		}
+		$was        = self::$busy;
+		self::$busy = true; // The operator check asks about capabilities; answer from the roles as they are.
+		$has        = false;
+		$users      = get_users(
+			array(
+				'capability__in' => array( 'manage_options', 'activate_plugins' ),
+				'number'         => 500,
+			)
+		);
+		foreach ( $users as $user ) {
+			if ( Optima_Hub_Access::is_operator( $user ) ) {
+				$has = true;
+				break;
+			}
+		}
+		self::$busy = $was;
+		set_transient( self::HAS_OPERATOR, array( 'key' => $key, 'has' => $has ? '1' : '0' ), DAY_IN_SECONDS );
+		return $has;
+	}
+
+	/**
+	 * on: the lock applies. waiting: switched on, but no operator account yet,
+	 * so it does not apply. off: switched off.
+	 */
+	public static function state(): string {
+		if ( ! self::enabled() ) {
+			return 'off';
+		}
+		return self::has_operator() ? 'on' : 'waiting';
 	}
 
 	/** Is the lock on? The option (on unless an operator turned it off), then the filter. */
@@ -75,7 +134,7 @@ final class Optima_Hub_Lock {
 			$allcaps[ self::VIEW ] = true;
 		}
 		self::$busy = true;
-		$locked     = ! self::exempt() && self::enabled();
+		$locked     = ! self::exempt() && self::enabled() && self::has_operator();
 		if ( $locked ) {
 			if ( ! isset( self::$operators[ $user->ID ] ) ) {
 				self::$operators[ $user->ID ] = Optima_Hub_Access::is_operator( $user );
@@ -98,7 +157,17 @@ final class Optima_Hub_Lock {
 	/** Is this user held back right now? (For screens that explain why.) */
 	public static function applies( ?WP_User $user = null ): bool {
 		$user = $user ? $user : wp_get_current_user();
-		return $user instanceof WP_User && $user->exists() && ! self::exempt() && self::enabled() && ! Optima_Hub_Access::is_operator( $user );
+		return $user instanceof WP_User && $user->exists() && ! self::exempt() && 'on' === self::state() && ! Optima_Hub_Access::is_operator( $user );
+	}
+
+	/** The line administrators see while the lock waits for an operator account, or ''. */
+	public static function waiting_note(): string {
+		if ( 'waiting' !== self::state() || ! current_user_can( 'manage_options' ) ) {
+			return '';
+		}
+		return Optima_Hub_Admin::branded()
+			? __( 'Site lock is waiting: no Optima operator account on this site yet.', 'optima-build' )
+			: __( 'Site lock is waiting: no operator account on this site yet.', 'optima-build' );
 	}
 
 	/** The toggle on Build, operators only. */
@@ -127,20 +196,26 @@ final class Optima_Hub_Lock {
 			return;
 		}
 		$option = '0' !== (string) get_option( self::OPTION, '1' );
-		$on     = self::enabled();
+		$state  = self::state();
+		$labels = array(
+			'on'      => __( 'On', 'optima-build' ),
+			'waiting' => __( 'Waiting for an operator account', 'optima-build' ),
+			'off'     => __( 'Off', 'optima-build' ),
+		);
+		$notes  = array(
+			'on'      => __( 'Only operators can edit pages and posts, change settings, or add and update plugins and themes. Everyone else sees Overview, Site health and Inbox, and sends requests.', 'optima-build' ),
+			'waiting' => __( 'Switched on, but no user on this site passes the operator check yet, so nobody is locked. It starts by itself once an operator account exists.', 'optima-build' ),
+			'off'     => __( 'Everyone edits the site as their WordPress role allows.', 'optima-build' ),
+		);
+		$pill   = array( 'on' => 'is-on', 'waiting' => 'is-received', 'off' => '' );
 		?>
 		<section class="sh-card" id="sh-lock">
-			<h2><?php esc_html_e( 'Site lock', 'optima-build' ); ?></h2>
-			<p class="sh-note">
-				<?php
-				echo esc_html(
-					$on
-						? __( 'On. Only operators can edit pages and posts, change settings, or add and update plugins and themes. Everyone else sees Overview, Site health and Inbox, and sends requests.', 'optima-build' )
-						: __( 'Off. Everyone edits the site as their WordPress role allows.', 'optima-build' )
-				);
-				?>
-			</p>
-			<?php if ( $on !== $option ) : ?>
+			<div class="sh-cardhead">
+				<h2><?php esc_html_e( 'Site lock', 'optima-build' ); ?></h2>
+				<span class="sh-pill <?php echo esc_attr( $pill[ $state ] ); ?>"><?php echo esc_html( $labels[ $state ] ); ?></span>
+			</div>
+			<p class="sh-note"><?php echo esc_html( $notes[ $state ] ); ?></p>
+			<?php if ( self::enabled() !== $option ) : ?>
 				<p class="sh-note"><?php esc_html_e( 'Set in code with the optima_build_site_lock filter, so this switch has no effect until that changes.', 'optima-build' ); ?></p>
 			<?php endif; ?>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="sh-inline">

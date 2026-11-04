@@ -39,9 +39,10 @@ On by default. A non-operator keeps their role in the database, but while the lo
 edit, publish or delete content, upload files, change settings, manage users, or install, activate
 or update plugins and themes; they see Overview, Site health and Inbox and send requests. Never
 applies to WP-CLI, cron or an operator. Off: the Site lock card on Build, or the
-`optima_build_site_lock` filter. Before each site gets release 1, confirm its operators can sign
-in (an agency-domain administrator, or the site's `OPTIMA_HUB_OPERATORS` list); otherwise nobody
-on that site can edit until the lock is turned off from WP-CLI or the filter.
+`optima_build_site_lock` filter. The lock waits until the site has at least one operator account
+(Optima Build 0.7.9.11): with none, nobody is locked, administrators see "Site lock is waiting: no
+Optima operator account on this site yet." on Overview and the Dashboard box, and it starts by
+itself once an operator account exists.
 
 **Who sees what:** the default operator rule is "administrators on the agency domain": any
 user whose address ends with `@optimadigitalmedia.com` and who can manage the site's settings

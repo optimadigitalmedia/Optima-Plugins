@@ -149,6 +149,10 @@ final class Optima_Hub_Overview {
 		);
 		self::notice();
 		?>
+		<?php $waiting = Optima_Hub_Lock::waiting_note(); ?>
+		<?php if ( '' !== $waiting ) : ?>
+			<p class="sh-note"><?php echo esc_html( $waiting ); ?></p>
+		<?php endif; ?>
 		<?php if ( Optima_Hub_Lock::applies() ) : ?>
 			<p class="sh-note">
 				<?php
