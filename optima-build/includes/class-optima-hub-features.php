@@ -143,7 +143,7 @@ final class Optima_Hub_Features {
 		$features = Optima_Hub_Catalog::features();
 		if ( 'refresh' === $do ) {
 			self::refresh();
-			self::back( __( 'Checked for new features and versions.', 'optima-build' ) );
+			self::back( __( 'Checked for new features and versions.', 'optima-build' ), 'success', 'updates' );
 		}
 		if ( 'refill' === $do ) {
 			// The setup file runs once per theme version. A save from a page that was
@@ -151,7 +151,7 @@ final class Optima_Hub_Features {
 			// Oct 15), so this lets it run again. It still fills blanks only.
 			delete_option( Optima_Hub_Setup::DONE );
 			Optima_Hub_Setup::run();
-			self::back( __( 'Filled in from the theme\'s setup file. Anything already set stayed as it was.', 'optima-build' ) );
+			self::back( __( 'Filled in from the theme\'s setup file. Anything already set stayed as it was.', 'optima-build' ), 'success', 'updates' );
 		}
 		if ( ! isset( $features[ $slug ] ) ) {
 			self::back( __( 'That feature is not in the list.', 'optima-build' ), 'error' );
@@ -374,9 +374,10 @@ final class Optima_Hub_Features {
 		return (array) get_option( self::LOG_KEY, array() );
 	}
 
-	private static function back( string $message, string $type = 'success' ): void {
+	/** Back to Build: Updates for the update queue's buttons, Features for a feature's own. */
+	private static function back( string $message, string $type = 'success', string $tab = 'features' ): void {
 		set_transient( 'optima_hub_notice_' . get_current_user_id(), array( 'message' => $message, 'type' => $type ), MINUTE_IN_SECONDS );
-		wp_safe_redirect( Optima_Hub_Admin::url( 'features' ) );
+		wp_safe_redirect( Optima_Hub_Admin::url( $tab ) );
 		exit;
 	}
 }

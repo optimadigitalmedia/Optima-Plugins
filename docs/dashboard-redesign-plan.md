@@ -12,6 +12,13 @@ home and the words change.
 
 ## Release 1: the menu, Overview, Inbox, Build (Optima Build + shared admin kit)
 
+**Release 1: built** (2026-11-04, Optima Build 0.7.9.10, shared admin kit 1.6.0.0, every plugin
+that carries the kit one layer revision up). Tested on a local WordPress with the busiest client
+site's plugin set; screenshots go to the site owner before merge. Where the build differs from the
+table below: Chat settings sit under Your business with the other feature settings; "review
+requests" in the Inbox are the notes people send from the review page (the Ask for reviews screen
+itself holds nothing waiting, so it is a tab under Inbox); Email also sends a non-operator to Overview.
+
 | File | Change |
 |---|---|
 | `tools/admin-kit/class-optima-admin-ui.php` (+ 18 copies) | `GROUPS` becomes the seven items (`overview`, `business`, `content`, `search`, `health`, `inbox`, `build`). `group()` sorts by slug lists, not word matches: Business info, Call buttons, Hours, Team, Results, Reviews settings, Cards → `business`; Site Sync, Redirects, Image optimizer → `content`; SEO, AI search, Analytics, Accessibility, Spam protection → `search`; Site health, Search health → `health`; Request a change, Chat questions, Review inbox, Review requests → `inbox`; Features, Updates, Design, Email, Site checks, Customer list, Site setup, Content updates → `build`. The `optima_admin_nav_group` filter stays. Kit version bump. |
@@ -27,9 +34,20 @@ home and the words change.
 working), every settings form and option name, the front end of every site, all
 client themes, Optima Core's head and schema.
 
-**Who sees what:** operators come from `OPTIMA_HUB_OPERATORS` (wp-config). Until each
-site sets its list, Build shows only to the default operator. The operator list
-per site is an open question for the CTO.
+**Site lock (added to release 1 by the site owner, 2026-11-04): only operators edit the site.**
+On by default. A non-operator keeps their role in the database, but while the lock is on cannot
+edit, publish or delete content, upload files, change settings, manage users, or install, activate
+or update plugins and themes; they see Overview, Site health and Inbox and send requests. Never
+applies to WP-CLI, cron or an operator. Off: the Site lock card on Build, or the
+`optima_build_site_lock` filter. Before each site gets release 1, confirm its operators can sign
+in (an agency-domain administrator, or the site's `OPTIMA_HUB_OPERATORS` list); otherwise nobody
+on that site can edit until the lock is turned off from WP-CLI or the filter.
+
+**Who sees what:** the default operator rule is "administrators on the agency domain": any
+user whose address ends with `@optimadigitalmedia.com` and who can manage the site's settings
+(decided by the site owner, 2026-11-04). A site can narrow or change it with
+`OPTIMA_HUB_OPERATORS` in wp-config (exact addresses, or `@domain` entries). No personal
+address lives in this repo.
 
 **Tests:** local WordPress (SQLite) with the plugin set of the busiest client site:
 every old address still opens (HTTP 200, same title), every screen lands in its
@@ -59,5 +77,5 @@ private fleet list. Not in this public repo's data.
 
 ## Open questions
 
-- Operator list and change-request recipient per site (CTO).
+- Change-request recipient per site (CTO). The operator default is settled (agency-domain administrators); a site narrows it in wp-config.
 - Who logs in most: if operators come first, Overview opens on the operator strip.

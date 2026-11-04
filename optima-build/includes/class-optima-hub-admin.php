@@ -1,6 +1,7 @@
 <?php
 /**
- * The dashboard screens: Features, Requests and Health.
+ * The hub's own screens: Updates and Features (Build, operators only), Request
+ * a change (Inbox) and Site health. Overview and Inbox have their own classes.
  *
  * Placement follows the dashboard standard (one Build section per site): the
  * screens go inside the site's existing Build menu when there is one (the
@@ -24,7 +25,9 @@ final class Optima_Hub_Admin {
 
 	public static function boot(): void {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ), 15 );
-		add_action( 'admin_menu', array( __CLASS__, 'first' ), 999 );
+		add_action( 'admin_init', array( __CLASS__, 'operators_only' ) );
+		add_filter( 'update_plugin_complete_actions', array( __CLASS__, 'back_to_build' ) );
+		add_filter( 'update_theme_complete_actions', array( __CLASS__, 'back_to_build' ) );
 		add_filter( 'optima_admin_nav_hint', array( __CLASS__, 'nav_hint' ), 10, 2 );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
 		add_action( 'admin_post_' . self::PLAN_ACTION, array( __CLASS__, 'save_plan' ) );
@@ -63,18 +66,18 @@ final class Optima_Hub_Admin {
 			$icon  = self::branded()
 				? 'data:image/svg+xml;base64,' . base64_encode( '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#1272C4" d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>' ) // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 				: 'dashicons-admin-generic';
-			add_menu_page( $label, $label, 'edit_posts', 'site-build', array( __CLASS__, 'render' ), $icon, 3 );
-			add_submenu_page( 'site-build', __( 'Features', 'optima-build' ), __( 'Features', 'optima-build' ), 'edit_posts', 'site-build', array( __CLASS__, 'render' ) );
+			add_menu_page( $label, $label, Optima_Hub_Lock::VIEW, 'site-build', array( __CLASS__, 'render' ), $icon, 3 );
+			add_submenu_page( 'site-build', __( 'Features', 'optima-build' ), __( 'Features', 'optima-build' ), Optima_Hub_Lock::VIEW, 'site-build', array( __CLASS__, 'render' ) );
 		}
-		add_submenu_page( $parent, __( 'Features', 'optima-build' ), __( 'Features', 'optima-build' ), 'edit_posts', self::PAGE, array( __CLASS__, 'render' ) );
+		add_submenu_page( $parent, __( 'Features', 'optima-build' ), __( 'Features', 'optima-build' ), Optima_Hub_Lock::VIEW, self::PAGE, array( __CLASS__, 'render' ) );
 		if ( 'site-build' === $parent ) {
 			remove_submenu_page( 'site-build', self::PAGE ); // The section's first item already opens this screen.
 		}
 		// The other two tabs get their own sidebar entries, so nobody has to find the tabs first.
 		$base = 'site-build' === $parent ? 'site-build' : self::PAGE;
-		add_submenu_page( $parent, __( 'Request a change', 'optima-build' ), __( 'Request a change', 'optima-build' ), 'edit_posts', $base . '&tab=requests', array( __CLASS__, 'render' ) );
-		add_submenu_page( $parent, __( 'Site health', 'optima-build' ), __( 'Site health', 'optima-build' ), 'edit_posts', $base . '&tab=health', array( __CLASS__, 'render' ) );
-		add_submenu_page( $parent, __( 'Updates', 'optima-build' ), __( 'Updates', 'optima-build' ), 'edit_posts', $base . '&tab=updates', array( __CLASS__, 'render' ) );
+		add_submenu_page( $parent, __( 'Request a change', 'optima-build' ), __( 'Request a change', 'optima-build' ), Optima_Hub_Lock::VIEW, $base . '&tab=requests', array( __CLASS__, 'render' ) );
+		add_submenu_page( $parent, __( 'Site health', 'optima-build' ), __( 'Site health', 'optima-build' ), Optima_Hub_Lock::VIEW, $base . '&tab=health', array( __CLASS__, 'render' ) );
+		add_submenu_page( $parent, __( 'Updates', 'optima-build' ), __( 'Updates', 'optima-build' ), Optima_Hub_Lock::VIEW, $base . '&tab=updates', array( __CLASS__, 'render' ) );
 		$slug = 'site-build' === $parent ? 'site-build' : self::PAGE;
 		if ( get_option( 'optima_hub_page' ) !== $slug ) {
 			update_option( 'optima_hub_page', $slug, false );
@@ -82,41 +85,27 @@ final class Optima_Hub_Admin {
 	}
 
 	/**
-	 * One order for the Optima menu on every site, which the shared section nav
-	 * follows too: Features and Site health first, then the settings screens
-	 * (Business info, SEO, AI search, images), then the rest, Request a change last.
+	 * Build is for operators (plugin-first rule 9). Anyone else who opens
+	 * Updates, Features, Design or Email by its address lands on Overview instead.
 	 */
-	public static function first(): void {
-		global $submenu;
-		$parent = self::parent();
-		if ( empty( $submenu[ $parent ] ) ) {
-			return;
+	public static function operators_only(): void {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- reading the screen address only.
+		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+		$tab  = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : '';
+		// phpcs:enable
+		$hub = in_array( $page, array( self::PAGE, 'site-build' ), true ) && in_array( $tab, array( '', 'features', 'updates' ), true );
+		if ( ( $hub || in_array( $page, array( Optima_Hub_Design::PAGE, Optima_Hub_Mail::PAGE ), true ) ) && ! wp_doing_ajax() && ! Optima_Hub_Access::is_operator() ) {
+			wp_safe_redirect( Optima_Hub_Overview::url() );
+			exit;
 		}
-		$items = array_values( $submenu[ $parent ] );
-		$rank  = static function ( array $item, int $i ): int {
-			$slug = (string) ( $item[2] ?? '' );
-			$page = strtok( $slug, '&' );
-			if ( false !== strpos( $slug, 'tab=requests' ) ) {
-				return 9000;
-			}
-			if ( false !== strpos( $slug, 'tab=health' ) ) {
-				return 100;
-			}
-			if ( self::PAGE === $page || 'site-build' === $page ) {
-				return 0;
-			}
-			$order = array( 'optima' => 200, 'optima-ai-search' => 400, 'optima-optimize' => 500 );
-			if ( 'optima' === $page && false !== strpos( $slug, 'tab=' ) ) {
-				return 300 + $i; // SEO and any companion settings, after Business info.
-			}
-			return ( $order[ $page ] ?? 1000 ) + $i;
-		};
-		$keyed = array();
-		foreach ( $items as $i => $item ) {
-			$keyed[] = array( $rank( $item, $i ), $i, $item );
+	}
+
+	/** After a theme or plugin update from Build, the way back is to Build. */
+	public static function back_to_build( $actions ) {
+		if ( Optima_Hub_Access::is_operator() && is_array( $actions ) ) {
+			$actions['optima_build'] = '<a href="' . esc_url( self::url( 'updates' ) ) . '">' . esc_html__( 'Back to Build', 'optima-build' ) . '</a>';
 		}
-		usort( $keyed, static fn( $x, $y ) => $x[0] <=> $y[0] ?: $x[1] <=> $y[1] );
-		$submenu[ $parent ] = array_column( $keyed, 2 ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- reordering only.
+		return $actions;
 	}
 
 	/** Live hints on the hub's own pills in the shared section nav. */
@@ -197,20 +186,19 @@ final class Optima_Hub_Admin {
 	}
 
 	public static function render(): void {
-		if ( ! current_user_can( 'edit_posts' ) ) {
+		if ( ! current_user_can( Optima_Hub_Lock::VIEW ) ) {
 			return;
 		}
 		$tab  = sanitize_key( (string) ( $_GET['tab'] ?? 'features' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$tabs = array(
-			'features' => __( 'Your features', 'optima-build' ),
+			'features' => __( 'Features', 'optima-build' ),
 			'requests' => __( 'Request a change', 'optima-build' ),
 			'health'   => __( 'Site health', 'optima-build' ),
 			'updates'  => __( 'Updates', 'optima-build' ),
 		);
 		$tab  = isset( $tabs[ $tab ] ) ? $tab : 'features';
-		// Site name in the eyebrow, trimmed at a " | " tagline so it fits a phone.
-		$site = trim( (string) preg_split( '/\s+[|–—-]\s+/u', wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES ) )[0] );
-		Optima_Admin_UI::open( $tabs[ $tab ], '', $site );
+		// The eyebrow names the screen's group (Build, Inbox, Site health), as the sidebar does.
+		Optima_Admin_UI::open( $tabs[ $tab ] );
 		?>
 			<?php self::notice(); ?>
 			<?php
@@ -249,14 +237,25 @@ final class Optima_Hub_Admin {
 	/* ------------------------------------------------------------------ */
 
 	/**
-	 * Updates: every update tool on one screen, the same on every site.
-	 * New versions of features and Optima Build, the theme (and its key),
-	 * filling features from the theme's setup file, and applying approved
-	 * copy (Site Sync, or the theme's Content updates screen).
+	 * Updates, the first view of Build: every update on one screen, the same on
+	 * every site, each with one button that comes back here. New versions of
+	 * features and Optima Build, the theme (and its key), filling features from
+	 * the theme's setup file, and applying approved copy (Site Sync, or the
+	 * theme's Content updates screen).
 	 */
 	private static function updates(): void {
 		$operator = Optima_Hub_Access::is_operator();
 		$content  = Optima_Hub_Menu::content_screen();
+		$features = Optima_Hub_Catalog::features();
+		$ready    = array();
+		foreach ( array_keys( $features ) as $slug ) {
+			$st = Optima_Hub_Features::status( $slug );
+			if ( '' !== $st['version'] && '' !== $st['update'] ) {
+				$ready[ $slug ] = $st;
+			}
+		}
+		$updates   = get_site_transient( 'update_plugins' );
+		$build_new = $updates->response[ plugin_basename( OPTIMA_HUB_FILE ) ]->new_version ?? '';
 		?>
 		<section class="sh-card">
 			<h2><?php esc_html_e( 'Features and Optima Build', 'optima-build' ); ?></h2>
@@ -264,11 +263,42 @@ final class Optima_Hub_Admin {
 			<?php if ( $operator ) : ?>
 				<?php echo Optima_Hub_Features::button( '', 'refresh', __( 'Check for new versions', 'optima-build' ), 'button button-primary' ); // phpcs:ignore WordPress.Security.EscapeOutput -- built from escaped parts. ?>
 			<?php endif; ?>
+			<?php if ( $ready ) : ?>
+				<ul class="sh-waiting" style="margin-top:14px">
+					<?php foreach ( $ready as $slug => $st ) : ?>
+						<li>
+							<div>
+								<strong><?php echo esc_html( $features[ $slug ]['name'] ); ?></strong>
+								<p class="sh-note">
+									<?php
+									/* translators: 1: installed version, 2: new version */
+									echo esc_html( sprintf( __( 'v%1$s, update ready: v%2$s', 'optima-build' ), $st['version'], $st['update'] ) );
+									?>
+								</p>
+							</div>
+							<?php $url = $operator ? Optima_Hub_Features::update_url( $slug ) : ''; ?>
+							<?php if ( '' !== $url ) : ?>
+								<a class="button" href="<?php echo esc_url( $url ); ?>"><?php esc_html_e( 'Update now', 'optima-build' ); ?></a>
+							<?php endif; ?>
+						</li>
+					<?php endforeach; ?>
+				</ul>
+			<?php else : ?>
+				<p class="sh-note"><?php esc_html_e( 'Every feature is on its newest version.', 'optima-build' ); ?></p>
+			<?php endif; ?>
 			<p class="sh-note">
 				<?php
 				/* translators: %s: Optima Build version */
 				echo esc_html( sprintf( __( 'Optima Build %s', 'optima-build' ), OPTIMA_HUB_VERSION ) );
 				?>
+				<?php if ( $build_new && version_compare( $build_new, OPTIMA_HUB_VERSION, '>' ) ) : ?>
+					<a href="<?php echo esc_url( admin_url( 'plugins.php?plugin_status=upgrade' ) ); ?>">
+						<?php
+						/* translators: %s: newer Optima Build version */
+						echo esc_html( sprintf( __( '%s ready on the Plugins screen', 'optima-build' ), $build_new ) );
+						?>
+					</a>
+				<?php endif; ?>
 			</p>
 		</section>
 
@@ -301,6 +331,7 @@ final class Optima_Hub_Admin {
 				<p class="sh-note"><?php esc_html_e( 'Turn on Business info and SEO (Optima Core) to apply approved copy from the theme.', 'optima-build' ); ?></p>
 			<?php endif; ?>
 		</section>
+		<?php Optima_Hub_Lock::card(); ?>
 		<?php $setup = Optima_Hub_Menu::theme_setup_screen(); ?>
 		<?php if ( $setup ) : ?>
 		<section class="sh-card">

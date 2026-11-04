@@ -22,7 +22,7 @@ Every rule is a MUST or a NEVER (46 rules). If a task would break one, stop and 
 
 **Same everywhere**
 
-9. Every site MUST have one top-level dashboard menu, **Optima**, with the same seven items in the same order (section 4a): Overview, Your business, Content, Search and AI, Site health, Inbox, Build. Build shows only to operators.
+9. Every site MUST have one top-level dashboard menu, **Optima**, with the same seven items in the same order (section 4a): Overview, Your business, Content, Search and AI, Site health, Inbox, Build. Build shows only to operators. By default the operators are the administrators on the agency domain (`@optimadigitalmedia.com`, with the right to manage the site's settings); a site can narrow or change that with `OPTIMA_HUB_OPERATORS` in wp-config.
 10. A feature's settings MUST live only on its tab inside one of those seven items (Optima → Your business → Contact buttons). NEVER under Settings, Tools, Appearance or a theme screen. Every existing screen keeps its address; only the sidebar, the home and the words move.
 11. A theme MUST NEVER register its own admin menu for features. Design-only settings go under Optima → Build → Design.
 12. Plugin blocks MUST render only through `optima_slot( $name )` in the fixed spots in section 4a, so each feature appears in the same place on every site.
@@ -273,6 +273,7 @@ When a theme hands its SEO head and JSON-LD to Optima Core (jobs `seo` and `sche
   | Inbox | Client, operator | Everything waiting on a person (change requests, chat questions, new reviews, review requests), one count in the sidebar |
   | Build | Operators only | The update queue (every update, one button each, each returning here), setup file against the site, features, health, theme and key, design tokens, the change log |
 
+- **Only operators edit the site** (site lock, Optima Build, on by default since dashboard release 1). Everyone else sees Overview, Site health and Inbox and sends requests; the lock holds back editing, settings, users and plugin and theme changes without touching roles. Off: the Site lock card on Build or the `optima_build_site_lock` filter. Never applies to WP-CLI, cron or an operator.
 - **A feature's settings live in one place:** its tab inside one of the seven items. Never under Settings, Tools, Appearance, or a theme page.
 - **Themes put no feature settings anywhere.** A theme's own screen (if any) holds design only, under Optima → Build → Design.
 - **Look:** the Optima brand with the client's logo (the admin kit's white-label switch stays). DESIGN.md dresses the site, not the dashboard.
@@ -296,7 +297,9 @@ When a theme hands its SEO head and JSON-LD to Optima Core (jobs `seo` and `sche
 
 **Every plugin has the same files:** `<slug>.php` (header and version), `includes/`, `assets/css/` (variables only), `readme.txt`, and the same settings-page layout from Optima Build's admin kit.
 
-**Checked by a script:** `tools/uniform-check.sh` fails if a theme is missing a required file, a theme registers a menu outside Optima, a plugin hard-codes a color, or a screen's sidebar group does not match the seven items (added with dashboard release 1).
+**Checked by a script:** `tools/uniform-check.sh` fails if a theme is missing a required file, a theme registers a menu outside Optima, a plugin hard-codes a color, or a screen's sidebar group does not match the seven items (`tools/uniform-check.sh screens`, added with dashboard release 1: every `add_submenu_page()` address must be listed in `Optima_Admin_UI::SCREENS` in the shared admin kit).
+
+**Dashboard release 1: built** (2026-11-04, Optima Build 0.7.9.10, admin kit 1.6.0.0): the seven items, Overview, Inbox, Build for operators, the WordPress Dashboard box. Plan and test notes: `docs/dashboard-redesign-plan.md`.
 
 ## 5. Order (each step on staging, head-and-schema diff before and after)
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.3.7 (2026-11-04)
+
+- Shared admin kit 1.6.0.0 (the Optima menu now has seven items: Overview, Your business, Content, Search and AI, Site health, Inbox, Build). This plugin's own menu is not part of it and keeps its one row of tabs. Screens opened from a button now have a page title (no PHP notice).
+
 ## 0.3.3.6 (2026-11-04)
 
 - Optima admin footer: no personal email address. It reads "Built and looked after by Optima Digital" with a Request a change link (shared admin kit 1.5.1.5).

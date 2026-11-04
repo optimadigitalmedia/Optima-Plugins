@@ -69,11 +69,11 @@ final class Optima_Hub_Requests {
 
 	/**
 	 * A Optima menu in the toolbar: the arrow and "Optima" (or "Site Build" on
-	 * unbranded sites), opening Features, with Site health and Request a
-	 * change under it.
+	 * unbranded sites), opening Overview, with Build (operators only), Site
+	 * health and Request a change under it.
 	 */
 	public static function admin_bar( WP_Admin_Bar $bar ): void {
-		if ( ! current_user_can( 'edit_posts' ) ) {
+		if ( ! current_user_can( Optima_Hub_Lock::VIEW ) ) {
 			return;
 		}
 		$branded = Optima_Hub_Admin::branded();
@@ -84,17 +84,27 @@ final class Optima_Hub_Requests {
 			array(
 				'id'    => 'optima-hub',
 				'title' => $title,
-				'href'  => Optima_Hub_Admin::url( 'features' ),
+				'href'  => Optima_Hub_Overview::url(),
 			)
 		);
 		$bar->add_node(
 			array(
 				'parent' => 'optima-hub',
-				'id'     => 'optima-hub-features',
-				'title'  => __( 'Features', 'optima-build' ),
-				'href'   => Optima_Hub_Admin::url( 'features' ),
+				'id'     => 'optima-hub-overview',
+				'title'  => __( 'Overview', 'optima-build' ),
+				'href'   => Optima_Hub_Overview::url(),
 			)
 		);
+		if ( Optima_Hub_Access::is_operator() ) {
+			$bar->add_node(
+				array(
+					'parent' => 'optima-hub',
+					'id'     => 'optima-hub-features',
+					'title'  => __( 'Build', 'optima-build' ),
+					'href'   => Optima_Hub_Admin::url( 'updates' ),
+				)
+			);
+		}
 		$bar->add_node(
 			array(
 				'parent' => 'optima-hub',
@@ -140,7 +150,7 @@ final class Optima_Hub_Requests {
 
 	public static function handle(): void {
 		check_admin_referer( self::ACTION );
-		if ( ! current_user_can( 'edit_posts' ) ) {
+		if ( ! current_user_can( Optima_Hub_Lock::VIEW ) ) {
 			wp_die( esc_html__( 'You do not have permission to do that.', 'optima-build' ), 403 );
 		}
 		$do = sanitize_key( wp_unslash( (string) ( $_POST['do'] ?? 'new' ) ) );
@@ -217,12 +227,20 @@ final class Optima_Hub_Requests {
 			array( 'Reply-To: ' . $user->display_name . ' <' . $user->user_email . '>' ),
 			$attachments
 		);
+		if ( self::from_overview() ) {
+			self::back( __( 'Sent. We will reply by email, and you can follow it under With Optima.', 'optima-build' ) );
+		}
 		self::back( __( 'Sent. We will reply by email, and you can follow it in the list below.', 'optima-build' ) );
+	}
+
+	/** The request box on Overview asks to come back there. */
+	private static function from_overview(): bool {
+		return 'overview' === sanitize_key( wp_unslash( (string) ( $_POST['back'] ?? '' ) ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- checked in handle().
 	}
 
 	private static function back( string $message, string $type = 'success' ): void {
 		set_transient( 'optima_hub_notice_' . get_current_user_id(), array( 'message' => $message, 'type' => $type ), MINUTE_IN_SECONDS );
-		wp_safe_redirect( Optima_Hub_Admin::url( 'requests' ) );
+		wp_safe_redirect( self::from_overview() ? Optima_Hub_Overview::url() : Optima_Hub_Admin::url( 'requests' ) );
 		exit;
 	}
 }
