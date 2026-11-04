@@ -21,8 +21,14 @@
  *                "footer", "note", "team_intro", "links_intro", "photo", "spot_heading", "spot_text",
  *                "pick_heading", "spot_label", "spot_sub", "spot_url", "logo", "share_card", "share_links",
  *                "people": [ { "name", "slug", "title", "email", "intro", "pick", "tags", "photo", "share" } ],
- *                "links": [ { "label", "sub", "url" } ] }
+ *                "links": [ { "label", "sub", "url" } ] },
+ *   "seo":     { "site": {...}, "pages": { "/": {...} }, "schema": {...} }
  * }
+ * The "seo" section is the theme's SEO head and JSON-LD as data, for Optima Core
+ * (docs/plugin-first.md, section 3a). Unlike the other sections it is a mirror:
+ * it is copied whole into the option Optima Core reads, every time the theme
+ * file or the theme version changes, and on "Fill from theme again". Editors'
+ * own SEO box values live elsewhere and are never touched.
  * "photo" values are a path inside the theme (assets/img/team-member.webp) or a full https:// address.
  *
  * @package Optima_Build
@@ -37,6 +43,7 @@ final class Optima_Hub_Setup {
 	const FILE  = 'optima-setup.json';
 	const DONE  = 'optima_hub_setup_done';  // section => hash of what was applied.
 	const MEDIA = 'optima_hub_setup_media'; // theme path => attachment ID.
+	const SEO_OPTION = 'optima_core_seo_setup'; // the seo section, as Optima Core reads it (Optima_SEO_Setup::OPTION).
 
 	public static function boot(): void {
 		add_action( 'admin_init', array( __CLASS__, 'run' ), 30 );
@@ -85,14 +92,21 @@ final class Optima_Hub_Setup {
 			'analytics' => array( __CLASS__, 'analytics' ),
 			'cards'   => array( __CLASS__, 'cards' ),
 			'contact' => array( __CLASS__, 'contact' ),
+			'seo'     => array( __CLASS__, 'seo' ),
 		);
+		// The theme dropped its seo section: Optima Core goes back to its own defaults.
+		if ( empty( $data['seo'] ) && isset( $done['seo'] ) ) {
+			delete_option( self::SEO_OPTION );
+			unset( $done['seo'] );
+			update_option( self::DONE, $done, false );
+		}
 		$changed = false;
 		foreach ( $jobs as $section => $job ) {
 			if ( empty( $data[ $section ] ) || ! is_array( $data[ $section ] ) ) {
 				continue;
 			}
 			// The reviews section reruns once after 0.4.4, when untouched defaults started counting as blank.
-			$hash = md5( (string) wp_json_encode( $data[ $section ] ) . ( 'reviews' === $section ? '|defaults-blank' : '' ) );
+			$hash = md5( (string) wp_json_encode( $data[ $section ] ) . ( 'reviews' === $section ? '|defaults-blank' : '' ) . ( 'seo' === $section ? '|' . self::theme_version() : '' ) );
 			if ( ( $done[ $section ] ?? '' ) === $hash ) {
 				continue;
 			}
@@ -382,6 +396,130 @@ final class Optima_Hub_Setup {
 			update_option( Optima_Cards_Settings::OPTION, $saved );
 		}
 		return true;
+	}
+
+	/**
+	 * The SEO head and JSON-LD facts, for Optima Core. Stored whole (cleaned),
+	 * replacing the last copy: this is the theme's data, not anything an editor
+	 * typed. Per-page SEO box values are post meta and stay as they are.
+	 */
+	private static function seo( array $in ): bool {
+		if ( ! class_exists( 'Optima_SEO_Head' ) ) {
+			return false;
+		}
+		$out = array();
+		if ( isset( $in['site'] ) && is_array( $in['site'] ) ) {
+			$out['site'] = self::seo_fields( $in['site'] );
+		}
+		if ( isset( $in['pages'] ) && is_array( $in['pages'] ) ) {
+			$out['pages'] = array();
+			foreach ( $in['pages'] as $path => $page ) {
+				if ( ! is_array( $page ) ) {
+					continue;
+				}
+				$key = self::seo_path( (string) $path );
+				if ( '' !== $key ) {
+					$out['pages'][ $key ] = self::seo_fields( $page );
+				}
+			}
+		}
+		if ( isset( $in['schema'] ) && is_array( $in['schema'] ) ) {
+			$out['schema'] = self::clean_tree( $in['schema'] );
+		}
+		$out['theme'] = array(
+			'stylesheet' => get_stylesheet(),
+			'version'    => self::theme_version(),
+			'filled'     => gmdate( 'c' ),
+		);
+		update_option( self::SEO_OPTION, $out, true );
+		if ( class_exists( 'Optima_SEO_Setup' ) ) {
+			Optima_SEO_Setup::flush();
+		}
+		return true;
+	}
+
+	/** One site or page entry: known keys only, each cleaned for what it holds. */
+	private static function seo_fields( array $in ): array {
+		$text = array( 'title', 'title_format', 'site_name', 'og_title', 'og_type', 'twitter', 'robots', 'locale', 'image_alt' );
+		$long = array( 'description', 'default_description', 'og_description' );
+		$addr = array( 'canonical', 'image', 'default_image' );
+		$out  = array();
+		foreach ( $in as $key => $value ) {
+			$key = (string) $key;
+			if ( in_array( $key, $text, true ) && is_scalar( $value ) ) {
+				$out[ $key ] = sanitize_text_field( (string) $value );
+			} elseif ( in_array( $key, $long, true ) && is_scalar( $value ) ) {
+				$out[ $key ] = sanitize_textarea_field( (string) $value );
+			} elseif ( in_array( $key, $addr, true ) && is_scalar( $value ) ) {
+				$out[ $key ] = self::seo_address( (string) $value );
+			} elseif ( in_array( $key, array( 'image_width', 'image_height' ), true ) && is_numeric( $value ) ) {
+				$out[ $key ] = absint( $value );
+			} elseif ( 'meta' === $key && is_array( $value ) ) {
+				$out['meta'] = array();
+				foreach ( $value as $tag ) {
+					if ( ! is_array( $tag ) || ! isset( $tag['content'] ) || ! is_scalar( $tag['content'] ) ) {
+						continue;
+					}
+					$attr = isset( $tag['property'] ) ? 'property' : 'name';
+					$name = preg_replace( '/[^A-Za-z0-9:_\-.]/', '', (string) ( $tag[ $attr ] ?? '' ) );
+					if ( '' !== $name ) {
+						$out['meta'][] = array(
+							$attr     => $name,
+							'content' => sanitize_text_field( (string) $tag['content'] ),
+						);
+					}
+				}
+			} elseif ( 'schema' === $key && is_array( $value ) ) {
+				$out['schema'] = array_values( array_filter( self::clean_tree( $value ), 'is_array' ) );
+			}
+		}
+		return $out;
+	}
+
+	/** A page key: "/about/" style, or a prefix pattern ending in "*" ("/blog/*"). */
+	private static function seo_path( string $path ): string {
+		$path = trim( $path );
+		if ( '' === $path || preg_match( '#^[a-z]+://#i', $path ) ) {
+			$path = (string) wp_parse_url( $path, PHP_URL_PATH );
+		}
+		$path = '/' . ltrim( preg_replace( '#[^A-Za-z0-9/_\-.~%*]#', '', $path ), '/' );
+		if ( '*' === substr( $path, -1 ) ) {
+			return $path;
+		}
+		return '/' === $path ? '/' : trailingslashit( $path );
+	}
+
+	/** A full https address, a site path ("/about/"), or a theme path ("assets/og/home.png"). */
+	private static function seo_address( string $value ): string {
+		$value = trim( $value );
+		if ( preg_match( '#^https?://#i', $value ) ) {
+			return esc_url_raw( $value );
+		}
+		return str_replace( array( '..', '\\' ), '', sanitize_text_field( $value ) );
+	}
+
+	/** JSON-LD as plain data: keys and strings stripped of tags, numbers and true/false kept. */
+	private static function clean_tree( array $in ): array {
+		$out = array();
+		foreach ( $in as $key => $value ) {
+			$key = is_int( $key ) ? $key : preg_replace( '/[^A-Za-z0-9@_\-:]/', '', (string) $key );
+			if ( '' === $key ) {
+				continue;
+			}
+			if ( is_array( $value ) ) {
+				$out[ $key ] = self::clean_tree( $value );
+			} elseif ( is_bool( $value ) || is_int( $value ) || is_float( $value ) ) {
+				$out[ $key ] = $value;
+			} elseif ( is_string( $value ) ) {
+				$out[ $key ] = sanitize_textarea_field( $value );
+			}
+		}
+		return $out;
+	}
+
+	/** The active theme's version (child theme first). */
+	private static function theme_version(): string {
+		return (string) wp_get_theme()->get( 'Version' );
 	}
 
 	/* ---------- helpers ---------- */

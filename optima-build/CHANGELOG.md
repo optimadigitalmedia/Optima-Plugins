@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.9.7 (2026-11-04)
+
+- **Fill from theme carries the SEO head.** A new `seo` section in `optima-setup.json` (site defaults, per-URL title, description, canonical, robots, share tags, and JSON-LD for the organization, people and other nodes) is copied whole into the `optima_core_seo_setup` option that Optima Core 1.6.0.6 reads. It refreshes when the file or the theme version changes and on "Fill from theme again", and is removed when the theme drops the section. Editors' SEO box values are never touched. Spec: docs/plugin-first.md, section 3a.
+
 ## 0.7.9.6 (2026-11-04)
 
 - **Account names stay private on every site** (new job `account-privacy`). For visitors, author pages and `?author=N` go to the About page (or home), the public REST users list and the users sitemap are closed, and author links point to About. Signed-in people and the editor are unaffected; bylines and schema keep the display name, so nothing visible changes. Login names are often email addresses and can show who has access to a site. Filters: `optima_build_account_privacy`, `optima_build_author_target`.

@@ -140,6 +140,72 @@ if ( function_exists( 'optima_owns' ) && optima_owns( 'seo' ) ) {
 - **Every plugin styles itself only with those variables**, with design-system defaults when a theme has no `DESIGN.md`.
 - Fonts come from the theme (the theme already loads them); plugins name them, never load their own.
 
+## 3a. optima-setup.json: the `seo` section (the theme's head as data)
+
+When a theme hands its SEO head and JSON-LD to Optima Core (jobs `seo` and `schema`), its old head code moves to `inc/fallbacks/seo.php` behind `optima_owns( 'seo' )`, and every value that code used moves into an `seo` section of `optima-setup.json`. Optima Core then prints the same tags from that data. Every key is optional.
+
+```json
+"seo": {
+  "site": {
+    "title_format": "%page% | %site%",
+    "site_name": "Example Firm",
+    "default_description": "One sentence for pages without their own.",
+    "default_image": "assets/og/default.png",
+    "image_width": 1200, "image_height": 630, "image_alt": "Example Firm",
+    "twitter": "summary_large_image",
+    "robots": "max-snippet:-1, max-video-preview:-1",
+    "locale": "en_US",
+    "meta": [ { "name": "theme-color", "content": "#12163A" }, { "name": "twitter:site", "content": "@example" } ]
+  },
+  "pages": {
+    "/": { "title": "Example Firm | Injury Lawyers in Example City", "description": "...", "image": "assets/og/home.png", "og_type": "website" },
+    "/about/": { "title": "...", "description": "...", "canonical": "/about/", "og_title": "...", "og_description": "...",
+                 "schema": [ { "@type": "AboutPage", "@id": "/about/#webpage", "url": "/about/", "about": { "@id": "#business" } } ] },
+    "/thank-you/": { "robots": "noindex, follow" },
+    "/blog/*": { "og_type": "article" }
+  },
+  "schema": {
+    "organization": { "@type": ["LegalService", "Attorney"], "name": "Example Firm", "telephone": "+1-555-555-0100",
+                      "image": "assets/img/office.webp", "areaServed": "Example City", "priceRange": "Free consultation" },
+    "website": { "name": "Example Firm" },
+    "same_as": [ "https://www.facebook.com/example" ],
+    "people": [ { "name": "Jane Example", "jobTitle": "Attorney", "url": "/about/jane-example/", "image": "assets/img/jane.webp" } ],
+    "nodes": [ ]
+  }
+}
+```
+
+**Keys.**
+
+| Where | Key | What it sets |
+|---|---|---|
+| `site` | `title_format` | Titles WordPress builds itself (no per-URL title): `%page%`, `%site%`, `%tagline%`. Not used on the home page. |
+| `site` | `site_name` | `og:site_name` and `%site%` (default: the site title). |
+| `site` | `default_description` | Last fallback before the tagline. |
+| `site`, `pages` | `image`/`default_image`, `image_width`, `image_height`, `image_alt` | `og:image`, `og:image:width`/`height`/`alt`, `twitter:image`. A theme image's size is read from the file when not given. |
+| `site`, `pages` | `twitter` | `twitter:card`. |
+| `site`, `pages` | `robots` | Added to WordPress's one robots tag, site-wide first, then the URL's (`noindex, follow`, `max-snippet:-1`). |
+| `site` | `locale` | `og:locale`. |
+| `site`, `pages` | `meta` | Any other `<meta>` the theme printed: `{ "name" or "property", "content" }`. |
+| `pages` | `title` | The full `<title>`, used as written (no format). Also `og:title` and `twitter:title` unless `og_title` is set. |
+| `pages` | `description`, `canonical`, `og_title`, `og_description`, `og_type` | The matching tags. |
+| `pages` | `schema` | Extra JSON-LD nodes for that URL only. |
+| `schema` | `organization` | Laid over Core's `#business` node key by key (the theme's facts win, Business info fills the rest, `@id` stays `/#business`). `@type` may be a list. |
+| `schema` | `website` | Laid over the `#website` node (its `name` defaults to `site.site_name` when set). |
+| `schema` | `same_as` | Added to the business `sameAs` list (duplicates dropped). |
+| `schema` | `people` | Person nodes on every page. Defaults: `@type` Person, `@id` `/#person-<name>`, `worksFor` `/#business`. |
+| `schema` | `nodes` | Any other site-wide nodes. |
+
+**Page keys** are paths below the home URL with a trailing slash (`/`, `/about/`). A key ending in `*` (`/blog/*`) matches every deeper URL; the exact path wins, then the longest pattern.
+
+**Addresses.** `https://...` is used as is. `/about/` and `#business` are on the site (`home_url`). Anything else (`assets/og/home.png`) is a file in the theme, child theme first. In schema this applies to `@id`, `url`, `image`, `logo`, `sameAs`, `contentUrl`, `thumbnailUrl`, `embedUrl`, `mainEntityOfPage` and `hasMap`.
+
+**Which value wins.** The Optima SEO box on the post (title, description, canonical, noindex) wins over everything. Then the theme's per-URL value. Then Core's own fallbacks (featured image, excerpt, term description, the editor's defaults on Optima Build → SEO; on the home page the editor's homepage description also beats `pages["/"].description`). Then the theme's `site` defaults.
+
+**How it gets there.** Optima Build's setup filler copies the section whole (cleaned) into the option `optima_core_seo_setup`, which Optima Core reads. Unlike the other sections it is a mirror of the theme, not blanks to fill: it is rewritten when the section or the theme version changes and on "Fill from theme again", and removed when the theme drops the section. It never touches the SEO box or Optima Build → SEO. The data applies only while Core prints the head (the theme does not declare `optima-seo-head` or define `optima_head`).
+
+**Not expressible yet.** `<link>` tags other than canonical (preloads, `alternate`, `hreflang`), anything outside `<head>`, values computed per request (dates, counts) beyond what Core already computes, and per-post-type rules other than path patterns. Those stay in the theme (preloads are the theme's look anyway) or become a Core feature first.
+
 ## 4. Files to build
 
 ### Optima-Plugins
@@ -180,7 +246,7 @@ if ( function_exists( 'optima_owns' ) && optima_owns( 'seo' ) ) {
 
 **On the site, every feature sits in the same spot:**
 
-- Call bar: bottom of the screen on phones. Cookie notice: bottom left. Chat: bottom right. Hours: footer, beside the address. Reviews: their own block, placed by the theme through one hook (`optima_slot( 'reviews' )`). Accessibility statement: `/accessibility/`. Team profiles: `/team/<name>/`. Case results: `/results/`.
+- Call bar: bottom of the screen on phones. Cookie notice: bottom left. Chat: bottom right. Hours: footer, beside the address (Optima Hours fills `optima_slot( 'footer-contact' )` with a one-line summary once the hours are confirmed; the slot stays empty, and `optima_slot_has( 'footer-contact' )` false, until then). Reviews: their own block, placed by the theme through one hook (`optima_slot( 'reviews' )`). Accessibility statement: `/accessibility/`. Team profiles: `/team/<name>/`. Case results: `/results/`.
 - Themes place plugin blocks only through `optima_slot( $name )` calls in fixed template spots (header, footer, after-hero, before-close), so a feature lands in the same place on every site.
 
 **Every theme has the same files:**

@@ -266,6 +266,74 @@ final class Optima_Hours {
 		return sprintf( __( '%1$s to %2$s', 'optima-hours' ), self::time_label( $open ), self::time_label( $close ) );
 	}
 
+	/**
+	 * The week in one line, for a footer: open days with the same hours are
+	 * grouped, closed days are left out.
+	 *   "Monday to Friday, 9 a.m. to 5 p.m."
+	 *   "Monday to Thursday, 8 a.m. to 6 p.m.; Friday, 8 a.m. to noon"
+	 * '' until the hours are confirmed or when no day is open. Filter
+	 * `optima_hours_summary` to change the words.
+	 */
+	public static function summary(): string {
+		if ( ! self::is_public() || ! self::has_hours() ) {
+			return '';
+		}
+		$s      = self::settings();
+		$groups = array();
+		$last   = null;
+		foreach ( self::ordered_days() as $key ) {
+			$day = $s['days'][ $key ];
+			$sig = $day['open'] ? wp_json_encode( $day['ranges'] ) : '';
+			if ( null !== $last && $sig === $last && '' !== $sig ) {
+				$groups[ count( $groups ) - 1 ]['to'] = $key;
+			} elseif ( '' !== $sig ) {
+				$groups[] = array(
+					'from'   => $key,
+					'to'     => $key,
+					'ranges' => $day['ranges'],
+				);
+			}
+			$last = $sig;
+		}
+		$parts = array();
+		foreach ( $groups as $g ) {
+			$days = self::day_label( $g['from'] );
+			if ( $g['to'] !== $g['from'] ) {
+				/* translators: 1: first day, 2: last day. */
+				$days = sprintf( __( '%1$s to %2$s', 'optima-hours' ), $days, self::day_label( $g['to'] ) );
+			}
+			$times = implode( __( ' and ', 'optima-hours' ), array_map( array( __CLASS__, 'short_range' ), $g['ranges'] ) );
+			/* translators: 1: day or days, 2: hours. */
+			$parts[] = sprintf( __( '%1$s, %2$s', 'optima-hours' ), $days, $times );
+		}
+		$text = implode( '; ', $parts );
+		if ( '' !== $text ) {
+			$text .= '.';
+		}
+		return (string) apply_filters( 'optima_hours_summary', $text, $groups );
+	}
+
+	/** "9 a.m. to 5:30 p.m." for a stored "HH:MM" pair: short footer style. */
+	public static function short_range( array $range ): string {
+		/* translators: 1: opening time, 2: closing time. */
+		return sprintf( __( '%1$s to %2$s', 'optima-hours' ), self::short_time( $range[0] ), self::short_time( $range[1] ) );
+	}
+
+	/** "9 a.m.", "5:30 p.m.", "noon", "midnight". */
+	public static function short_time( string $hhmm ): string {
+		list( $h, $m ) = array_map( 'intval', array_pad( explode( ':', $hhmm ), 2, 0 ) );
+		$h = $h % 24;
+		if ( 0 === $m && 12 === $h ) {
+			return __( 'noon', 'optima-hours' );
+		}
+		if ( 0 === $m && 0 === $h ) {
+			return __( 'midnight', 'optima-hours' );
+		}
+		$hour = $h % 12 ? $h % 12 : 12;
+		$time = $m ? sprintf( '%d:%02d', $hour, $m ) : (string) $hour;
+		return $time . ' ' . ( $h < 12 ? __( 'a.m.', 'optima-hours' ) : __( 'p.m.', 'optima-hours' ) );
+	}
+
 	/** "9:00 AM to 12:00 PM and 1:00 PM to 5:00 PM", or "Closed". */
 	public static function ranges_label( array $ranges ): string {
 		if ( ! $ranges ) {

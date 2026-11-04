@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.0.6 (2026-11-04)
+
+- Optima layer revision 6: **the theme's SEO facts drive the head.** When Optima Core prints the head (plugin first, jobs `seo` and `schema`), it now reads the `seo` section of the theme's `optima-setup.json`, which Optima Build 0.7.9.7 copies into the `optima_core_seo_setup` option. Per URL: title, meta description, canonical, robots, Open Graph title, description, type and image (with width, height and alt), Twitter card, extra meta tags and extra JSON-LD nodes; site-wide: a title format (`%page% | %site%`), default description and share image, site name, locale, robots and meta tags. Schema: the organization's type and fields are laid over the `#business` node, `sameAs` is merged, and Person and other nodes join the `@graph`. Theme paths (`assets/og/home.png`) resolve to the theme's address, `/about/` and `#id` to the site's. Order: the SEO box wins, then the theme's per-URL values, then Core's own fallbacks, then the theme's site defaults. Sites without the section print exactly what they printed before, plus `og:image:width`, `og:image:height` and `og:image:alt` for featured images. Spec: docs/plugin-first.md, section 3a.
+
 ## 1.6.0.5 (2026-11-04)
 
 - Optima layer revision 5: visitor-facing styles now use the `--optima-*` design variables Optima Build 0.7.9.5 prints from the theme's DESIGN.md, so this feature dresses in each site's brand (plugin-first rule 7). Same look on sites without DESIGN.md.

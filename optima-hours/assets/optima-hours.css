@@ -192,3 +192,15 @@
 		transition: background-color .15s ease;
 	}
 }
+
+/* The one-line hours in the theme's footer-contact slot. Inherits the footer's
+   type and color; only the label is set apart. */
+.optima-hours-summary {
+	margin: 0;
+	font: inherit;
+	color: inherit;
+}
+
+.optima-hours-summary-label {
+	font-weight: 600;
+}

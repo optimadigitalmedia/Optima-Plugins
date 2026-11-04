@@ -39,6 +39,11 @@ final class Optima_SEO_Head {
 				return $custom;
 			}
 		}
+		// The theme's per-URL title from optima-setup.json (seo.pages), used as written.
+		$setup = (string) Optima_SEO_Setup::page( 'title' );
+		if ( '' !== $setup ) {
+			return $setup;
+		}
 		return $title;
 	}
 
@@ -62,9 +67,20 @@ final class Optima_SEO_Head {
 		$description = self::description();
 		$canonical   = self::canonical();
 		$title       = wp_get_document_title();
-		$site_name   = get_bloginfo( 'name' );
+		$site_name   = (string) Optima_SEO_Setup::site( 'site_name' );
+		$site_name   = '' !== $site_name ? $site_name : get_bloginfo( 'name' );
 		$image       = self::image();
 		$is_article  = is_singular( 'post' );
+		$og_type     = (string) Optima_SEO_Setup::page( 'og_type' );
+		$og_type     = '' !== $og_type ? $og_type : ( $is_article ? 'article' : 'website' );
+		// The theme's share title and text, unless an editor set this page's own in the SEO box.
+		$box_id      = is_singular() ? get_queried_object_id() : 0;
+		$og_title    = $box_id && '' !== (string) get_post_meta( $box_id, OPTIMA_SEO_META_TITLE, true ) ? '' : (string) Optima_SEO_Setup::page( 'og_title' );
+		$og_title    = '' !== $og_title ? $og_title : $title;
+		$og_desc     = $box_id && '' !== (string) get_post_meta( $box_id, OPTIMA_SEO_META_DESC, true ) ? '' : (string) Optima_SEO_Setup::page( 'og_description' );
+		$og_desc     = '' !== $og_desc ? $og_desc : $description;
+		$locale      = (string) Optima_SEO_Setup::site( 'locale' );
+		$locale      = '' !== $locale ? $locale : get_locale();
 
 		$tags = array();
 
@@ -76,18 +92,25 @@ final class Optima_SEO_Head {
 		}
 
 		// Open Graph.
-		$tags[] = sprintf( '<meta property="og:locale" content="%s" />', esc_attr( get_locale() ) );
-		$tags[] = sprintf( '<meta property="og:type" content="%s" />', $is_article ? 'article' : 'website' );
-		$tags[] = sprintf( '<meta property="og:title" content="%s" />', esc_attr( $title ) );
-		if ( '' !== $description ) {
-			$tags[] = sprintf( '<meta property="og:description" content="%s" />', esc_attr( $description ) );
+		$tags[] = sprintf( '<meta property="og:locale" content="%s" />', esc_attr( $locale ) );
+		$tags[] = sprintf( '<meta property="og:type" content="%s" />', esc_attr( $og_type ) );
+		$tags[] = sprintf( '<meta property="og:title" content="%s" />', esc_attr( $og_title ) );
+		if ( '' !== $og_desc ) {
+			$tags[] = sprintf( '<meta property="og:description" content="%s" />', esc_attr( $og_desc ) );
 		}
 		if ( $canonical ) {
 			$tags[] = sprintf( '<meta property="og:url" content="%s" />', esc_url( $canonical ) );
 		}
 		$tags[] = sprintf( '<meta property="og:site_name" content="%s" />', esc_attr( $site_name ) );
 		if ( $image ) {
-			$tags[] = sprintf( '<meta property="og:image" content="%s" />', esc_url( $image ) );
+			$tags[] = sprintf( '<meta property="og:image" content="%s" />', esc_url( $image['url'] ) );
+			if ( ! empty( $image['width'] ) && ! empty( $image['height'] ) ) {
+				$tags[] = sprintf( '<meta property="og:image:width" content="%d" />', (int) $image['width'] );
+				$tags[] = sprintf( '<meta property="og:image:height" content="%d" />', (int) $image['height'] );
+			}
+			if ( ! empty( $image['alt'] ) ) {
+				$tags[] = sprintf( '<meta property="og:image:alt" content="%s" />', esc_attr( $image['alt'] ) );
+			}
 		}
 		if ( $is_article ) {
 			$id     = get_queried_object_id();
@@ -96,13 +119,29 @@ final class Optima_SEO_Head {
 		}
 
 		// Twitter.
-		$tags[] = sprintf( '<meta name="twitter:card" content="%s" />', $image ? 'summary_large_image' : 'summary' );
-		$tags[] = sprintf( '<meta name="twitter:title" content="%s" />', esc_attr( $title ) );
-		if ( '' !== $description ) {
-			$tags[] = sprintf( '<meta name="twitter:description" content="%s" />', esc_attr( $description ) );
+		$card = (string) Optima_SEO_Setup::page( 'twitter' );
+		$card = '' !== $card ? $card : (string) Optima_SEO_Setup::site( 'twitter' );
+		$card = '' !== $card ? $card : ( $image ? 'summary_large_image' : 'summary' );
+		$tags[] = sprintf( '<meta name="twitter:card" content="%s" />', esc_attr( $card ) );
+		$tags[] = sprintf( '<meta name="twitter:title" content="%s" />', esc_attr( $og_title ) );
+		if ( '' !== $og_desc ) {
+			$tags[] = sprintf( '<meta name="twitter:description" content="%s" />', esc_attr( $og_desc ) );
 		}
 		if ( $image ) {
-			$tags[] = sprintf( '<meta name="twitter:image" content="%s" />', esc_url( $image ) );
+			$tags[] = sprintf( '<meta name="twitter:image" content="%s" />', esc_url( $image['url'] ) );
+		}
+
+		// Any other tags the theme printed (theme-color, twitter:site, fb:app_id), site-wide then per URL.
+		$extra = array_merge( (array) Optima_SEO_Setup::site( 'meta' ), (array) Optima_SEO_Setup::page( 'meta' ) );
+		foreach ( $extra as $meta ) {
+			if ( ! is_array( $meta ) || ! isset( $meta['content'] ) ) {
+				continue;
+			}
+			$attr = isset( $meta['property'] ) ? 'property' : 'name';
+			$key  = (string) ( $meta[ $attr ] ?? '' );
+			if ( '' !== $key ) {
+				$tags[] = sprintf( '<meta %s="%s" content="%s" />', $attr, esc_attr( $key ), esc_attr( (string) $meta['content'] ) );
+			}
 		}
 
 		echo "\n" . implode( "\n", $tags ) . "\n";
@@ -116,6 +155,12 @@ final class Optima_SEO_Head {
 		if ( is_search() || is_404() ) {
 			$robots['noindex'] = true;
 			unset( $robots['index'] );
+		}
+		// The theme's robots rules from optima-setup.json: site-wide, then this URL's.
+		foreach ( array( (string) Optima_SEO_Setup::site( 'robots' ), (string) Optima_SEO_Setup::page( 'robots' ) ) as $rule ) {
+			if ( '' !== $rule ) {
+				$robots = Optima_SEO_Setup::apply_robots( (array) $robots, $rule );
+			}
 		}
 		if ( is_singular() && get_post_meta( get_queried_object_id(), OPTIMA_SEO_META_NOINDEX, true ) ) {
 			$robots['noindex'] = true;
@@ -131,6 +176,16 @@ final class Optima_SEO_Head {
 			if ( '' !== $desc ) {
 				return $desc;
 			}
+		}
+		// The theme's per-URL description (optima-setup.json). On the homepage an
+		// editor-set description (Optima Build -> SEO) still wins over it.
+		$setup = (string) Optima_SEO_Setup::page( 'description' );
+		if ( '' !== $setup ) {
+			$home = is_front_page() && class_exists( 'Optima_Core_SEO_Settings' ) ? Optima_Core_SEO_Settings::value( 'home_description' ) : '';
+			return '' !== $home ? $home : $setup;
+		}
+		if ( is_singular() ) {
+			$id = get_queried_object_id();
 			if ( has_excerpt( $id ) ) {
 				return wp_strip_all_tags( get_the_excerpt( $id ) );
 			}
@@ -143,19 +198,20 @@ final class Optima_SEO_Head {
 				}
 			}
 		}
-		if ( is_front_page() && class_exists( 'Optima_Core_SEO_Settings' ) ) {
-			$home = Optima_Core_SEO_Settings::value( 'home_description' );
-			if ( '' !== $home ) {
-				return $home;
-			}
-		}
 		if ( is_category() || is_tag() || is_tax() ) {
 			$term_desc = wp_strip_all_tags( term_description() );
 			if ( '' !== $term_desc ) {
 				return $term_desc;
 			}
 		}
-		return get_bloginfo( 'description' );
+		if ( is_front_page() && class_exists( 'Optima_Core_SEO_Settings' ) ) {
+			$home = Optima_Core_SEO_Settings::value( 'home_description' );
+			if ( '' !== $home ) {
+				return $home;
+			}
+		}
+		$default = (string) Optima_SEO_Setup::site( 'default_description' );
+		return '' !== $default ? $default : get_bloginfo( 'description' );
 	}
 
 	private static function canonical() {
@@ -165,7 +221,13 @@ final class Optima_SEO_Head {
 			if ( '' !== $override ) {
 				return $override;
 			}
-			return get_permalink( $id );
+		}
+		$setup = (string) Optima_SEO_Setup::page( 'canonical' );
+		if ( '' !== $setup ) {
+			return Optima_SEO_Setup::resolve( $setup );
+		}
+		if ( is_singular() ) {
+			return get_permalink( get_queried_object_id() );
 		}
 		if ( is_front_page() ) {
 			return home_url( '/' );
@@ -187,20 +249,64 @@ final class Optima_SEO_Head {
 		return home_url( '/' );
 	}
 
+	/**
+	 * The share image: the theme's per-URL image (optima-setup.json), the
+	 * featured image, the editor's default (Optima Build -> SEO), the theme's
+	 * default, then the site icon.
+	 *
+	 * @return array{url:string,width?:int,height?:int,alt?:string}|array{}
+	 */
 	private static function image() {
+		$setup = (string) Optima_SEO_Setup::page( 'image' );
+		if ( '' !== $setup ) {
+			return self::setup_image( $setup, 'page' );
+		}
 		if ( is_singular() && has_post_thumbnail( get_queried_object_id() ) ) {
-			$url = get_the_post_thumbnail_url( get_queried_object_id(), 'full' );
-			if ( $url ) {
-				return $url;
+			$thumb = (int) get_post_thumbnail_id( get_queried_object_id() );
+			$src   = wp_get_attachment_image_src( $thumb, 'full' );
+			if ( $src ) {
+				return array_filter(
+					array(
+						'url'    => (string) $src[0],
+						'width'  => (int) $src[1],
+						'height' => (int) $src[2],
+						'alt'    => (string) get_post_meta( $thumb, '_wp_attachment_image_alt', true ),
+					)
+				);
 			}
 		}
 		if ( class_exists( 'Optima_Core_SEO_Settings' ) ) {
 			$default = Optima_Core_SEO_Settings::value( 'default_image' );
 			if ( '' !== $default ) {
-				return $default;
+				return array( 'url' => $default );
 			}
 		}
+		$setup = (string) Optima_SEO_Setup::site( 'default_image' );
+		if ( '' !== $setup ) {
+			return self::setup_image( $setup, 'site' );
+		}
 		$icon = get_site_icon_url();
-		return $icon ? $icon : '';
+		return $icon ? array( 'url' => $icon ) : array();
+	}
+
+	/** A share image named in optima-setup.json, with its size (given, or read from the theme file) and alt text. */
+	private static function setup_image( string $value, string $level ): array {
+		$get    = 'page' === $level ? array( 'Optima_SEO_Setup', 'page' ) : array( 'Optima_SEO_Setup', 'site' );
+		$width  = (int) call_user_func( $get, 'image_width' );
+		$height = (int) call_user_func( $get, 'image_height' );
+		if ( ! $width || ! $height ) {
+			$size = Optima_SEO_Setup::theme_image_size( $value );
+			if ( $size ) {
+				list( $width, $height ) = $size;
+			}
+		}
+		return array_filter(
+			array(
+				'url'    => Optima_SEO_Setup::resolve( $value ),
+				'width'  => $width,
+				'height' => $height,
+				'alt'    => (string) call_user_func( $get, 'image_alt' ),
+			)
+		);
 	}
 }

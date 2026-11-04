@@ -3,7 +3,7 @@
  * Plugin Name:       Optima Core
  * Plugin URI:        https://optimadigitalmedia.com
  * Description:       The Optima engine for a client site: business identity, content model (post types, fields, Block Bindings), the JSON-LD schema graph, and the in-house SEO head tags and sitemap tuning. One plugin, one Optima dashboard. The Yoast replacement, built to survive any future redesign.
- * Version:           1.6.0.5
+ * Version:           1.6.0.6
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Author:            Optima Digital
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OPTIMA_CORE_VERSION', '1.6.0.5' );
+define( 'OPTIMA_CORE_VERSION', '1.6.0.6' );
 define( 'OPTIMA_CORE_DIR', plugin_dir_path( __FILE__ ) );
 define( 'OPTIMA_CORE_FILE', __FILE__ );
 
@@ -58,6 +58,7 @@ require_once OPTIMA_CORE_DIR . 'includes/schema/class-optima-schema-conflicts.ph
 
 /* ---- SEO module (was optima-seo) ---- */
 require_once OPTIMA_CORE_DIR . 'includes/seo/class-seo-head.php';
+require_once OPTIMA_CORE_DIR . 'includes/seo/class-seo-setup.php';
 require_once OPTIMA_CORE_DIR . 'includes/seo/class-seo-box.php';
 require_once OPTIMA_CORE_DIR . 'includes/seo/class-seo-sitemap.php';
 
@@ -128,6 +129,7 @@ add_action( 'update_option_optima_business', array( 'Optima_Schema', 'clear_cach
 
 /* SEO: head tags, the per-post box, sitemap tuning. */
 Optima_SEO_Head::init();
+Optima_SEO_Setup::init();
 Optima_SEO_Box::init();
 Optima_SEO_Sitemap::init();
 Optima_Schema_Conflicts::init();
