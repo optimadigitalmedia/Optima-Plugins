@@ -4,7 +4,7 @@ Status: **Adopted, Joy, Nov 4 2026. These rules are binding for every Optima plu
 
 ## 0. Strict rules (read before touching any plugin or theme)
 
-Every rule is a MUST or a NEVER. If a task would break one, stop and ask Joy first.
+Every rule is a MUST or a NEVER (29 rules). If a task would break one, stop and ask Joy first.
 
 **Who does the work**
 
@@ -36,9 +36,27 @@ Every rule is a MUST or a NEVER. If a task would break one, stop and ask Joy fir
 17. Every move lands on staging first, one site at a time, in the order in section 5.
 18. Every plugin and theme change bumps its version and adds a changelog line, as today.
 
+**Load the same way**
+
+20. Every theme's `functions.php` MUST follow the same skeleton, in this order: `inc/setup.php`, `inc/slots.php`, every `inc/fallbacks/*.php`, then theme-only files. Nothing else at the top level.
+21. Every theme MUST enqueue the same handles the same way: `optima-tokens` (the CSS variables), then `optima-theme` (the theme stylesheet), versioned with the theme version so every release clears caches. No inline `<style>` or `<script>` blocks except the ones Optima Build prints.
+22. Plugins MUST load only through Optima Build: the hub installs, activates and updates them. NEVER install an Optima plugin by hand on a client site.
+
+**Update the same way**
+
+23. Every theme MUST update itself through Optima Build's theme updater from its own GitHub repo with a read-only key (as all four sites do today). NEVER ship a theme with its own updater code.
+24. Every theme and plugin release MUST be a GitHub release whose zip is built by the same script (`build-theme-zip.sh` for themes, `RELEASING.md` for plugins), named `<slug>.zip`, with a semantic version that matches the file header and a changelog line.
+25. Updates move forward only. Rollback is Optima Build's "Go back to vX" button, never a manual upload of an older zip.
+
+**Build the same way on the back end**
+
+26. Every theme MUST be a classic PHP theme with the folder layout in section 4a, the same PHP version floor as Optima Build, `php -l` clean, and its text domain equal to its folder name.
+27. Every theme repo MUST carry the same release workflow and check scripts from `client-kit/template/` (`build-theme-zip.sh`, `uniform-check.sh`), copied, not rewritten.
+28. Every plugin MUST be built from the same skeleton: main file with the standard header, `includes/class-<slug>-*.php`, settings pages from Optima Build's admin kit, and the shared updater. NEVER a plugin-specific settings framework.
+
 **Naming**
 
-19. Plugin and theme code, comments, readmes and docs in Optima repos use Optima names only.
+29. Plugin and theme code, comments, readmes and docs in Optima repos use Optima names only.
 
 
 Joy, Nov 4 2026: "i want all the plugins to take over all theme edits... the theme should not do what the plugin also does... why would we build both? i want the plugin to pull design.md from the theme... i want plugin to do the lifting of all of it's responsibilities and then the theme only takes over if the plugin can't do it."

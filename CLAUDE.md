@@ -14,4 +14,8 @@ The plugin suite behind every Optima client site. Before changing any plugin, re
   Optima Build → <feature>; blocks render through `optima_slot()` in fixed spots.
 - **Prove it.** `tools/uniform-check.sh` passes, head-and-schema diff for every move,
   staging first, version bump and changelog line every release (`RELEASING.md`).
+- **Load, update and build the same way.** Same `functions.php` skeleton and asset handles in
+  every theme; plugins installed and updated only by Optima Build; every theme updates through
+  Optima Build from its own GitHub repo; every release is a GitHub release built by the shared
+  script; same plugin skeleton and admin kit.
 - Optima names only in code, comments and docs.
