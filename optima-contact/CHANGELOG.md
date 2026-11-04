@@ -3,6 +3,7 @@
 ## 0.1.11.5 (2026-11-04)
 
 - Optima layer revision 5: visitor-facing styles now use the `--optima-*` design variables Optima Build 0.7.9.5 prints from the theme's DESIGN.md, so this feature dresses in each site's brand (plugin-first rule 7). Same look on sites without DESIGN.md.
+- The bar renders in the theme's `body-end` slot (plugin-first rule 12); themes without slots still get it from the footer, once per page.
 
 ## 0.1.11.4 (2026-10-31)
 

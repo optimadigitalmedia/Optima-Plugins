@@ -84,6 +84,7 @@ final class Optima_Hub_Setup {
 			'hours'   => array( __CLASS__, 'hours' ),
 			'analytics' => array( __CLASS__, 'analytics' ),
 			'cards'   => array( __CLASS__, 'cards' ),
+			'contact' => array( __CLASS__, 'contact' ),
 		);
 		$changed = false;
 		foreach ( $jobs as $section => $job ) {
@@ -219,6 +220,24 @@ final class Optima_Hub_Setup {
 			$fill[ $key ] = $value;
 		}
 		self::fill_option( Optima_Chat::OPTION, $fill );
+		return true;
+	}
+
+	/** Call buttons: phone, text number, booking link and the labels, filled only where blank or still the default. */
+	private static function contact( array $in ): bool {
+		if ( ! class_exists( 'Optima_Contact' ) ) {
+			return false;
+		}
+		$fill = array();
+		foreach ( array( 'phone', 'text', 'label', 'title', 'subtitle', 'text_note', 'book_note' ) as $key ) {
+			if ( isset( $in[ $key ] ) && is_scalar( $in[ $key ] ) ) {
+				$fill[ $key ] = sanitize_text_field( (string) $in[ $key ] );
+			}
+		}
+		if ( isset( $in['book_url'] ) && is_scalar( $in['book_url'] ) ) {
+			$fill['book_url'] = esc_url_raw( (string) $in['book_url'] );
+		}
+		self::fill_option( Optima_Contact::OPTION, $fill, Optima_Contact::defaults() );
 		return true;
 	}
 
