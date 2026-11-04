@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.9.12 (2026-11-04)
+
+- Fix: the web team's own accounts are operators again. 0.7.9.10 limited the default operators to administrators on the agency domain, which left the web team's administrator accounts (on the agency's web-team partner domain) outside Build and inside the site lock. Administrators on that domain are operators by default again; the domain is stored only as a hash. A site's own `OPTIMA_HUB_OPERATORS` list still replaces the defaults.
+
 ## 0.7.9.11 (2026-11-04)
 
 - **The site lock waits for an operator account.** It applies only when at least one user on the site passes the operator check, so a site can never be locked with nobody able to edit it. The answer is kept in a transient (keyed to the operator list) and cleared whenever a user is added, changed, removed or given a new role. While it waits, administrators see "Site lock is waiting: no Optima operator account on this site yet." on Overview and in the WordPress Dashboard box, and the Site lock card on Build reads On, Waiting for an operator account, or Off.
