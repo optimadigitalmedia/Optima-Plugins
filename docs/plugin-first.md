@@ -1,6 +1,45 @@
 # Plugin First: plugins do the work, themes only fill gaps
 
-Status: **proposed, waiting on Joy's four decisions (section 7).** Nothing below is built yet.
+Status: **Adopted, Joy, Nov 4 2026. These rules are binding for every Optima plugin, theme and client build from now on.** The build-out (sections 4 and 5) is not done yet; until a site is converted, do not add new theme code for any job in the table in section 2.
+
+## 0. Strict rules (read before touching any plugin or theme)
+
+Every rule is a MUST or a NEVER. If a task would break one, stop and ask Joy first.
+
+**Who does the work**
+
+1. A plugin MUST own every job listed in section 2. When that plugin is on, it does the whole job: output, settings, schema and styling.
+2. A theme MUST NEVER do a job a plugin owns, except as a fallback that runs only when `optima_owns( $job )` is false.
+3. NEVER build the same feature twice. Before writing theme code, check the job table. If a plugin owns it, the work goes in the plugin.
+4. A new job (anything a client could also use) MUST be built as a plugin feature first, added to the job table and `catalog.json`, then given a theme fallback only if one is needed.
+5. Theme fallback code MUST live in `inc/fallbacks/<job>.php`, one file per job, and MUST start with the `optima_owns()` check.
+
+**How things look**
+
+6. Every theme MUST ship `DESIGN.md` at its root with one `optima-design` JSON block (section 3).
+7. Plugin CSS MUST use only the `--optima-*` variables Optima Build prints from `DESIGN.md`. NEVER hard-code a color, font or radius in a plugin.
+8. Plugins MUST NEVER load fonts. The theme loads them; plugins name them.
+
+**Same everywhere**
+
+9. Every site MUST have one top-level dashboard menu, **Optima Build**, in the order in section 4a.
+10. A feature's settings MUST live only at Optima Build → <feature name>. NEVER under Settings, Tools, Appearance or a theme screen.
+11. A theme MUST NEVER register its own admin menu for features. Design-only settings go under Optima Build → Design.
+12. Plugin blocks MUST render only through `optima_slot( $name )` in the fixed spots in section 4a, so each feature appears in the same place on every site.
+13. Every theme MUST have the required files in section 4a (`DESIGN.md`, `optima-setup.json`, `inc/fallbacks/`, `inc/slots.php`). Every plugin MUST have the required plugin files.
+14. Client facts (team, hours, phone, results data) MUST live in `optima-setup.json`. NEVER hard-code them in templates.
+
+**Proving it**
+
+15. `tools/uniform-check.sh` MUST pass before any theme or plugin release.
+16. Moving a job from a theme to a plugin MUST be checked with the head-and-schema diff (section 4): every tag and schema node present before is present after.
+17. Every move lands on staging first, one site at a time, in the order in section 5.
+18. Every plugin and theme change bumps its version and adds a changelog line, as today.
+
+**Naming**
+
+19. Plugin and theme code, comments, readmes and docs in Optima repos use Optima names only.
+
 
 Joy, Nov 4 2026: "i want all the plugins to take over all theme edits... the theme should not do what the plugin also does... why would we build both? i want the plugin to pull design.md from the theme... i want plugin to do the lifting of all of it's responsibilities and then the theme only takes over if the plugin can't do it."
 
@@ -135,8 +174,8 @@ Joy: "i want all plugins and themes to be uniformly created so that when you go 
 - No more doubled tags or "Not used on this site" exceptions.
 - Plugin output looks like each client's brand without per-client CSS.
 
-## 7. Decisions for Joy
+## 7. Defaults (Joy can change any of these)
 
-1. **DESIGN.md format:** human rules plus one `optima-design` JSON block (above). OK?
-2. **Order:** RMN first, Optima last (above), or Optima first?
-3. **Retire Optima Site Kit** once its three jobs move into the plugins?
+1. **DESIGN.md format:** human rules plus one `optima-design` JSON block.
+2. **Order:** RMN first, then GJNOLA, Collier, Optima last.
+3. **Optima Site Kit** retires once its three jobs live in the plugins.
