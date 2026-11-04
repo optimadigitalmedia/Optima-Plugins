@@ -68,6 +68,12 @@ check_screens() {
   local root="${1:-.}"
   local kit="$root/tools/admin-kit/class-optima-admin-ui.php"
   [ -f "$kit" ] || { bad "screen groups: no admin kit at $kit"; return; }
+  # Admin kit 1.7 (upstream, Nov 4 2026) files screens by its own slug lists and
+  # carries the grouping test; the SCREENS map below is for older kits.
+  if ! grep -q "const SCREENS" "$kit"; then
+    if php "$root/tools/tests/admin-kit-groups.php" >/dev/null 2>&1; then ok "screen groups: tools/tests/admin-kit-groups.php passes"; else bad "screen groups: tools/tests/admin-kit-groups.php fails (run it for the list)"; fi
+    return
+  fi
   local map
   map=$(php -r 'define("ABSPATH", "/"); function add_action() {} function add_filter() {} require $argv[1]; echo json_encode( array( "groups" => Optima_Admin_UI::GROUPS, "screens" => Optima_Admin_UI::SCREENS ) );' "$kit") || { bad "screen groups: could not read the admin kit"; return; }
   local out
