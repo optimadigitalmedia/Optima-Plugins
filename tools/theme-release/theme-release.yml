@@ -32,8 +32,24 @@ jobs:
       SLUG: client-theme                    # EDIT: the theme folder name, same as "Optima Release:"
       THEME_DIR: wp-theme/client-theme      # EDIT: the folder holding style.css (or leave and set THEME_ZIP)
       THEME_ZIP: ''                        # Optional: a built zip committed to the repo, used instead of THEME_DIR
+      OPTIMA_STANDARD: warn                 # EDIT: 'strict' once the site is on the Optima Site Standard; 'warn' reports only
     steps:
       - uses: actions/checkout@v4
+
+      # The Optima Site Standard check (Optima-Internal ops/playbook/site-standard.md §3, rule 7):
+      # the files a theme must have, and the things it must never hold. 'warn' reports;
+      # 'strict' fails the release (rule 17 to 19: a release never ships a theme that broke the standard).
+      - uses: actions/checkout@v4
+        with:
+          repository: optimadigitalmedia/Optima-Plugins
+          path: .optima-plugins
+      - name: Optima Site Standard check
+        run: |
+          set -euo pipefail
+          dir="$THEME_DIR"
+          if [ -n "$THEME_ZIP" ]; then mkdir -p .standard && unzip -q "$THEME_ZIP" -d .standard && dir=".standard/$SLUG"; fi
+          flag=""; [ "$OPTIMA_STANDARD" = "strict" ] || flag="--warn"
+          bash .optima-plugins/tools/theme-standard-check.sh "$dir" $flag
 
       - name: Build the zip
         run: |

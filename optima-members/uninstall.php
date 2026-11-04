@@ -14,3 +14,8 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 delete_option( 'optima_members' );
 delete_option( 'optima_members_questions' );
 delete_option( 'optima_members_next_step' );
+// The plan-to-product links. The WooCommerce products and orders stay: they are the shop's records.
+delete_option( 'optima_members_products' );
+delete_option( 'optima_members_unmatched' );
+delete_option( 'optima_members_version' );
+wp_clear_scheduled_hook( 'optima_members_daily' );

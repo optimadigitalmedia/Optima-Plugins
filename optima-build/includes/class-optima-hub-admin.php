@@ -1,6 +1,6 @@
 <?php
 /**
- * The dashboard screens: Features, Requests and Health.
+ * The dashboard screens: Overview, Inbox, Site health, Features, Updates, Requests and the Site log.
  *
  * Placement follows the dashboard standard (one Build section per site): the
  * screens go inside the site's existing Build menu when there is one (the
@@ -52,7 +52,7 @@ final class Optima_Hub_Admin {
 		return in_array( $slug, array( self::PAGE, 'site-build' ), true ) ? $slug : self::PAGE;
 	}
 
-	public static function url( string $tab = 'features', array $args = array() ): string {
+	public static function url( string $tab = 'overview', array $args = array() ): string {
 		return add_query_arg( array_merge( array( 'page' => self::page_slug(), 'tab' => $tab ), $args ), admin_url( 'admin.php' ) );
 	}
 
@@ -64,16 +64,24 @@ final class Optima_Hub_Admin {
 				? 'data:image/svg+xml;base64,' . base64_encode( '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#1272C4" d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>' ) // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 				: 'dashicons-admin-generic';
 			add_menu_page( $label, $label, 'edit_posts', 'site-build', array( __CLASS__, 'render' ), $icon, 3 );
-			add_submenu_page( 'site-build', __( 'Features', 'optima-build' ), __( 'Features', 'optima-build' ), 'edit_posts', 'site-build', array( __CLASS__, 'render' ) );
+			add_submenu_page( 'site-build', __( 'Overview', 'optima-build' ), __( 'Overview', 'optima-build' ), 'edit_posts', 'site-build', array( __CLASS__, 'render' ) );
 		}
-		add_submenu_page( $parent, __( 'Features', 'optima-build' ), __( 'Features', 'optima-build' ), 'edit_posts', self::PAGE, array( __CLASS__, 'render' ) );
+		// Site Standard §7 (v1.2): the first screen is the Overview, for everyone.
+		add_submenu_page( $parent, __( 'Overview', 'optima-build' ), __( 'Overview', 'optima-build' ), 'edit_posts', self::PAGE, array( __CLASS__, 'render' ) );
 		if ( 'site-build' === $parent ) {
 			remove_submenu_page( 'site-build', self::PAGE ); // The section's first item already opens this screen.
 		}
-		// The other two tabs get their own sidebar entries, so nobody has to find the tabs first.
+		// Each tab gets its own sidebar entry, so nobody has to find the tabs first.
 		$base = 'site-build' === $parent ? 'site-build' : self::PAGE;
+		add_submenu_page( $parent, __( 'Inbox', 'optima-build' ), __( 'Inbox', 'optima-build' ) . self::bubble( self::waiting_total() ), 'edit_posts', $base . '&tab=inbox', array( __CLASS__, 'render' ) );
 		add_submenu_page( $parent, __( 'Request a change', 'optima-build' ), __( 'Request a change', 'optima-build' ), 'edit_posts', $base . '&tab=requests', array( __CLASS__, 'render' ) );
 		add_submenu_page( $parent, __( 'Site health', 'optima-build' ), __( 'Site health', 'optima-build' ), 'edit_posts', $base . '&tab=health', array( __CLASS__, 'render' ) );
+		// Build (operators): the features, every update (rule 12), and the Site log. The admin kit hides the group from everyone else.
+		add_submenu_page( $parent, __( 'Features', 'optima-build' ), __( 'Features', 'optima-build' ), 'edit_posts', $base . '&tab=features', array( __CLASS__, 'render' ) );
+		add_submenu_page( $parent, __( 'Updates', 'optima-build' ), __( 'Updates', 'optima-build' ), 'edit_posts', $base . '&tab=updates', array( __CLASS__, 'render' ) );
+		// Operators see the full Site log under Build; everyone else sees it as "Your site" under Overview.
+		$log_label = Optima_Hub_Access::is_operator() ? __( 'Site log', 'optima-build' ) : __( 'Your site', 'optima-build' );
+		add_submenu_page( $parent, $log_label, $log_label, 'edit_posts', $base . '&tab=log', array( __CLASS__, 'render' ) );
 		$slug = 'site-build' === $parent ? 'site-build' : self::PAGE;
 		if ( get_option( 'optima_hub_page' ) !== $slug ) {
 			update_option( 'optima_hub_page', $slug, false );
@@ -82,14 +90,39 @@ final class Optima_Hub_Admin {
 
 	/**
 	 * One order for the Optima menu on every site, which the shared section nav
-	 * follows too: Features and Site health first, then the settings screens
+	 * follows too: Overview, Inbox and Site health first, then the settings screens
 	 * (Business info, SEO, AI search, images), then the rest, Request a change last.
 	 */
 	public static function first(): void {
-		global $submenu;
+		global $submenu, $menu;
 		$parent = self::parent();
 		if ( empty( $submenu[ $parent ] ) ) {
 			return;
+		}
+		// Site Standard rule 11: one menu, named Optima (Site Build on partner sites), whatever
+		// registered it. A theme's own Build menu keeps its slug until its conversion, but
+		// shows the standard name so every site reads the same.
+		if ( in_array( $parent, array( 'optima-build', 'recon-build' ), true ) && is_array( $menu ) ) {
+			$label = self::branded() ? __( 'Optima', 'optima-build' ) : __( 'Site Build', 'optima-build' );
+			foreach ( $menu as $i => $entry ) {
+				if ( ( $entry[2] ?? '' ) === $parent ) {
+					$menu[ $i ][0] = $label; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- relabel only.
+				}
+			}
+		}
+		// Rule 11 again: every group shows on every site. A group with nothing on gets a
+		// stand-in entry that opens the Features screen, which the admin kit greys out.
+		if ( class_exists( 'Optima_Admin_UI' ) && defined( 'Optima_Admin_UI::GROUPS' ) ) {
+			$base = 'site-build' === $parent ? 'site-build' : self::PAGE;
+			$seen = array();
+			foreach ( $submenu[ $parent ] as $item ) {
+				$seen[ Optima_Admin_UI::group( (string) ( $item[2] ?? '' ), wp_strip_all_tags( (string) ( $item[0] ?? '' ) ) ) ] = true;
+			}
+			foreach ( Optima_Admin_UI::GROUPS as $key => $label ) {
+				if ( empty( $seen[ $key ] ) ) {
+					add_submenu_page( $parent, $label, $label, 'edit_posts', $base . '&tab=features&group=' . $key, array( __CLASS__, 'render' ) );
+				}
+			}
 		}
 		$items = array_values( $submenu[ $parent ] );
 		$rank  = static function ( array $item, int $i ): int {
@@ -98,8 +131,23 @@ final class Optima_Hub_Admin {
 			if ( false !== strpos( $slug, 'tab=requests' ) ) {
 				return 9000;
 			}
+			if ( false !== strpos( $slug, '&group=' ) ) {
+				return 8000 + $i; // Stand-ins for groups with nothing on, before Request a change.
+			}
+			if ( false !== strpos( $slug, 'tab=inbox' ) ) {
+				return 50;
+			}
 			if ( false !== strpos( $slug, 'tab=health' ) ) {
 				return 100;
+			}
+			if ( false !== strpos( $slug, 'tab=features' ) ) {
+				return 140;
+			}
+			if ( false !== strpos( $slug, 'tab=updates' ) ) {
+				return 150;
+			}
+			if ( false !== strpos( $slug, 'tab=log' ) ) {
+				return 160;
 			}
 			if ( self::PAGE === $page || 'site-build' === $page ) {
 				return 0;
@@ -128,10 +176,27 @@ final class Optima_Hub_Admin {
 			/* translators: 1: checks passed, 2: total */
 			return sprintf( __( 'AI %1$d/%2$d', 'optima-build' ), count( array_filter( $ai, static fn( $c ) => 'good' === $c['state'] ) ), count( $ai ) );
 		}
+		if ( false !== strpos( $slug, 'tab=log' ) ) {
+			$n = Optima_Hub_Log::count_month();
+			/* translators: %d: log lines this month */
+			return $n ? sprintf( __( '%d this month', 'optima-build' ), $n ) : '';
+		}
 		if ( false !== strpos( $slug, 'tab=requests' ) ) {
 			$open = count( array_filter( Optima_Hub_Requests::all(), static fn( $p ) => 'done' !== get_post_meta( $p->ID, Optima_Hub_Requests::META_STATUS, true ) ) );
 			/* translators: %d: open requests */
 			return $open ? sprintf( __( '%d open', 'optima-build' ), $open ) : '';
+		}
+		if ( false !== strpos( $slug, 'tab=updates' ) ) {
+			$waiting = self::waiting();
+			/* translators: %d: plugins with an update */
+			return $waiting ? sprintf( __( '%d ready', 'optima-build' ), $waiting ) : '';
+		}
+		if ( false !== strpos( $slug, 'tab=inbox' ) ) {
+			$n = self::waiting_total();
+			return $n ? (string) $n : '';
+		}
+		if ( false === strpos( $slug, 'tab=features' ) || false !== strpos( $slug, '&group=' ) ) {
+			return $hint; // Only the Features entry itself carries the "on" count.
 		}
 		$on = 0;
 		foreach ( array_keys( Optima_Hub_Catalog::features() ) as $f ) {
@@ -139,6 +204,62 @@ final class Optima_Hub_Admin {
 		}
 		/* translators: %d: features on */
 		return sprintf( __( '%d on', 'optima-build' ), $on );
+	}
+
+	/**
+	 * Everything waiting on a person, one list for the Inbox, the Overview and
+	 * the sidebar count: open change requests, unanswered chat questions, new
+	 * reviews. Each row: label, count, url, note.
+	 *
+	 * @return array<int,array{label:string,count:int,url:string,note:string}>
+	 */
+	public static function waiting_on_you(): array {
+		$rows = array();
+		$open = count( array_filter( Optima_Hub_Requests::all(), static fn( $p ) => 'done' !== get_post_meta( $p->ID, Optima_Hub_Requests::META_STATUS, true ) ) );
+		$rows[] = array( 'label' => __( 'Change requests', 'optima-build' ), 'count' => $open, 'url' => self::url( 'requests' ), 'note' => __( 'Things you asked Optima for, with where each one stands.', 'optima-build' ) );
+		if ( class_exists( 'Optima_Chat_Admin' ) && method_exists( 'Optima_Chat_Admin', 'unanswered' ) && class_exists( 'Optima_Chat' ) ) {
+			$rows[] = array( 'label' => __( 'Chat questions', 'optima-build' ), 'count' => (int) Optima_Chat_Admin::unanswered(), 'url' => admin_url( 'edit.php?post_type=' . Optima_Chat::CPT ), 'note' => __( 'Questions visitors asked the chat that it could not answer.', 'optima-build' ) );
+		}
+		if ( class_exists( 'Optima_Reviews_Google_Sync' ) && method_exists( 'Optima_Reviews_Google_Sync', 'new_count' ) ) {
+			$rows[] = array( 'label' => __( 'New reviews', 'optima-build' ), 'count' => (int) Optima_Reviews_Google_Sync::new_count(), 'url' => admin_url( 'admin.php?page=optima-reviews-inbox' ), 'note' => __( 'Reviews that arrived since you last looked. Pick the ones to show.', 'optima-build' ) );
+		}
+		/**
+		 * Filters the Inbox rows, so a plugin can add its own queue.
+		 *
+		 * @param array $rows Rows of label, count, url, note.
+		 */
+		return (array) apply_filters( 'optima_hub_inbox', $rows );
+	}
+
+	/** The Inbox total, for the sidebar bubble and the nav hint. */
+	public static function waiting_total(): int {
+		static $total = null;
+		if ( null === $total ) {
+			$total = (int) array_sum( array_column( self::waiting_on_you(), 'count' ) );
+		}
+		return $total;
+	}
+
+	/** A WordPress count bubble for a sidebar label. */
+	private static function bubble( int $n ): string {
+		return $n ? ' <span class="awaiting-mod"><span class="pending-count">' . (int) $n . '</span></span>' : '';
+	}
+
+	/** Installed Optima features, slug => status, newest check included. */
+	private static function installed(): array {
+		$rows = array();
+		foreach ( array_keys( Optima_Hub_Catalog::features() ) as $slug ) {
+			$st = Optima_Hub_Features::status( $slug );
+			if ( '' !== $st['version'] ) {
+				$rows[ $slug ] = $st;
+			}
+		}
+		return $rows;
+	}
+
+	/** How many installed features have a newer release waiting. */
+	private static function waiting(): int {
+		return count( array_filter( self::installed(), static fn( $st ) => '' !== $st['update'] ) );
 	}
 
 	/** Where each feature's own settings live, when it has a screen. */
@@ -166,7 +287,7 @@ final class Optima_Hub_Admin {
 	}
 
 	public static function action_link( array $links ): array {
-		array_unshift( $links, '<a href="' . esc_url( self::url() ) . '">' . esc_html__( 'Features', 'optima-build' ) . '</a>' );
+		array_unshift( $links, '<a href="' . esc_url( self::url() ) . '">' . esc_html__( 'Open Optima', 'optima-build' ) . '</a>' );
 		return $links;
 	}
 
@@ -191,16 +312,24 @@ final class Optima_Hub_Admin {
 		if ( ! current_user_can( 'edit_posts' ) ) {
 			return;
 		}
-		$tab  = sanitize_key( (string) ( $_GET['tab'] ?? 'features' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$tab  = sanitize_key( (string) ( $_GET['tab'] ?? 'overview' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$tabs = array(
-			'features' => __( 'Your features', 'optima-build' ),
+			'overview' => __( 'Overview', 'optima-build' ),
+			'inbox'    => __( 'Inbox', 'optima-build' ),
+			'features' => __( 'Features', 'optima-build' ),
+			'updates'  => __( 'Updates', 'optima-build' ),
 			'requests' => __( 'Request a change', 'optima-build' ),
 			'health'   => __( 'Site health', 'optima-build' ),
+			'log'      => Optima_Hub_Access::is_operator() && empty( $_GET['view'] ) ? __( 'Site log', 'optima-build' ) : __( 'Your site', 'optima-build' ), // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		);
-		$tab  = isset( $tabs[ $tab ] ) ? $tab : 'features';
+		$tab  = isset( $tabs[ $tab ] ) ? $tab : 'overview';
+		$lede = 'updates' === $tab ? __( 'Everything that brings a new version or new content onto this site, in one place: the theme, the plugins, the setup file, Site Sync, imports and the change log.', 'optima-build' ) : '';
+		if ( 'log' === $tab && __( 'Your site', 'optima-build' ) === $tabs['log'] ) {
+			$lede = __( 'What Optima has done on your website, and anything you have asked for.', 'optima-build' );
+		}
 		// Site name in the eyebrow, trimmed at a " | " tagline so it fits a phone.
 		$site = trim( (string) preg_split( '/\s+[|–—-]\s+/u', wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES ) )[0] );
-		Optima_Admin_UI::open( $tabs[ $tab ], '', $site );
+		Optima_Admin_UI::open( $tabs[ $tab ], $lede, $site );
 		?>
 			<?php self::notice(); ?>
 			<?php
@@ -208,6 +337,14 @@ final class Optima_Hub_Admin {
 				self::requests();
 			} elseif ( 'health' === $tab ) {
 				self::health();
+			} elseif ( 'updates' === $tab ) {
+				self::updates();
+			} elseif ( 'inbox' === $tab ) {
+				self::inbox();
+			} elseif ( 'overview' === $tab ) {
+				self::overview();
+			} elseif ( 'log' === $tab ) {
+				self::log();
 			} else {
 				self::features();
 			}
@@ -236,10 +373,193 @@ final class Optima_Hub_Admin {
 
 	/* ------------------------------------------------------------------ */
 
+	/**
+	 * Overview (Site Standard §7, v1.2): the first screen for everyone. Three
+	 * answers: is the site all right, what needs you, what Optima is doing. Then
+	 * the things a client actually comes here to do, and one line to ask for more.
+	 */
+	private static function overview(): void {
+		$operator = Optima_Hub_Access::is_operator();
+		$basics   = Optima_Hub_Health::checks();
+		$ai       = Optima_Hub_Health::ai_checks();
+		$bad      = array_filter( $basics, static fn( $c ) => 'bad' === $c['state'] );
+		$warn     = array_filter( $basics, static fn( $c ) => 'warn' === $c['state'] );
+		$ready    = count( array_filter( $ai, static fn( $c ) => 'good' === $c['state'] ) );
+		$waiting  = self::waiting_on_you();
+		$total    = (int) array_sum( array_column( $waiting, 'count' ) );
+		$updates  = self::waiting();
+		$theme    = wp_get_theme();
+		$log      = class_exists( 'Optima_Hub_Log' ) ? Optima_Hub_Log::query( array( 'per_page' => 3, 'client' => ! $operator ) ) : array( 'items' => array() );
+		$site     = trim( (string) preg_split( '/\s+[|–—-]\s+/u', wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES ) )[0] );
+		if ( $bad ) {
+			$state = 'bad';
+			/* translators: %d: failing checks */
+			$line = sprintf( _n( '%d thing on the site needs fixing.', '%d things on the site need fixing.', count( $bad ), 'optima-build' ), count( $bad ) );
+		} elseif ( $warn ) {
+			$state = 'warn';
+			/* translators: %d: checks that want a look */
+			$line = sprintf( _n( 'The site is fine. %d thing wants a look.', 'The site is fine. %d things want a look.', count( $warn ), 'optima-build' ), count( $warn ) );
+		} else {
+			$state = 'good';
+			$line  = __( 'The site is in good shape.', 'optima-build' );
+		}
+		?>
+		<style>
+			.sh-ov-status{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+			.sh-ov-status .sh-dot{width:10px;height:10px;border-radius:50%;flex:none}
+			.sh-ov-status .is-good{background:var(--sh-good)}.sh-ov-status .is-warn{background:var(--sh-warn)}.sh-ov-status .is-bad{background:var(--sh-bad,#E23B2E)}
+			.sh-ov-status p{margin:0;font-size:17px;font-weight:600}
+			.sh-ov-rows{display:grid;gap:6px;margin-top:10px}
+			.sh-ov-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 14px;padding:10px 12px;border-radius:10px;background:var(--sh-surface-2)}
+			.sh-ov-row .sh-num{font:600 20px/1 var(--sh-mono);margin:0;min-width:28px}
+			.sh-ov-row .sh-note{margin:0}
+			.sh-ov-do{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:10px}
+			.sh-ov-do a{display:grid;gap:4px;padding:12px 14px;border-radius:12px;border:1px solid var(--sh-border);text-decoration:none;color:inherit}
+			.sh-ov-do a:hover{border-color:var(--sh-accent)}
+			.sh-ov-do b{color:var(--sh-text)}
+			.sh-ov-do span{font-size:13px;color:var(--sh-text-2)}
+			.sh-ov-log{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:6px}
+			.sh-ov-log li{display:grid;grid-template-columns:auto 1fr;gap:10px;color:var(--sh-text-2)}
+			.sh-ov-log .sh-when{font-family:var(--sh-mono);font-size:12px;color:var(--sh-text-3);padding-top:2px;white-space:nowrap}
+		</style>
+		<section class="sh-box">
+			<div class="sh-ov-status">
+				<span class="sh-dot is-<?php echo esc_attr( $state ); ?>" aria-hidden="true"></span>
+				<p><?php echo esc_html( $line ); ?></p>
+				<a href="<?php echo esc_url( self::url( 'health' ) ); ?>"><?php esc_html_e( 'See the full report', 'optima-build' ); ?> &rsaquo;</a>
+			</div>
+			<p class="sh-note" style="margin-top:8px">
+				<?php
+				/* translators: 1: site name, 2: checks ready for AI search, 3: total AI checks */
+				echo esc_html( sprintf( __( '%1$s is ready for AI search on %2$d of %3$d checks.', 'optima-build' ), $site, $ready, count( $ai ) ) );
+				?>
+			</p>
+		</section>
+
+		<div class="sh-grid sh-grid-2">
+			<section class="sh-box">
+				<h2 class="sh-title"><?php esc_html_e( 'Needs you', 'optima-build' ); ?></h2>
+				<?php if ( $total ) : ?>
+					<div class="sh-ov-rows">
+						<?php foreach ( $waiting as $row ) : ?>
+							<?php if ( ! $row['count'] ) { continue; } ?>
+							<div class="sh-ov-row"><p class="sh-num"><?php echo (int) $row['count']; ?></p><a href="<?php echo esc_url( $row['url'] ); ?>"><?php echo esc_html( $row['label'] ); ?> &rsaquo;</a></div>
+						<?php endforeach; ?>
+					</div>
+				<?php else : ?>
+					<p class="sh-note"><?php esc_html_e( 'Nothing is waiting on you.', 'optima-build' ); ?></p>
+				<?php endif; ?>
+				<p class="sh-note" style="margin-top:10px"><a href="<?php echo esc_url( self::url( 'inbox' ) ); ?>"><?php esc_html_e( 'Open the Inbox', 'optima-build' ); ?> &rsaquo;</a></p>
+			</section>
+			<section class="sh-box">
+				<h2 class="sh-title"><?php echo esc_html( self::branded() ? __( 'With Optima', 'optima-build' ) : __( 'Behind the scenes', 'optima-build' ) ); ?></h2>
+				<p class="sh-note">
+					<?php
+					echo esc_html(
+						$updates
+							/* translators: %d: plugin updates waiting */
+							? sprintf( _n( '%d update is ready and installs itself within a few hours.', '%d updates are ready and install themselves within a few hours.', $updates, 'optima-build' ), $updates )
+							: __( 'Everything is up to date. Updates install themselves.', 'optima-build' )
+					);
+					?>
+					<?php echo ' ' . esc_html( sprintf( /* translators: 1: theme name, 2: version */ __( 'Theme: %1$s %2$s.', 'optima-build' ), (string) $theme->get( 'Name' ), (string) $theme->get( 'Version' ) ) ); ?>
+				</p>
+				<?php if ( ! empty( $log['items'] ) ) : ?>
+					<ul class="sh-ov-log">
+						<?php foreach ( $log['items'] as $post ) : ?>
+							<?php $row = Optima_Hub_Log::to_array( $post, ! $operator ); ?>
+							<li><span class="sh-when"><?php echo esc_html( wp_date( 'M j', strtotime( $row['date'] ) ) ); ?></span><span><?php echo esc_html( ( ! $operator && '' !== $row['client_text'] ) ? $row['client_text'] : $row['title'] ); ?></span></li>
+						<?php endforeach; ?>
+					</ul>
+					<p class="sh-note" style="margin-top:8px"><a href="<?php echo esc_url( self::url( 'log' ) ); ?>"><?php echo esc_html( $operator ? __( 'The whole Site log', 'optima-build' ) : __( 'Everything Optima has done on your site', 'optima-build' ) ); ?> &rsaquo;</a></p>
+				<?php endif; ?>
+			</section>
+		</div>
+
+		<?php
+		$do = array();
+		$do[] = array( admin_url( 'edit.php?post_type=page' ), __( 'Change a page', 'optima-build' ), __( 'Your pages, with who edited each one last.', 'optima-build' ) );
+		$do[] = array( admin_url( 'post-new.php' ), __( 'Write a post', 'optima-build' ), __( 'A new post, in your own words.', 'optima-build' ) );
+		if ( class_exists( 'Optima_Hours_Admin' ) ) {
+			$do[] = array( admin_url( 'admin.php?page=optima-hours' ), __( 'Update your hours', 'optima-build' ), __( 'Holiday closures and new hours, everywhere at once.', 'optima-build' ) );
+		} elseif ( class_exists( 'Optima_Core_Admin' ) ) {
+			$do[] = array( admin_url( 'admin.php?page=optima&tab=business' ), __( 'Your business details', 'optima-build' ), __( 'Name, phone, address and profiles, typed once.', 'optima-build' ) );
+		}
+		if ( class_exists( 'Optima_Reviews_Requests' ) ) {
+			$do[] = array( admin_url( 'admin.php?page=optima-reviews-ask' ), __( 'Ask for a review', 'optima-build' ), __( 'Your review link, ready to send.', 'optima-build' ) );
+		} elseif ( class_exists( 'Optima_Core_Admin' ) && class_exists( 'Optima_Hours_Admin' ) ) {
+			$do[] = array( admin_url( 'admin.php?page=optima&tab=business' ), __( 'Your business details', 'optima-build' ), __( 'Name, phone, address and profiles, typed once.', 'optima-build' ) );
+		}
+		?>
+		<div class="sh-section-head"><p class="sh-eyebrow"><?php esc_html_e( 'Things you can do here', 'optima-build' ); ?></p></div>
+		<div class="sh-ov-do">
+			<?php foreach ( $do as list( $url, $title, $text ) ) : ?>
+				<a href="<?php echo esc_url( $url ); ?>"><b><?php echo esc_html( $title ); ?></b><span><?php echo esc_html( $text ); ?></span></a>
+			<?php endforeach; ?>
+		</div>
+		<section class="sh-box" style="margin-top:16px">
+			<p>
+				<?php echo esc_html( self::branded() ? __( 'Want something added or changed? Ask Optima.', 'optima-build' ) : __( 'Want something added or changed? Ask us.', 'optima-build' ) ); ?>
+				<a class="button" style="margin-left:8px" href="<?php echo esc_url( self::url( 'requests' ) ); ?>"><?php esc_html_e( 'Request a change', 'optima-build' ); ?></a>
+			</p>
+		</section>
+		<?php if ( $operator ) : ?>
+			<p class="sh-note" style="margin-top:14px">
+				<?php esc_html_e( 'Operators:', 'optima-build' ); ?>
+				<a href="<?php echo esc_url( self::url( 'features' ) ); ?>"><?php esc_html_e( 'Features', 'optima-build' ); ?></a> ·
+				<a href="<?php echo esc_url( self::url( 'updates' ) ); ?>"><?php esc_html_e( 'Updates', 'optima-build' ); ?></a> ·
+				<a href="<?php echo esc_url( self::url( 'log' ) ); ?>"><?php esc_html_e( 'Site log', 'optima-build' ); ?></a>
+			</p>
+		<?php endif; ?>
+		<?php
+	}
+
+	/** Inbox: every queue that waits on a person, in one place, with one count. */
+	private static function inbox(): void {
+		$rows  = self::waiting_on_you();
+		$total = (int) array_sum( array_column( $rows, 'count' ) );
+		?>
+		<section class="sh-box">
+			<p class="sh-lede" style="margin:0">
+				<?php
+				echo esc_html(
+					$total
+						/* translators: %d: items waiting */
+						? sprintf( _n( '%d thing is waiting on a person.', '%d things are waiting on a person.', $total, 'optima-build' ), $total )
+						: __( 'Nothing is waiting. Every queue is empty.', 'optima-build' )
+				);
+				?>
+			</p>
+		</section>
+		<div class="sh-grid">
+			<?php foreach ( $rows as $row ) : ?>
+				<article class="sh-card<?php echo $row['count'] ? '' : ' is-off'; ?>">
+					<div class="sh-cardhead"><h2><?php echo esc_html( $row['label'] ); ?></h2><span class="sh-pill <?php echo $row['count'] ? 'is-on' : 'is-off'; ?>"><?php echo (int) $row['count']; ?></span></div>
+					<p class="sh-summary"><?php echo esc_html( $row['note'] ); ?></p>
+					<div class="sh-actions"><a class="button<?php echo $row['count'] ? ' button-primary' : ''; ?>" href="<?php echo esc_url( $row['url'] ); ?>"><?php esc_html_e( 'Open', 'optima-build' ); ?></a></div>
+				</article>
+			<?php endforeach; ?>
+			<?php if ( class_exists( 'Optima_Reviews_Requests' ) ) : ?>
+				<article class="sh-card">
+					<div class="sh-cardhead"><h2><?php esc_html_e( 'Ask for reviews', 'optima-build' ); ?></h2></div>
+					<p class="sh-summary"><?php esc_html_e( 'Your review link and the card to hand out. Nothing queues here; it is the way to ask.', 'optima-build' ); ?></p>
+					<div class="sh-actions"><a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=optima-reviews-ask' ) ); ?>"><?php esc_html_e( 'Open', 'optima-build' ); ?></a></div>
+				</article>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
 	private static function features(): void {
 		$operator = Optima_Hub_Access::is_operator();
 		$features = Optima_Hub_Catalog::features();
 		$plan     = Optima_Hub_Access::plan();
+		// Opened from a greyed group in the nav: say so, then show the features as usual.
+		$group = sanitize_key( (string) ( $_GET['group'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( '' !== $group && class_exists( 'Optima_Admin_UI' ) && isset( Optima_Admin_UI::GROUPS[ $group ] ) ) {
+			/* translators: %s: nav group name, e.g. Reviews */
+			printf( '<div class="notice notice-info"><p>%s</p></div>', esc_html( sprintf( __( 'Nothing in %s is on yet. Turn on a feature below and the group fills in.', 'optima-build' ), Optima_Admin_UI::GROUPS[ $group ] ) ) );
+		}
 		$states   = array(
 			'missing' => __( 'Not installed', 'optima-build' ),
 			'off'     => __( 'Off', 'optima-build' ),
@@ -313,63 +633,12 @@ final class Optima_Hub_Admin {
 						</select>
 						<button type="submit" class="button"><?php esc_html_e( 'Save plan', 'optima-build' ); ?></button>
 					</form>
-					<?php echo Optima_Hub_Features::button( '', 'refresh', __( 'Check for new versions', 'optima-build' ), 'button sh-quiet' ); // phpcs:ignore WordPress.Security.EscapeOutput -- built from escaped parts. ?>
-					<?php if ( Optima_Hub_Setup::data() ) : ?>
-						<?php echo Optima_Hub_Features::button( '', 'refill', __( 'Fill from theme again', 'optima-build' ), 'button sh-quiet' ); // phpcs:ignore WordPress.Security.EscapeOutput -- built from escaped parts. ?>
-					<?php endif; ?>
-					<?php
-					$installed = array_filter( array_map( array( 'Optima_Hub_Features', 'status' ), array_keys( Optima_Hub_Catalog::features() ) ), static fn( $st ) => '' !== $st['version'] );
-					$waiting   = count( array_filter( $installed, static fn( $st ) => '' !== $st['update'] ) );
-					$checked   = $installed ? max( array_column( $installed, 'checked' ) ) : 0;
-					Optima_Hub_Features::refresh_if_stale( $checked );
-					?>
-					<p class="sh-inline sh-note">
-						<?php $offline = ! $waiting && Optima_Hub_Catalog::unreachable(); ?>
-						<span class="sh-tag <?php echo ( $waiting || $offline ) ? 'is-update' : 'is-current'; ?>"><?php
-							echo esc_html(
-								$waiting
-									/* translators: %d: features with an update */
-									? sprintf( _n( '%d update ready', '%d updates ready', $waiting, 'optima-build' ), $waiting )
-									: ( $offline
-										// The check failed, so "up to date" would be a guess.
-										? __( 'Could not reach GitHub. Try again in 15 minutes.', 'optima-build' )
-										: __( 'Everything is up to date', 'optima-build' ) )
-							);
-						?></span>
-						<?php if ( $checked ) : ?>
-							<?php
-							/* translators: %s: time since, e.g. "5 minutes" */
-							echo esc_html( sprintf( __( 'Checked %s ago', 'optima-build' ), human_time_diff( $checked ) ) );
-							?>
-						<?php endif; ?>
-						<?php
-						// Optima Build updates itself from the Plugins screen, so its own version sits here.
-						$updates   = get_site_transient( 'update_plugins' );
-						$build_new = $updates->response[ plugin_basename( OPTIMA_HUB_FILE ) ]->new_version ?? '';
-						?>
-						<span class="sh-build-ver">
-							<?php
-							/* translators: %s: Optima Build version */
-							echo esc_html( sprintf( __( 'Optima Build %s', 'optima-build' ), OPTIMA_HUB_VERSION ) );
-							?>
-							<?php if ( $build_new && version_compare( $build_new, OPTIMA_HUB_VERSION, '>' ) ) : ?>
-								<a href="<?php echo esc_url( admin_url( 'plugins.php?plugin_status=upgrade' ) ); ?>">
-									<?php
-									/* translators: %s: newer Optima Build version */
-									echo esc_html( sprintf( __( '%s ready on the Plugins screen', 'optima-build' ), $build_new ) );
-									?>
-								</a>
-							<?php endif; ?>
-						</span>
-					</p>
 				</div>
 				<?php if ( ! Optima_Hub_Access::can_install() ) : ?>
 					<p class="sh-note"><?php esc_html_e( 'This site blocks plugin installs from the dashboard, so features that are not installed yet need to be uploaded by hand.', 'optima-build' ); ?></p>
 				<?php endif; ?>
 			<?php endif; ?>
 		</section>
-
-		<?php Optima_Hub_Themes::panel( $operator ); ?>
 
 		<?php
 		$titles = array(
@@ -405,6 +674,157 @@ final class Optima_Hub_Admin {
 				</ul>
 			</section>
 		<?php endif; ?>
+		<?php
+	}
+
+	/* ------------------------------------------------------------------ */
+
+	/**
+	 * Optima → Updates (Site Standard rule 12): the theme, the plugins, the
+	 * setup file, Site Sync, the post importer, site settings and the change
+	 * log. Nothing elsewhere brings a new version or new content onto the site.
+	 */
+	private static function updates(): void {
+		$operator  = Optima_Hub_Access::is_operator();
+		$features  = Optima_Hub_Catalog::features();
+		$installed = self::installed();
+		uksort( $installed, static fn( $a, $b ) => strcasecmp( $features[ $a ]['name'] ?? $a, $features[ $b ]['name'] ?? $b ) );
+		$waiting = count( array_filter( $installed, static fn( $st ) => '' !== $st['update'] ) );
+		$checked = $installed ? max( array_column( $installed, 'checked' ) ) : 0;
+		Optima_Hub_Features::refresh_if_stale( $checked );
+		$offline = ! $waiting && Optima_Hub_Catalog::unreachable();
+		// Optima Build updates itself from the Plugins screen, so its own version sits first.
+		$updates   = get_site_transient( 'update_plugins' );
+		$build_new = $updates->response[ plugin_basename( OPTIMA_HUB_FILE ) ]->new_version ?? '';
+		$build_new = $build_new && version_compare( $build_new, OPTIMA_HUB_VERSION, '>' ) ? $build_new : '';
+
+		Optima_Hub_Themes::panel( $operator );
+		Optima_Hub_Rings::panel( $operator );
+		?>
+		<section class="sh-box" id="sh-plugins">
+			<h2 class="sh-title"><?php esc_html_e( 'Plugins', 'optima-build' ); ?></h2>
+			<p class="sh-inline sh-note">
+				<span class="sh-tag <?php echo ( $waiting || $build_new || $offline ) ? 'is-update' : 'is-current'; ?>"><?php
+					$ready = $waiting + ( $build_new ? 1 : 0 );
+					echo esc_html(
+						$ready
+							/* translators: %d: plugins with an update */
+							? sprintf( _n( '%d update ready', '%d updates ready', $ready, 'optima-build' ), $ready )
+							: ( $offline
+								// The check failed, so "up to date" would be a guess.
+								? __( 'Could not reach GitHub. Try again in 15 minutes.', 'optima-build' )
+								: __( 'Everything is up to date', 'optima-build' ) )
+					);
+				?></span>
+				<?php if ( $checked ) : ?>
+					<?php
+					/* translators: %s: time since, e.g. "5 minutes" */
+					echo esc_html( sprintf( __( 'Checked %s ago', 'optima-build' ), human_time_diff( $checked ) ) );
+					?>
+				<?php endif; ?>
+				<?php if ( $operator ) : ?>
+					<?php echo Optima_Hub_Features::button( '', 'refresh', __( 'Check for new versions', 'optima-build' ), 'button sh-quiet' ); // phpcs:ignore WordPress.Security.EscapeOutput -- built from escaped parts. ?>
+				<?php endif; ?>
+			</p>
+			<table class="sh-table sh-table-plain">
+				<thead>
+					<tr>
+						<th scope="col"><?php esc_html_e( 'Plugin', 'optima-build' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Version', 'optima-build' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Status', 'optima-build' ); ?></th>
+						<th scope="col"><span class="screen-reader-text"><?php esc_html_e( 'Action', 'optima-build' ); ?></span></th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td><?php esc_html_e( 'Optima Build', 'optima-build' ); ?></td>
+						<td><?php echo esc_html( 'v' . OPTIMA_HUB_VERSION ); ?></td>
+						<td>
+							<?php if ( $build_new ) : ?>
+								<span class="sh-tag is-update"><?php echo esc_html( sprintf( /* translators: %s: version */ __( 'Update ready: v%s', 'optima-build' ), $build_new ) ); ?></span>
+							<?php else : ?>
+								<span class="sh-tag is-current"><?php esc_html_e( 'Up to date', 'optima-build' ); ?></span>
+							<?php endif; ?>
+						</td>
+						<td>
+							<?php if ( $build_new && current_user_can( 'update_plugins' ) ) : ?>
+								<a class="button button-primary" href="<?php echo esc_url( admin_url( 'plugins.php?plugin_status=upgrade' ) ); ?>"><?php esc_html_e( 'Update now', 'optima-build' ); ?></a>
+							<?php endif; ?>
+						</td>
+					</tr>
+					<?php foreach ( $installed as $slug => $st ) : ?>
+						<tr>
+							<td><?php echo esc_html( $features[ $slug ]['name'] ?? $slug ); ?><?php if ( 'on' !== $st['state'] ) : ?> <span class="sh-pill is-off"><?php esc_html_e( 'Off', 'optima-build' ); ?></span><?php endif; ?></td>
+							<td><?php echo esc_html( 'v' . $st['version'] ); ?></td>
+							<td>
+								<?php if ( $st['update'] ) : ?>
+									<span class="sh-tag is-update"><?php echo esc_html( sprintf( /* translators: %s: version */ __( 'Update ready: v%s', 'optima-build' ), $st['update'] ) ); ?></span>
+									<?php $wait = Optima_Hub_Rings::wait_reason( $slug, (string) $st['update'] ); ?>
+									<?php if ( '' !== $wait ) : ?><span class="sh-note" style="display:block;margin-top:4px"><?php echo esc_html( $wait ); ?></span><?php endif; ?>
+								<?php elseif ( $st['checked'] ) : ?>
+									<span class="sh-tag is-current"><?php esc_html_e( 'Up to date', 'optima-build' ); ?></span>
+								<?php endif; ?>
+								<?php if ( Optima_Hub_Features::held( $slug ) ) : ?><span class="sh-tag is-held"><?php esc_html_e( 'Updates paused', 'optima-build' ); ?></span><?php endif; ?>
+							</td>
+							<td>
+								<?php
+								$update = $operator && $st['update'] ? Optima_Hub_Features::update_url( $slug ) : '';
+								if ( '' !== $update ) {
+									echo '<a class="button button-primary" href="' . esc_url( $update ) . '">' . esc_html__( 'Update now', 'optima-build' ) . '</a>';
+								}
+								?>
+							</td>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+			<p class="sh-note"><?php esc_html_e( 'Optima plugins update themselves within a few hours of each release. Turning a feature on, off or back a version happens on the Features screen.', 'optima-build' ); ?></p>
+		</section>
+
+		<?php
+		// The other ways content and settings reach the site. Each lands here and nowhere
+		// else; a card says plainly when its tool is not on this site yet.
+		$sync    = class_exists( 'Optima_Sync_Admin' ) ? admin_url( 'admin.php?page=optima&tab=sync' ) : '';
+		$changes = class_exists( 'Optima_Changelog_Admin' ) ? admin_url( 'admin.php?page=optima&tab=changes' ) : '';
+		$settings = (string) apply_filters( 'optima_hub_site_settings_url', '' );
+		$cards   = array(
+			array(
+				'title' => __( 'Fill from theme', 'optima-build' ),
+				'text'  => __( 'Copies the business facts in the theme\'s setup file into the features that use them. Fills blanks only; anything already set stays as it is.', 'optima-build' ),
+				'go'    => Optima_Hub_Setup::data() ? ( $operator ? Optima_Hub_Features::button( '', 'refill', __( 'Fill from theme again', 'optima-build' ), 'button' ) : '' ) : '<span class="sh-note">' . esc_html__( 'This theme has no setup file.', 'optima-build' ) . '</span>',
+			),
+			array(
+				'title' => __( 'Site Sync', 'optima-build' ),
+				'text'  => __( 'Pulls page copy from the theme\'s bundle, the way it left the repo. Untouched pages update on their own; anything edited here waits for review.', 'optima-build' ),
+				'go'    => '' !== $sync ? '<a class="button" href="' . esc_url( $sync ) . '">' . esc_html__( 'Open Site Sync', 'optima-build' ) . '</a>' : '<span class="sh-note">' . esc_html__( 'Needs Optima Core.', 'optima-build' ) . '</span>',
+			),
+			array(
+				'title' => __( 'Import posts (XML)', 'optima-build' ),
+				'text'  => __( 'Brings posts in from a WordPress export file, through WordPress\'s own importer.', 'optima-build' ),
+				'go'    => current_user_can( 'import' ) ? '<a class="button" href="' . esc_url( admin_url( 'import.php' ) ) . '">' . esc_html__( 'Open the importer', 'optima-build' ) . '</a>' : '',
+			),
+			array(
+				'title' => __( 'Site settings', 'optima-build' ),
+				'text'  => __( 'Export this site\'s Optima settings to a file, or import one from another site.', 'optima-build' ),
+				'go'    => '' !== $settings ? '<a class="button" href="' . esc_url( $settings ) . '">' . esc_html__( 'Export or import', 'optima-build' ) . '</a>' : '<span class="sh-note">' . esc_html__( 'Not available on this site yet.', 'optima-build' ) . '</span>',
+			),
+			array(
+				'title' => __( 'Change log', 'optima-build' ),
+				'text'  => __( 'What was changed on this site, by whom and when, with a copy you can hand to Optima so the repo catches up.', 'optima-build' ),
+				'go'    => '' !== $changes ? '<a class="button" href="' . esc_url( $changes ) . '">' . esc_html__( 'Open the change log', 'optima-build' ) . '</a>' : '<span class="sh-note">' . esc_html__( 'Needs Optima Core 1.7.0 or newer.', 'optima-build' ) . '</span>',
+			),
+		);
+		?>
+		<div class="sh-section-head"><p class="sh-eyebrow"><?php esc_html_e( 'Content and settings', 'optima-build' ); ?></p></div>
+		<div class="sh-grid">
+			<?php foreach ( $cards as $card ) : ?>
+				<article class="sh-card">
+					<div class="sh-cardhead"><h2><?php echo esc_html( $card['title'] ); ?></h2></div>
+					<p class="sh-summary"><?php echo esc_html( $card['text'] ); ?></p>
+					<div class="sh-actions"><?php echo $card['go']; // phpcs:ignore WordPress.Security.EscapeOutput -- built from escaped parts. ?></div>
+				</article>
+			<?php endforeach; ?>
+		</div>
 
 		<?php
 		$log = Optima_Hub_Features::recent_log();
@@ -706,6 +1126,421 @@ final class Optima_Hub_Admin {
 				</section>
 			<?php endforeach; ?>
 		</div>
+		<?php
+	}
+
+	/* ------------------------------------------------------------------ */
+
+	/**
+	 * Site log: every change to this site, newest first. Operators add notes,
+	 * set the client wording and the measure on a line, import the history
+	 * file once, and export the current view as CSV.
+	 */
+	private static function log(): void {
+		$operator = Optima_Hub_Access::is_operator();
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- a view switch only.
+		if ( ! $operator || ! empty( $_GET['view'] ) ) {
+			self::your_site( $operator );
+			return;
+		}
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- filters only.
+		$filter = array(
+			'month'  => isset( $_GET['month'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['month'] ) ) : '',
+			'kind'   => isset( $_GET['kind'] ) ? sanitize_key( wp_unslash( (string) $_GET['kind'] ) ) : '',
+			'topic'  => isset( $_GET['topic'] ) ? sanitize_key( wp_unslash( (string) $_GET['topic'] ) ) : '',
+			'status' => isset( $_GET['status'] ) ? sanitize_key( wp_unslash( (string) $_GET['status'] ) ) : '',
+			'client' => ! empty( $_GET['client'] ),
+			'page'   => max( 1, (int) ( $_GET['paged'] ?? 1 ) ),
+		);
+		$show_import = $operator && ( ! get_option( Optima_Hub_Log::IMPORTED ) || ! empty( $_GET['import'] ) );
+		// phpcs:enable
+		$page    = Optima_Hub_Log::query( $filter + array( 'per_page' => 50 ) );
+		$months  = array();
+		for ( $i = 0; $i < 12; $i++ ) {
+			$m            = gmdate( 'Y-m', strtotime( "-$i months", current_time( 'timestamp' ) ) ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
+			$months[ $m ] = date_i18n( 'F Y', strtotime( $m . '-01' ) );
+		}
+		$no_wording = 0;
+		?>
+		<style>
+			.sh-log-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+			.sh-log-filters select{min-width:120px}
+			.sh-log-filters .sh-note{margin:0 0 0 auto}
+			.sh-log-table{width:100%;border-collapse:collapse;font-size:13.5px}
+			.sh-log-table th{text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--sh-text-3);padding:6px 10px 6px 0;border-bottom:1px solid var(--sh-border)}
+			.sh-log-table td{padding:10px 10px 10px 0;border-bottom:1px solid var(--sh-border);vertical-align:top}
+			.sh-log-table td.sh-log-date{font-family:var(--sh-mono);font-size:12px;color:var(--sh-text-3);white-space:nowrap}
+			.sh-log-table .sh-pill{font-size:11px;padding:2px 8px;margin-right:4px}
+			.sh-log-table .sh-pill.is-planned{background:var(--sh-glow);color:var(--sh-accent-text)}
+			.sh-log-table .sh-pill.is-waiting{background:rgba(253,193,52,.18);color:var(--sh-warn)}
+			.sh-log-table .sh-pill.is-client{background:rgba(43,162,75,.14);color:var(--sh-good)}
+			.sh-log-meta{font-size:12px;color:var(--sh-text-3);margin:2px 0 0}
+			.sh-log-flag{font-size:12px;color:var(--sh-warn);margin:2px 0 0}
+			.sh-log-edit{display:none;margin-top:8px;gap:6px}
+			.sh-log-edit.is-open{display:grid}
+			.sh-log-edit input[type="text"]{width:100%;border-radius:8px}
+			.sh-log-row .sh-quiet{padding:0 6px;min-height:0;font-size:12px}
+			.sh-log-note .sh-form{grid-template-columns:1fr 1fr;gap:6px 14px}
+			.sh-log-note .sh-form .sh-wide{grid-column:1/-1}
+			.sh-log-note .sh-form label{margin-top:4px}
+			.sh-log-note .sh-form input[type="text"],.sh-log-note .sh-form input[type="date"]{width:100%;border-radius:8px;border-color:var(--sh-border-strong)}
+			@media (max-width:700px){.sh-log-note .sh-form{grid-template-columns:1fr}.sh-log-table td.sh-log-date{white-space:normal}}
+		</style>
+
+		<section class="sh-box">
+			<div class="sh-section-head">
+				<div>
+					<p class="sh-label"><?php esc_html_e( 'Every change to this site', 'optima-build' ); ?></p>
+					<p class="sh-note"><?php esc_html_e( 'Updates, features, copy, requests and notes, written by the plugins as they happen. Lines marked "Client sees" make up the monthly update.', 'optima-build' ); ?></p>
+				</div>
+			</div>
+			<form method="get" action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>" class="sh-log-filters">
+				<input type="hidden" name="page" value="<?php echo esc_attr( self::page_slug() ); ?>">
+				<input type="hidden" name="tab" value="log">
+				<select name="month" aria-label="<?php esc_attr_e( 'Month', 'optima-build' ); ?>">
+					<option value=""><?php esc_html_e( 'Any month', 'optima-build' ); ?></option>
+					<?php foreach ( $months as $key => $label ) : ?>
+						<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $filter['month'], $key ); ?>><?php echo esc_html( $label ); ?></option>
+					<?php endforeach; ?>
+				</select>
+				<select name="kind" aria-label="<?php esc_attr_e( 'Kind', 'optima-build' ); ?>">
+					<option value=""><?php esc_html_e( 'Any kind', 'optima-build' ); ?></option>
+					<?php foreach ( Optima_Hub_Log::KINDS as $key => $label ) : ?>
+						<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $filter['kind'], $key ); ?>><?php echo esc_html( $label ); ?></option>
+					<?php endforeach; ?>
+				</select>
+				<select name="topic" aria-label="<?php esc_attr_e( 'Topic', 'optima-build' ); ?>">
+					<option value=""><?php esc_html_e( 'Any topic', 'optima-build' ); ?></option>
+					<?php foreach ( Optima_Hub_Log::TOPICS as $key => $label ) : ?>
+						<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $filter['topic'], $key ); ?>><?php echo esc_html( $label ); ?></option>
+					<?php endforeach; ?>
+				</select>
+				<select name="status" aria-label="<?php esc_attr_e( 'Status', 'optima-build' ); ?>">
+					<option value=""><?php esc_html_e( 'Any status', 'optima-build' ); ?></option>
+					<?php foreach ( Optima_Hub_Log::STATUSES as $key => $label ) : ?>
+						<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $filter['status'], $key ); ?>><?php echo esc_html( $label ); ?></option>
+					<?php endforeach; ?>
+				</select>
+				<label><input type="checkbox" name="client" value="1" <?php checked( $filter['client'] ); ?>> <?php esc_html_e( 'Client sees', 'optima-build' ); ?></label>
+				<button type="submit" class="button"><?php esc_html_e( 'Filter', 'optima-build' ); ?></button>
+				<?php if ( $operator ) : ?>
+					<p class="sh-note"><a href="#sh-log-note"><?php esc_html_e( 'Add a note', 'optima-build' ); ?></a> &middot; <a href="#sh-log-export"><?php esc_html_e( 'Export CSV', 'optima-build' ); ?></a> &middot; <a href="<?php echo esc_url( self::url( 'log', array( 'view' => 'client' ) ) ); ?>"><?php esc_html_e( 'See it as the client', 'optima-build' ); ?> &rsaquo;</a></p>
+				<?php endif; ?>
+			</form>
+
+			<?php if ( ! $page['items'] ) : ?>
+				<p class="sh-note" style="margin-top:14px"><?php esc_html_e( 'Nothing logged yet for this view. Lines appear as plugins, the theme and copy update, when requests come in, and when someone adds a note.', 'optima-build' ); ?></p>
+			<?php else : ?>
+				<table class="sh-log-table" style="margin-top:14px">
+					<thead><tr><th><?php esc_html_e( 'When', 'optima-build' ); ?></th><th><?php esc_html_e( 'What changed', 'optima-build' ); ?></th><th><?php esc_html_e( 'By', 'optima-build' ); ?></th></tr></thead>
+					<tbody>
+					<?php foreach ( $page['items'] as $post ) : ?>
+						<?php
+						$row = Optima_Hub_Log::to_array( $post );
+						if ( $row['show_client'] && '' === $row['client_text'] ) {
+							++$no_wording;
+						}
+						?>
+						<tr class="sh-log-row">
+							<td class="sh-log-date"><?php echo esc_html( get_the_date( 'M j, Y', $post ) ); ?></td>
+							<td>
+								<strong><?php echo esc_html( $row['title'] ); ?></strong>
+								<p class="sh-log-meta">
+									<span class="sh-pill"><?php echo esc_html( Optima_Hub_Log::KINDS[ $row['kind'] ] ?? $row['kind'] ); ?></span>
+									<span class="sh-pill"><?php echo esc_html( Optima_Hub_Log::TOPICS[ $row['topic'] ] ?? $row['topic'] ); ?></span>
+									<?php if ( 'done' !== $row['status'] ) : ?>
+										<span class="sh-pill is-<?php echo esc_attr( $row['status'] ); ?>"><?php echo esc_html( Optima_Hub_Log::STATUSES[ $row['status'] ] ); ?></span>
+									<?php endif; ?>
+									<?php if ( $row['show_client'] ) : ?>
+										<span class="sh-pill is-client"><?php esc_html_e( 'Client sees', 'optima-build' ); ?></span>
+									<?php endif; ?>
+									<?php if ( '' !== $row['version'] ) : ?>
+										<?php echo esc_html( $row['version'] ); ?>
+									<?php endif; ?>
+									<?php if ( '' !== $row['measure'] ) : ?>
+										&middot; <?php echo esc_html( $row['measure'] ); ?>
+									<?php endif; ?>
+								</p>
+								<?php if ( '' !== $row['client_text'] ) : ?>
+									<p class="sh-log-meta"><?php esc_html_e( 'Client wording:', 'optima-build' ); ?> <?php echo esc_html( $row['client_text'] ); ?></p>
+								<?php elseif ( $row['show_client'] ) : ?>
+									<p class="sh-log-flag"><?php esc_html_e( 'No client wording yet; the client sees the line above as written.', 'optima-build' ); ?></p>
+								<?php endif; ?>
+								<?php if ( $operator && '' !== $row['detail'] ) : ?>
+									<p class="sh-log-meta"><?php echo esc_html( $row['detail'] ); ?></p>
+								<?php endif; ?>
+								<?php if ( $operator ) : ?>
+									<button type="button" class="button sh-quiet" data-sh-edit="<?php echo (int) $row['id']; ?>"><?php esc_html_e( 'Edit wording', 'optima-build' ); ?></button>
+									<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="sh-log-edit" id="sh-log-edit-<?php echo (int) $row['id']; ?>">
+										<input type="hidden" name="action" value="<?php echo esc_attr( Optima_Hub_Log::ACTION ); ?>">
+										<input type="hidden" name="do" value="edit">
+										<input type="hidden" name="line" value="<?php echo (int) $row['id']; ?>">
+										<?php wp_nonce_field( Optima_Hub_Log::ACTION ); ?>
+										<label for="sh-ct-<?php echo (int) $row['id']; ?>"><?php esc_html_e( 'What the client reads', 'optima-build' ); ?></label>
+										<input type="text" id="sh-ct-<?php echo (int) $row['id']; ?>" name="client_text" value="<?php echo esc_attr( $row['client_text'] ); ?>" maxlength="400" placeholder="<?php esc_attr_e( 'One plain sentence. If it claims a result, put the number in.', 'optima-build' ); ?>">
+										<label for="sh-ms-<?php echo (int) $row['id']; ?>"><?php esc_html_e( 'Measure (before and after)', 'optima-build' ); ?></label>
+										<input type="text" id="sh-ms-<?php echo (int) $row['id']; ?>" name="measure" value="<?php echo esc_attr( $row['measure'] ); ?>" maxlength="200" placeholder="<?php esc_attr_e( 'PageSpeed phone 85 to 88', 'optima-build' ); ?>">
+										<label><input type="checkbox" name="show_client" value="1" <?php checked( $row['show_client'] ); ?>> <?php esc_html_e( 'Client sees this line', 'optima-build' ); ?></label>
+										<?php if ( 'done' !== $row['status'] ) : ?>
+											<label><input type="checkbox" name="status" value="done"> <?php esc_html_e( 'Mark as done', 'optima-build' ); ?></label>
+										<?php endif; ?>
+										<p><button type="submit" class="button button-primary"><?php esc_html_e( 'Save', 'optima-build' ); ?></button></p>
+									</form>
+								<?php endif; ?>
+							</td>
+							<td class="sh-log-date"><?php echo esc_html( $row['source'] ); ?></td>
+						</tr>
+					<?php endforeach; ?>
+					</tbody>
+				</table>
+				<?php if ( $page['pages'] > 1 ) : ?>
+					<p class="sh-note" style="margin-top:10px">
+						<?php
+						$base = self::url( 'log', array_filter( array( 'month' => $filter['month'], 'kind' => $filter['kind'], 'topic' => $filter['topic'], 'status' => $filter['status'], 'client' => $filter['client'] ? '1' : '' ) ) );
+						if ( $filter['page'] > 1 ) {
+							echo '<a href="' . esc_url( add_query_arg( 'paged', $filter['page'] - 1, $base ) ) . '">&lsaquo; ' . esc_html__( 'Newer', 'optima-build' ) . '</a> &middot; ';
+						}
+						/* translators: 1: page, 2: pages */
+						echo esc_html( sprintf( __( 'Page %1$d of %2$d', 'optima-build' ), $filter['page'], $page['pages'] ) );
+						if ( $filter['page'] < $page['pages'] ) {
+							echo ' &middot; <a href="' . esc_url( add_query_arg( 'paged', $filter['page'] + 1, $base ) ) . '">' . esc_html__( 'Older', 'optima-build' ) . ' &rsaquo;</a>';
+						}
+						?>
+					</p>
+				<?php endif; ?>
+				<?php if ( $operator && $no_wording ) : ?>
+					<p class="sh-note" style="margin-top:10px">
+						<?php
+						/* translators: %d: lines */
+						echo esc_html( sprintf( _n( '%d line on this page is shown to the client without its own wording.', '%d lines on this page are shown to the client without their own wording.', $no_wording, 'optima-build' ), $no_wording ) );
+						?>
+					</p>
+				<?php endif; ?>
+			<?php endif; ?>
+		</section>
+
+		<?php if ( $operator ) : ?>
+			<div class="sh-grid sh-grid-2">
+				<section class="sh-box sh-log-note" id="sh-log-note">
+					<p class="sh-label"><?php esc_html_e( 'Add a note', 'optima-build' ); ?></p>
+					<p class="sh-note"><?php esc_html_e( 'For work done by hand or outside the site: an edit in WordPress, a listing fix, a launch step.', 'optima-build' ); ?></p>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="sh-form">
+						<input type="hidden" name="action" value="<?php echo esc_attr( Optima_Hub_Log::ACTION ); ?>">
+						<input type="hidden" name="do" value="note">
+						<?php wp_nonce_field( Optima_Hub_Log::ACTION ); ?>
+						<label class="sh-wide" for="sh-ln-title"><?php esc_html_e( 'What changed', 'optima-build' ); ?></label>
+						<input class="sh-wide" type="text" id="sh-ln-title" name="title" required maxlength="200">
+						<label class="sh-wide" for="sh-ln-client"><?php esc_html_e( 'What the client reads (optional)', 'optima-build' ); ?></label>
+						<input class="sh-wide" type="text" id="sh-ln-client" name="client_text" maxlength="400">
+						<label for="sh-ln-topic"><?php esc_html_e( 'Topic', 'optima-build' ); ?></label>
+						<label for="sh-ln-status"><?php esc_html_e( 'Status', 'optima-build' ); ?></label>
+						<select id="sh-ln-topic" name="topic">
+							<?php foreach ( Optima_Hub_Log::TOPICS as $key => $label ) : ?>
+								<option value="<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $label ); ?></option>
+							<?php endforeach; ?>
+						</select>
+						<select id="sh-ln-status" name="status">
+							<?php foreach ( Optima_Hub_Log::STATUSES as $key => $label ) : ?>
+								<option value="<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $label ); ?></option>
+							<?php endforeach; ?>
+						</select>
+						<label for="sh-ln-version"><?php esc_html_e( 'Version (optional)', 'optima-build' ); ?></label>
+						<label for="sh-ln-measure"><?php esc_html_e( 'Measure (optional)', 'optima-build' ); ?></label>
+						<input type="text" id="sh-ln-version" name="version" maxlength="60" placeholder="1.1.8">
+						<input type="text" id="sh-ln-measure" name="measure" maxlength="200" placeholder="<?php esc_attr_e( 'largest paint 4.1s to 3.3s', 'optima-build' ); ?>">
+						<label for="sh-ln-date"><?php esc_html_e( 'When (blank for today)', 'optima-build' ); ?></label>
+						<label><input type="checkbox" name="show_client" value="1" checked> <?php esc_html_e( 'Client sees this line', 'optima-build' ); ?></label>
+						<input type="date" id="sh-ln-date" name="date">
+						<span></span>
+						<label class="sh-wide" for="sh-ln-detail"><?php esc_html_e( 'Internal detail (optional, never shown to the client)', 'optima-build' ); ?></label>
+						<textarea class="sh-wide" id="sh-ln-detail" name="detail" rows="3"></textarea>
+						<p class="sh-wide"><button type="submit" class="button button-primary"><?php esc_html_e( 'Add to the log', 'optima-build' ); ?></button></p>
+					</form>
+				</section>
+
+				<div>
+					<section class="sh-box" id="sh-log-export">
+						<p class="sh-label"><?php esc_html_e( 'Export', 'optima-build' ); ?></p>
+						<p class="sh-note"><?php esc_html_e( 'The current filter as a CSV file.', 'optima-build' ); ?></p>
+						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+							<input type="hidden" name="action" value="<?php echo esc_attr( Optima_Hub_Log::ACTION ); ?>">
+							<input type="hidden" name="do" value="export">
+							<?php wp_nonce_field( Optima_Hub_Log::ACTION ); ?>
+							<?php foreach ( array( 'month', 'kind', 'topic', 'status' ) as $key ) : ?>
+								<input type="hidden" name="<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( (string) $filter[ $key ] ); ?>">
+							<?php endforeach; ?>
+							<input type="hidden" name="client" value="<?php echo $filter['client'] ? '1' : ''; ?>">
+							<p><button type="submit" class="button"><?php esc_html_e( 'Download CSV', 'optima-build' ); ?></button></p>
+						</form>
+					</section>
+
+					<?php
+					$fresh  = get_transient( 'optima_hub_keys_show_' . get_current_user_id() );
+					$source = Optima_Hub_Log_API::keys_source();
+					if ( is_array( $fresh ) ) {
+						delete_transient( 'optima_hub_keys_show_' . get_current_user_id() );
+					}
+					?>
+					<section class="sh-box" id="sh-hub-keys" style="margin-top:14px">
+						<p class="sh-label"><?php esc_html_e( 'Hub keys', 'optima-build' ); ?></p>
+						<p class="sh-note"><?php esc_html_e( 'Two keys let the Optima Client Hub read this site\'s log, requests and versions. The read key goes in the Sheet; the write key lets Claude add note lines. They are shown once and kept encrypted.', 'optima-build' ); ?></p>
+						<?php if ( is_array( $fresh ) ) : ?>
+							<p class="sh-note" style="color:var(--sh-warn)"><strong><?php esc_html_e( 'Copy both into the password manager now. They are not shown again.', 'optima-build' ); ?></strong></p>
+							<p class="sh-note"><?php esc_html_e( 'Read key (for the Sheet):', 'optima-build' ); ?></p>
+							<p><code style="user-select:all;word-break:break-all"><?php echo esc_html( $fresh['read'] ); ?></code></p>
+							<p class="sh-note"><?php esc_html_e( 'Write key (for Claude):', 'optima-build' ); ?></p>
+							<p><code style="user-select:all;word-break:break-all"><?php echo esc_html( $fresh['write'] ); ?></code></p>
+						<?php elseif ( 'config' === $source ) : ?>
+							<p class="sh-note"><?php esc_html_e( 'Set in wp-config.php. Those win over any keys made here.', 'optima-build' ); ?></p>
+						<?php elseif ( 'site' === $source ) : ?>
+							<p class="sh-note">
+								<?php
+								/* translators: %s: date */
+								echo esc_html( sprintf( __( 'Keys made here on %s. The endpoint is on.', 'optima-build' ), date_i18n( get_option( 'date_format' ), Optima_Hub_Log_API::keys_made() ) ) );
+								?>
+							</p>
+						<?php else : ?>
+							<p class="sh-note"><?php esc_html_e( 'No keys yet, so the endpoint is off.', 'optima-build' ); ?></p>
+						<?php endif; ?>
+						<?php if ( 'config' !== $source ) : ?>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="sh-inline">
+								<input type="hidden" name="action" value="<?php echo esc_attr( Optima_Hub_Log::ACTION ); ?>">
+								<input type="hidden" name="do" value="keys">
+								<?php wp_nonce_field( Optima_Hub_Log::ACTION ); ?>
+								<button type="submit" class="button <?php echo 'site' === $source ? '' : 'button-primary'; ?>"><?php echo 'site' === $source ? esc_html__( 'Make new keys', 'optima-build' ) : esc_html__( 'Make keys', 'optima-build' ); ?></button>
+								<?php if ( 'site' === $source ) : ?>
+									<span class="sh-note"><?php esc_html_e( 'New keys replace the old ones; the Sheet will need the new read key.', 'optima-build' ); ?></span>
+								<?php endif; ?>
+							</form>
+							<?php if ( 'site' === $source ) : ?>
+								<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="sh-inline" style="margin-top:6px">
+									<input type="hidden" name="action" value="<?php echo esc_attr( Optima_Hub_Log::ACTION ); ?>">
+									<input type="hidden" name="do" value="forget_keys">
+									<?php wp_nonce_field( Optima_Hub_Log::ACTION ); ?>
+									<button type="submit" class="button sh-quiet"><?php esc_html_e( 'Forget the keys', 'optima-build' ); ?></button>
+								</form>
+							<?php endif; ?>
+						<?php endif; ?>
+					</section>
+
+					<?php if ( $show_import ) : ?>
+						<section class="sh-box" style="margin-top:14px">
+							<p class="sh-label"><?php esc_html_e( 'Import history', 'optima-build' ); ?></p>
+							<p class="sh-note"><?php esc_html_e( 'One time: the site\'s history file from Optima-Plugins, docs/site-log-import. Lines already in the log are skipped, so running it twice adds nothing.', 'optima-build' ); ?></p>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
+								<input type="hidden" name="action" value="<?php echo esc_attr( Optima_Hub_Log::ACTION ); ?>">
+								<input type="hidden" name="do" value="import">
+								<?php wp_nonce_field( Optima_Hub_Log::ACTION ); ?>
+								<p><input type="file" name="history" accept=".json,application/json" required></p>
+								<p><button type="submit" class="button"><?php esc_html_e( 'Import', 'optima-build' ); ?></button></p>
+							</form>
+						</section>
+					<?php else : ?>
+						<p class="sh-note" style="margin-top:10px"><a href="<?php echo esc_url( self::url( 'log', array( 'import' => '1' ) ) ); ?>"><?php esc_html_e( 'Import a history file again', 'optima-build' ); ?></a></p>
+					<?php endif; ?>
+				</div>
+			</div>
+			<script>
+				document.querySelectorAll('[data-sh-edit]').forEach(function (b) {
+					b.addEventListener('click', function () {
+						var f = document.getElementById('sh-log-edit-' + b.getAttribute('data-sh-edit'));
+						if (f) { f.classList.toggle('is-open'); }
+					});
+				});
+			</script>
+		<?php endif; ?>
+		<?php
+	}
+
+	/* ------------------------------------------------------------------ */
+
+	/**
+	 * Your site: the client's view of the Site log. Only lines marked for the
+	 * client, in their client wording, with no versions or internal detail.
+	 * What is waiting on them comes first, with an Approve button.
+	 *
+	 * @param bool $preview An operator looking at it through "See it as the client".
+	 */
+	private static function your_site( bool $preview ): void {
+		$v    = Optima_Hub_Log::client_view();
+		$open = array_filter( Optima_Hub_Requests::all(), static fn( $p ) => 'done' !== get_post_meta( $p->ID, Optima_Hub_Requests::META_STATUS, true ) );
+		$row  = static function ( array $l, bool $approve = false ): void {
+			?>
+			<li>
+				<div class="sh-cardhead">
+					<span><?php echo esc_html( $l['text'] ); ?></span>
+					<?php if ( 'planned' === $l['status'] ) : ?>
+						<span class="sh-pill is-progress"><?php esc_html_e( 'Planned', 'optima-build' ); ?></span>
+					<?php elseif ( 'waiting' === $l['status'] ) : ?>
+						<span class="sh-pill is-received"><?php esc_html_e( 'Waiting on you', 'optima-build' ); ?></span>
+					<?php endif; ?>
+				</div>
+				<p class="sh-note"><?php echo esc_html( date_i18n( 'M j, Y', strtotime( $l['date'] ) ) ); ?><?php echo '' !== $l['measure'] ? ' &middot; ' . esc_html( $l['measure'] ) : ''; ?></p>
+				<?php if ( $approve ) : ?>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="sh-inline">
+						<input type="hidden" name="action" value="<?php echo esc_attr( Optima_Hub_Log::ACTION ); ?>">
+						<input type="hidden" name="do" value="approve">
+						<input type="hidden" name="line" value="<?php echo (int) $l['id']; ?>">
+						<?php wp_nonce_field( Optima_Hub_Log::ACTION ); ?>
+						<button type="submit" class="button button-primary"><?php esc_html_e( 'Approve', 'optima-build' ); ?></button>
+						<a class="button" href="<?php echo esc_url( Optima_Hub_Admin::url( 'requests', array( 'ask' => rawurlencode( __( 'About: ', 'optima-build' ) . $l['text'] ) ) ) ); ?>"><?php esc_html_e( 'Ask for a change first', 'optima-build' ); ?></a>
+					</form>
+				<?php endif; ?>
+			</li>
+			<?php
+		};
+		?>
+		<?php if ( $preview ) : ?>
+			<div class="notice notice-info"><p><?php esc_html_e( 'This is the client\'s view. Only lines marked "Client sees" appear, in their client wording.', 'optima-build' ); ?> <a href="<?php echo esc_url( self::url( 'log' ) ); ?>"><?php esc_html_e( 'Back to the Site log', 'optima-build' ); ?> &rsaquo;</a></p></div>
+		<?php endif; ?>
+
+		<?php if ( $v['waiting'] ) : ?>
+			<section class="sh-box">
+				<p class="sh-label"><?php esc_html_e( 'Waiting on you', 'optima-build' ); ?></p>
+				<p class="sh-note"><?php esc_html_e( 'Optima needs your OK on these before they go live. Approve, or ask for a change first.', 'optima-build' ); ?></p>
+				<ul class="sh-requests"><?php foreach ( $v['waiting'] as $l ) { $row( $l, true ); } ?></ul>
+			</section>
+		<?php endif; ?>
+
+		<div class="sh-grid sh-grid-2">
+			<section class="sh-box">
+				<p class="sh-label"><?php echo esc_html( sprintf( /* translators: %s: month name */ __( 'This month: %s', 'optima-build' ), date_i18n( 'F' ) ) ); ?></p>
+				<?php if ( $v['month'] ) : ?>
+					<ul class="sh-requests"><?php foreach ( $v['month'] as $l ) { $row( $l ); } ?></ul>
+				<?php else : ?>
+					<p class="sh-note"><?php esc_html_e( 'Nothing to report yet this month. Updates appear here as they happen.', 'optima-build' ); ?></p>
+				<?php endif; ?>
+			</section>
+			<div style="display:grid;gap:14px;align-content:start">
+				<section class="sh-box">
+					<p class="sh-label"><?php esc_html_e( 'Your requests', 'optima-build' ); ?></p>
+					<?php if ( $open ) : ?>
+						<ul class="sh-requests">
+							<?php foreach ( $open as $post ) : ?>
+								<?php $status = (string) get_post_meta( $post->ID, Optima_Hub_Requests::META_STATUS, true ); ?>
+								<li><div class="sh-cardhead"><span><?php echo esc_html( get_the_title( $post ) ); ?></span><span class="sh-pill is-<?php echo esc_attr( $status ); ?>"><?php echo esc_html( Optima_Hub_Requests::STATUSES[ $status ] ?? $status ); ?></span></div><p class="sh-note"><?php echo esc_html( get_the_date( 'M j, Y', $post ) ); ?></p></li>
+							<?php endforeach; ?>
+						</ul>
+					<?php else : ?>
+						<p class="sh-note"><?php esc_html_e( 'Nothing open right now.', 'optima-build' ); ?></p>
+					<?php endif; ?>
+					<p><a class="button" href="<?php echo esc_url( self::url( 'requests' ) ); ?>"><?php esc_html_e( 'Request a change', 'optima-build' ); ?></a></p>
+				</section>
+				<?php if ( $v['coming'] ) : ?>
+					<section class="sh-box">
+						<p class="sh-label"><?php esc_html_e( 'Coming up', 'optima-build' ); ?></p>
+						<ul class="sh-requests"><?php foreach ( $v['coming'] as $l ) { $row( $l ); } ?></ul>
+					</section>
+				<?php endif; ?>
+			</div>
+		</div>
+
+		<?php if ( $v['earlier'] ) : ?>
+			<section class="sh-box">
+				<p class="sh-label"><?php esc_html_e( 'Earlier this year', 'optima-build' ); ?></p>
+				<ul class="sh-requests"><?php foreach ( $v['earlier'] as $l ) { $row( $l ); } ?></ul>
+			</section>
+		<?php endif; ?>
 		<?php
 	}
 }

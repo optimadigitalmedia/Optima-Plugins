@@ -9,7 +9,7 @@
  *   auto-updates for that plugin until a release newer than the one we left.
  *
  * Every action needs an operator (see Optima_Hub_Access) and is written to a
- * short log shown on the Features screen.
+ * short log shown on the Updates screen.
  *
  * @package Optima_Build
  */
@@ -116,11 +116,11 @@ final class Optima_Hub_Features {
 		wp_update_themes();
 	}
 
-	/** How old the last version check may get before the Features screen asks again by itself. */
+	/** How old the last version check may get before the Updates screen asks again by itself. */
 	const STALE_AFTER = HOUR_IN_SECONDS;
 
 	/**
-	 * When the Features screen opens on a version check older than an hour,
+	 * When the Updates screen opens on a version check older than an hour,
 	 * queue a fresh one in the background (WordPress cron), so the page never
 	 * waits on it and the "Up to date" marks are current on the next look.
 	 */
@@ -143,7 +143,7 @@ final class Optima_Hub_Features {
 		$features = Optima_Hub_Catalog::features();
 		if ( 'refresh' === $do ) {
 			self::refresh();
-			self::back( __( 'Checked for new features and versions.', 'optima-build' ) );
+			self::back( __( 'Checked for new features and versions.', 'optima-build' ), 'success', 'updates' );
 		}
 		if ( 'refill' === $do ) {
 			// The setup file runs once per theme version. A save from a page that was
@@ -151,7 +151,7 @@ final class Optima_Hub_Features {
 			// Oct 15), so this lets it run again. It still fills blanks only.
 			delete_option( Optima_Hub_Setup::DONE );
 			Optima_Hub_Setup::run();
-			self::back( __( 'Filled in from the theme\'s setup file. Anything already set stayed as it was.', 'optima-build' ) );
+			self::back( __( 'Filled in from the theme\'s setup file. Anything already set stayed as it was.', 'optima-build' ), 'success', 'updates' );
 		}
 		if ( ! isset( $features[ $slug ] ) ) {
 			self::back( __( 'That feature is not in the list.', 'optima-build' ), 'error' );
@@ -179,6 +179,14 @@ final class Optima_Hub_Features {
 			self::back( sprintf( __( '%1$s: %2$s', 'optima-build' ), $name, $result->get_error_message() ), 'error' );
 		}
 		self::log( $slug, $do, true, '' );
+		/**
+		 * A feature was turned on or off, or sent back a version. The Site log listens.
+		 *
+		 * @param string $slug Plugin folder.
+		 * @param string $do   on | off | back.
+		 * @param string $name The feature's name.
+		 */
+		do_action( 'optima_hub_feature_done', $slug, $do, $name );
 		$done = array(
 			/* translators: %s: feature name */
 			'on'   => __( '%s is on.', 'optima-build' ),
@@ -374,9 +382,9 @@ final class Optima_Hub_Features {
 		return (array) get_option( self::LOG_KEY, array() );
 	}
 
-	private static function back( string $message, string $type = 'success' ): void {
+	private static function back( string $message, string $type = 'success', string $tab = 'features' ): void {
 		set_transient( 'optima_hub_notice_' . get_current_user_id(), array( 'message' => $message, 'type' => $type ), MINUTE_IN_SECONDS );
-		wp_safe_redirect( Optima_Hub_Admin::url( 'features' ) );
+		wp_safe_redirect( Optima_Hub_Admin::url( $tab ) );
 		exit;
 	}
 }

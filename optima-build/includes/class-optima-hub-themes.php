@@ -99,7 +99,7 @@ final class Optima_Hub_Themes {
 		}
 		self::forget();
 		Optima_Hub_Features::refresh();
-		wp_safe_redirect( admin_url( 'admin.php?page=' . Optima_Hub_Admin::PAGE ) . '#sh-theme' );
+		wp_safe_redirect( Optima_Hub_Admin::url( 'updates' ) . '#sh-theme' );
 		exit;
 	}
 
@@ -218,9 +218,31 @@ final class Optima_Hub_Themes {
 	 * redirect to a signed file address; the key goes only to the first, so
 	 * it never leaves for the file host.
 	 */
+	/**
+	 * True when $package is this theme's release file, so the key goes with it.
+	 *
+	 * The repo in the theme's Update URI and the file address GitHub hands back
+	 * can name the repo differently. GitHub ignores capitals (the URI says
+	 * client-theme, the API says Client-Theme), and after a repo moves to another owner
+	 * or is renamed, GitHub forwards the old name while the file address carries
+	 * the new one (optimadigitalmedia/client-theme became
+	 * optimadigitalmedia/client-theme). So the exact address the release
+	 * lookup returned counts as well, whatever owner and name it carries.
+	 */
+	private static function is_release_file( array $src, string $package ): bool {
+		if ( 0 === stripos( $package, 'https://api.github.com/repos/' . $src['repo'] . '/releases/assets/' ) ) {
+			return true;
+		}
+		if ( ! preg_match( '#^https://api\.github\.com/repos/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/releases/assets/\d+$#', $package ) ) {
+			return false;
+		}
+		$latest = self::latest( $src );
+		return is_array( $latest ) && '' !== $latest['package'] && hash_equals( $latest['package'], $package );
+	}
+
 	public static function download( $reply, $package, $upgrader ) {
 		$src = self::source();
-		if ( false !== $reply || ! $src || ! is_string( $package ) || 0 !== strpos( $package, 'https://api.github.com/repos/' . $src['repo'] . '/releases/assets/' ) ) {
+		if ( false !== $reply || ! $src || ! is_string( $package ) || ! self::is_release_file( $src, $package ) ) {
 			return $reply;
 		}
 		$token = self::token();
@@ -268,7 +290,7 @@ final class Optima_Hub_Themes {
 
 	/* ---------- Optima → Build ---------- */
 
-	/** The Theme box on the Features screen. */
+	/** The Theme box on the Updates screen. */
 	public static function panel( bool $operator ): void {
 		$theme = wp_get_theme();
 		$src   = self::source( $theme );

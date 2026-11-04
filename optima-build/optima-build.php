@@ -2,8 +2,8 @@
 /**
  * Plugin Name:       Optima Build
  * Plugin URI:        https://optimadigitalmedia.com
- * Description:       One screen for the site's features: see what is on, turn features on or off (site operators only), roll one back, request a change, and check the site's health at a glance.
- * Version:           0.7.9.4
+ * Description:       The Optima menu on every site: an Overview that says whether the site is all right and what needs you, an Inbox with everything waiting on a person, Site health, and for operators the Build screens: features, every update in one place, and the Site log.
+ * Version:           0.11.1.8
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Author:            Optima Digital
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // Prefixed OPTIMA_HUB_ on purpose: the Optima Digital theme already defines a
 // OPTIMA_BUILD_MENU constant for its own menu.
-define( 'OPTIMA_HUB_VERSION', '0.7.9.4' );
+define( 'OPTIMA_HUB_VERSION', '0.11.1.8' );
 define( 'OPTIMA_HUB_FILE', __FILE__ );
 define( 'OPTIMA_HUB_DIR', plugin_dir_path( __FILE__ ) );
 define( 'OPTIMA_HUB_URL', plugin_dir_url( __FILE__ ) );
@@ -50,7 +50,10 @@ require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-admin.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-mail.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-dashboard.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-themes.php';
+require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-rings.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-watch.php';
+require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-log.php';
+require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-log-api.php';
 
 Optima_Hub_Features::boot();
 Optima_Hub_Requests::boot();
@@ -61,6 +64,9 @@ Optima_Hub_Setup::boot();
 Optima_Hub_Mail::boot();
 Optima_Hub_Dashboard::boot();
 Optima_Hub_Themes::boot();
+Optima_Hub_Rings::boot();
 Optima_Hub_Watch::boot();
+Optima_Hub_Log::boot();
+Optima_Hub_Log_API::boot();
 
 register_deactivation_hook( __FILE__, array( 'Optima_Hub_Watch', 'unschedule' ) );

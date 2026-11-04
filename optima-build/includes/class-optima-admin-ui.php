@@ -13,7 +13,7 @@
  *   Optima_Admin_UI::close();
  *
  * open() also prints the section nav, read live from WordPress's own menu: a
- * short row of groups (Home, Search, Website, Business, Reviews, Chat) with the open
+ * short row of groups (Overview, Your business, Content, Search and AI, Site health, Inbox, Build) with the open
  * group's screens as tabs underneath. Every Optima screen shows the same nav,
  * and a new plugin lands in the right group without anyone editing a list
  * (optima_admin_nav_group moves a screen to another group).
@@ -39,7 +39,7 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 
 	final class Optima_Admin_UI {
 
-		const VERSION = '1.5.1.4';
+		const VERSION = '1.7.0.8';
 
 		/** Show the Optima mark and sign-off. */
 		public static function branded(): bool {
@@ -121,13 +121,27 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 
 		/** The nav groups, in the order they show. */
 		const GROUPS = array(
-			'home'     => 'Home',
-			'search'   => 'Search',
-			'website'  => 'Website',
-			'business' => 'Business',
-			'reviews'  => 'Reviews',
-			'chat'     => 'Chat',
+			'overview' => 'Overview',
+			'business' => 'Your business',
+			'content'  => 'Content',
+			'search'   => 'Search and AI',
+			'health'   => 'Site health',
+			'inbox'    => 'Inbox',
+			'build'    => 'Build',
 		);
+
+		/**
+		 * Groups this person does not see (Site Standard §7, v1.2). Build holds
+		 * the operator tools: features, updates, the theme key, the Site log.
+		 * Clients see everything else. The optima_admin_hidden_groups filter adjusts it.
+		 */
+		public static function hidden(): array {
+			$hidden = array();
+			if ( class_exists( 'Optima_Hub_Access', false ) && method_exists( 'Optima_Hub_Access', 'is_operator' ) && ! Optima_Hub_Access::is_operator() ) {
+				$hidden[] = 'build';
+			}
+			return (array) apply_filters( 'optima_admin_hidden_groups', $hidden );
+		}
 
 		/** Optima sidebar menus the kit tidies. */
 		const MENUS = array( 'optima-build', 'recon-build', 'site-build', 'optima' );
@@ -151,8 +165,8 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 		private static $screen_slug = '';
 
 		/**
-		 * Shorten a long Optima sidebar menu to one link per group (Home,
-		 * Search, Website, Business, Reviews, Chat). Every screen stays registered and
+		 * Shorten a long Optima sidebar menu to one link per group (Overview, Your
+		 * business, Content, Search and AI, Site health, Inbox, Build). Every screen stays registered and
 		 * reachable; the others are hidden from the sidebar only, and the
 		 * section nav on each screen leads to them.
 		 */
@@ -172,12 +186,18 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 				$submenu[ $parent ] = array_column( $keyed, 2 ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- reordering only.
 				$lead   = array(); // group => index of its sidebar link.
 				$bubble = array(); // group => first count bubble in it.
+				$hidden = self::hidden();
 				foreach ( $submenu[ $parent ] as $i => $item ) {
 					$slug  = (string) ( $item[2] ?? '' );
 					$raw   = (string) ( $item[0] ?? '' );
 					$label = self::clean( $raw );
 					$group = self::group( $slug, $label );
 					self::$labels[ $slug ] = $label;
+					if ( in_array( $group, $hidden, true ) ) {
+						$item[4] = trim( ( $item[4] ?? '' ) . ' sh-menu-hidden' );
+						$submenu[ $parent ][ $i ] = $item; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- hide only.
+						continue;
+					}
 					if ( ! isset( $bubble[ $group ] ) && preg_match( '#<span[^>]*class="[^"]*(update-plugins|awaiting-mod|count)[^"]*"[^>]*>.*?</span>(\s*</span>)?#s', $raw, $m ) ) {
 						$bubble[ $group ] = ' ' . $m[0];
 					}
@@ -194,6 +214,9 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 					$item[3] = $item[3] ?? self::$labels[ $slug ];
 					if ( $lead[ $group ] === $i ) {
 						$item[0] = esc_html( self::GROUPS[ $group ] ) . ( $bubble[ $group ] ?? '' );
+						if ( self::is_off( $slug ) ) {
+							$item[4] = trim( ( $item[4] ?? '' ) . ' sh-menu-off' ); // Nothing on in this group yet: greyed, opens Turn on.
+						}
 					} else {
 						$item[4] = trim( ( $item[4] ?? '' ) . ' sh-menu-hidden' );
 					}
@@ -223,7 +246,7 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 		/** Hide the grouped screens' sidebar links. */
 		public static function menu_css(): void {
 			if ( self::$leaders ) {
-				echo '<style>#adminmenu .sh-menu-hidden{display:none}</style>';
+				echo '<style>#adminmenu .sh-menu-hidden{display:none}#adminmenu .sh-menu-off a{opacity:.55}</style>';
 			}
 		}
 
@@ -280,6 +303,11 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 			echo '</div>';
 		}
 
+		/** A sidebar slug the hub registered as a stand-in for a group with nothing on (…&group=chat). */
+		public static function is_off( string $slug ): bool {
+			return (bool) preg_match( '/[?&]group=[a-z]+/', $slug );
+		}
+
 		/**
 		 * Which nav group a sidebar screen belongs to. Plugins can move a screen
 		 * with the optima_admin_nav_group filter (group key, slug, label).
@@ -287,18 +315,32 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 		public static function group( string $slug, string $label ): string {
 			$s = strtolower( $slug );
 			$l = strtolower( $label );
-			if ( false !== strpos( $s . ' ' . $l, 'review' ) ) {
-				$group = 'reviews';
-			} elseif ( false !== strpos( $s . ' ' . $l, 'chat' ) ) {
-				$group = 'chat';
-			} elseif ( 0 === strpos( $s, 'site-build-features' ) || ( 'site-build' === strtok( $s, '&' ) && ( 'features' === $l || false !== strpos( $s, '&tab=' ) ) ) ) {
-				$group = 'home';
-			} elseif ( 'optima' === strtok( $s, '&' ) || preg_match( '/ai-search|analytics|robots/', $s ) ) {
+			// A placeholder the hub registers for a group with nothing on yet (&group=inbox).
+			if ( preg_match( '/[?&]group=([a-z]+)/', $s, $m ) && isset( self::GROUPS[ $m[1] ] ) ) {
+				return $m[1];
+			}
+			$page = strtok( $s, '&' );
+			$hub  = in_array( $page, array( 'site-build-features', 'site-build' ), true );
+			if ( $hub && ! preg_match( '/tab=/', $s ) ) {
+				$group = 'overview'; // The hub's first screen.
+			} elseif ( $hub && preg_match( '/tab=(features|updates|log)\b/', $s ) ) {
+				$group = 'build';
+			} elseif ( $hub && preg_match( '/tab=(inbox|requests)\b/', $s ) ) {
+				$group = 'inbox';
+			} elseif ( $hub && false !== strpos( $s, 'tab=health' ) ) {
+				$group = 'health';
+			} elseif ( 'search health' === $l ) {
+				$group = 'health';
+			} elseif ( preg_match( '/tab=(sync|writing)\b/', $s ) || preg_match( '/optima-(redirects|optimize|writing)/', $page ) || false !== strpos( $page, 'writing' ) ) {
+				$group = 'content';
+			} elseif ( preg_match( '/tab=(seo|protect)\b/', $s ) || preg_match( '/optima-(ai-search|analytics|accessibility|sitecheck)|site-build-robots|post_type=optima_sitecheck/', $s ) ) {
 				$group = 'search';
-			} elseif ( preg_match( '/hours|team|results|cards|contact|booking|proposal/', $s . ' ' . $l ) ) {
-				$group = 'business';
+			} elseif ( preg_match( '/tab=changes\b/', $s ) || preg_match( '/^(optima-mail|optima-chat|optima-events-crm)$/', $page ) || false !== strpos( $l, 'theme' ) || false !== strpos( $l, 'customer list' ) ) {
+				$group = 'build';
+			} elseif ( preg_match( '/optima-reviews-(inbox|ask)|post_type=optima_chat_q|post_type=optima_hub_request/', $s ) || preg_match( '/^(review inbox|ask for reviews|chat questions|request a change|inbox)$/', $l ) ) {
+				$group = 'inbox';
 			} else {
-				$group = 'website';
+				$group = 'business'; // Business info, Call buttons, Hours, Team, Case results, Reviews, Cards, Booking, Events, Members, Partners, Newsletter, a companion's types.
 			}
 			$group = (string) apply_filters( 'optima_admin_nav_group', $group, $slug, $label );
 			return isset( self::GROUPS[ $group ] ) ? $group : 'website';
@@ -306,7 +348,7 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 
 		/**
 		 * The section nav: every screen in this screen's sidebar menu, sorted into a
-		 * short row of groups (Home, Search, Website, Business, Reviews, Chat). The open
+		 * short row of groups (Overview, Your business, Content, Search and AI, Site health, Inbox, Build). The open
 		 * group's screens show as tabs underneath. Empty groups never show.
 		 *
 		 * @param string $current Sidebar slug to highlight; defaults to the screen being viewed.
@@ -352,20 +394,45 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 				}
 			}
 			// Sort into groups, keeping sidebar order inside each.
-			$groups = array_fill_keys( array_keys( self::GROUPS ), array() );
-			$open   = '';
+			$groups   = array_fill_keys( array_keys( self::GROUPS ), array() );
+			$open     = '';
+			$hidden   = self::hidden();
+			$operator = ! class_exists( 'Optima_Hub_Access', false ) || ! method_exists( 'Optima_Hub_Access', 'is_operator' ) || Optima_Hub_Access::is_operator();
 			foreach ( $items as $item ) {
 				$slug  = (string) $item[2];
 				$label = self::$labels[ $slug ] ?? self::clean( (string) $item[0] );
 				$key   = self::group( $slug, $label );
+				if ( in_array( $key, $hidden, true ) ) {
+					continue;
+				}
+				$off = self::is_off( $slug );
 				$groups[ $key ][] = array(
 					'url'   => false !== strpos( $slug, '.php' ) ? admin_url( $slug ) : admin_url( 'admin.php?page=' . $slug ),
 					'label' => $label,
-					'hint'  => (string) apply_filters( 'optima_admin_nav_hint', '', $slug ),
+					'hint'  => $off ? ( $operator ? __( 'Turn on', 'optima-build' ) : __( 'Not on', 'optima-build' ) ) : (string) apply_filters( 'optima_admin_nav_hint', '', $slug ),
 					'on'    => $slug === $active,
+					'off'   => $off,
 				);
 				if ( $slug === $active ) {
 					$open = $key;
+				}
+			}
+			// Site Standard rule 11: with the Optima Build hub on the site, every group shows in the
+			// same place on every site. A group with nothing on is greyed; for an operator it opens
+			// the Features screen to turn something on. Without the hub, empty groups stay out.
+			$overview = '';
+			foreach ( $groups['overview'] as $entry ) {
+				if ( preg_match( '#page=(site-build-features|site-build)(&|$)#', $entry['url'] ) ) {
+					$overview = $entry['url'];
+					break;
+				}
+			}
+			foreach ( $groups as $key => $entries ) {
+				if ( in_array( $key, $hidden, true ) ) {
+					unset( $groups[ $key ] );
+				} elseif ( ! $entries && '' !== $overview ) {
+					$url = $operator ? add_query_arg( array( 'tab' => 'features', 'group' => $key ), $overview ) : $overview;
+					$groups[ $key ][] = array( 'url' => $url, 'label' => self::GROUPS[ $key ], 'hint' => $operator ? __( 'Turn on', 'optima-build' ) : __( 'Not on', 'optima-build' ), 'on' => false, 'off' => true );
 				}
 			}
 			$groups = array_filter( $groups );
@@ -373,10 +440,11 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 				$open = (string) array_key_first( $groups );
 			}
 			$link = static function ( array $entry, string $text, bool $on, string $hint ): void {
+				$class = trim( ( $on ? 'is-active' : '' ) . ( ! empty( $entry['off'] ) ? ' is-off' : '' ) );
 				printf(
 					'<a href="%1$s"%2$s>%3$s%4$s</a>',
 					esc_url( $entry['url'] ),
-					$on ? ' class="is-active" aria-current="page"' : '',
+					( '' !== $class ? ' class="' . esc_attr( $class ) . '"' : '' ) . ( $on ? ' aria-current="page"' : '' ),
 					esc_html( $text ),
 					'' !== $hint ? '<span class="sh-nav-hint">' . esc_html( $hint ) . '</span>' : ''
 				);

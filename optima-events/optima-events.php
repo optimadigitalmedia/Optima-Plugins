@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Optima Events
  * Description:       Events, sessions and speakers the owner edits in plain forms: event pages with dates, venue, ticket button and what to know, a day-by-day schedule, speaker pages, and Event schema so the event can appear in Google. Works with any ticket link today and is built to sit in front of a WooCommerce ticket engine later.
- * Version:           0.14.3.4
+ * Version:           0.16.3.8
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Author:            Optima Digital
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OPTIMA_EVENTS_VERSION', '0.14.3.4' );
+define( 'OPTIMA_EVENTS_VERSION', '0.16.3.8' );
 define( 'OPTIMA_EVENTS_FILE', __FILE__ );
 define( 'OPTIMA_EVENTS_URL', plugin_dir_url( __FILE__ ) );
 define( 'OPTIMA_EVENTS_DIR', plugin_dir_path( __FILE__ ) );
@@ -42,6 +42,7 @@ require_once __DIR__ . '/includes/class-optima-events-schema.php';
 require_once __DIR__ . '/includes/class-optima-events-import.php';
 require_once __DIR__ . '/includes/class-optima-events-presenters.php';
 require_once __DIR__ . '/includes/class-optima-events-rsvp.php';
+require_once __DIR__ . '/includes/class-optima-events-agreements.php';
 require_once __DIR__ . '/includes/class-optima-events-calendar.php';
 require_once __DIR__ . '/includes/class-optima-events-vendors.php';
 require_once __DIR__ . '/includes/class-optima-events-volunteers.php';
@@ -50,6 +51,7 @@ require_once __DIR__ . '/includes/class-optima-events-directory.php';
 require_once __DIR__ . '/includes/class-optima-events-regions.php';
 require_once __DIR__ . '/includes/class-optima-events-topics.php';
 require_once __DIR__ . '/includes/class-optima-events-woo.php';
+require_once __DIR__ . '/includes/class-optima-events-tickets.php';
 require_once __DIR__ . '/includes/class-optima-events-rsvp-admin.php';
 require_once __DIR__ . '/includes/class-optima-events-admin.php';
 require_once __DIR__ . '/includes/functions.php';
@@ -61,6 +63,7 @@ Optima_Events_Schema::boot();
 Optima_Events_Admin::boot();
 Optima_Events_Presenters::boot();
 Optima_Events_RSVP::boot();
+Optima_Events_Agreements::boot();
 Optima_Events_Calendar::boot();
 Optima_Events_Vendors::boot();
 Optima_Events_Volunteers::boot();
