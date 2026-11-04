@@ -16,6 +16,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 
 delete_option( 'optima_results' );
 delete_transient( 'optima_updater_optima-results' );
+delete_transient( 'optima_updater_optima-results__test' );
 
 if ( ! defined( 'OPTIMA_PURGE_ON_UNINSTALL' ) || ! OPTIMA_PURGE_ON_UNINSTALL ) {
 	return;

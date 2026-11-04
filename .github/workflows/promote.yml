@@ -1,0 +1,85 @@
+name: Promote
+
+# Sends checked test releases to every site.
+#
+# With .github/release-channel set to test, each merge to main publishes
+# GitHub pre-releases (test releases). Only sites on the test channel (the
+# agency's own staging site) take them. Once a release looks right there, run
+# this: Actions tab -> Promote -> "Run workflow".
+#
+# It marks the newest test release of each plugin (or only the plugins you
+# name) as a normal release, when that version is newer than the plugin's
+# newest normal release. Only the flag changes. Nothing is rebuilt, so the zip
+# the test site ran is exactly the zip every other site installs. Then it
+# rewrites the version list, and stable sites pick the release up within a
+# few hours. Optima Core goes first.
+#
+# "Dry run" lists what would be promoted without changing anything.
+
+on:
+  workflow_dispatch:
+    inputs:
+      plugins:
+        description: Plugins to promote, separated by spaces (for example "optima-core optima-build"). Leave empty for every plugin with a newer test release.
+        required: false
+        type: string
+        default: ''
+      dry_run:
+        description: Dry run (list what would be promoted, change nothing)
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    name: Promote test releases
+    runs-on: ubuntu-latest
+    outputs:
+      promoted: ${{ steps.promote.outputs.promoted }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Mark the newest test releases as normal releases
+        id: promote
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PLUGINS: ${{ inputs.plugins }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          args=()
+          if [ "${DRY_RUN}" != "true" ]; then
+            args+=(--apply)
+          fi
+          # Plugin names only: letters, digits, dashes, spaces and commas.
+          if [ -n "${PLUGINS}" ]; then
+            if ! [[ "${PLUGINS}" =~ ^[a-z0-9,\ -]+$ ]]; then
+              echo "::error::Plugin names may only use lower-case letters, digits, dashes, spaces and commas."
+              exit 1
+            fi
+            read -r -a names <<< "${PLUGINS//,/ }"
+            args+=("${names[@]}")
+          fi
+          bash tools/release/promote.sh "${args[@]}"
+
+  feed:
+    name: Publish the version list
+    needs: promote
+    if: ${{ !inputs.dry_run && needs.promote.outputs.promoted != '0' }}
+    # One writer at a time: Release and Promote both rewrite the list.
+    concurrency:
+      group: version-list
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build releases.json and publish it on the version-list branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: bash tools/release/publish-feed.sh

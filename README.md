@@ -37,6 +37,8 @@ a theme never orphans content.
 3. Fill the business details once in **Optima → Business info**. Every plugin
    reads them from there.
 
-Plugins update themselves from this repo's releases. See `RELEASING.md`.
+Plugins update themselves from this repo's releases. Each release goes to the
+agency's own staging site first (the test channel) and to every other site once
+it is promoted. See `RELEASING.md`.
 
 Built and maintained by [Optima Digital](https://optimadigitalmedia.com).

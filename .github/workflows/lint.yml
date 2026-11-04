@@ -84,6 +84,37 @@ jobs:
       - name: Admin kit files every Optima screen by the Site Standard §7 map
         run: php tools/tests/admin-kit-groups.php
 
+  updater:
+    name: Updater copies match
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The first copy to load serves every Optima plugin on a site, so a copy
+      # that drifts changes updates for all of them.
+      - name: Every plugin's copy of the updater matches tools/updater
+        run: |
+          status=0
+          for d in */; do
+            d=${d%/}
+            [ -f "$d/$d.php" ] || continue
+            f="$d/includes/class-optima-plugin-updater.php"
+            if [ ! -f "$f" ]; then echo "::error::$d has no includes/class-optima-plugin-updater.php"; status=1; continue; fi
+            cmp -s "$f" tools/updater/class-optima-plugin-updater.php || { echo "::error file=$f::differs from tools/updater/class-optima-plugin-updater.php. Copy the source file over."; status=1; }
+          done
+          exit $status
+
+  release-tests:
+    name: Release channel tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Version picking (stable and test channels)
+        run: php tools/tests/release-channel.php
+      - name: Site health with test releases installed
+        run: php tools/tests/fleet-checks.php
+      - name: Promote dry run with made-up releases
+        run: bash tools/tests/promote-dry-run.sh
+
   slop-check:
     name: Code slop check
     runs-on: ubuntu-latest

@@ -733,6 +733,45 @@ final class Optima_Hub_Admin {
 	 * setup file, Site Sync, the post importer, site settings and the change
 	 * log. Nothing elsewhere brings a new version or new content onto the site.
 	 */
+	/**
+	 * Release channel card on Build, Updates (operators only). Test: this site
+	 * takes test releases (GitHub pre-releases) as soon as they are published.
+	 * Stable: only normal releases, after the test site checked them. Theme
+	 * updates are not affected; they follow the theme's own repo.
+	 */
+	private static function channel_card(): void {
+		$test  = 'test' === Optima_Hub_Access::channel();
+		$fixed = Optima_Hub_Access::channel_fixed();
+		?>
+		<section class="sh-card">
+			<h2><?php esc_html_e( 'Release channel', 'optima-build' ); ?></h2>
+			<p>
+				<strong><?php echo esc_html( $test ? __( 'Test', 'optima-build' ) : __( 'Stable', 'optima-build' ) ); ?>:</strong>
+				<?php
+				echo esc_html(
+					$test
+						? __( 'this site gets each release first, before the client sites.', 'optima-build' )
+						: __( 'this site gets releases after they are checked on the test site.', 'optima-build' )
+				);
+				?>
+			</p>
+			<p class="sh-note"><?php esc_html_e( 'Plugin updates only. Theme updates come from the theme\'s own repo either way.', 'optima-build' ); ?></p>
+			<?php if ( $fixed ) : ?>
+				<p class="sh-note"><?php esc_html_e( 'Set in wp-config.php (OPTIMA_HUB_CHANNEL), so it cannot be changed here.', 'optima-build' ); ?></p>
+			<?php else : ?>
+				<?php
+				echo Optima_Hub_Features::button( // phpcs:ignore WordPress.Security.EscapeOutput -- built from escaped parts.
+					'',
+					'channel',
+					$test ? __( 'Switch to Stable', 'optima-build' ) : __( 'Switch to Test', 'optima-build' ),
+					'button'
+				);
+				?>
+			<?php endif; ?>
+		</section>
+		<?php
+	}
+
 	private static function updates(): void {
 		$operator  = Optima_Hub_Access::is_operator();
 		$features  = Optima_Hub_Catalog::features();
@@ -878,7 +917,7 @@ final class Optima_Hub_Admin {
 		<?php
 		$log = Optima_Hub_Features::recent_log();
 		if ( $operator && $log ) :
-			$verbs = array( 'on' => __( 'Turned on', 'optima-build' ), 'off' => __( 'Turned off', 'optima-build' ), 'back' => __( 'Went back a version', 'optima-build' ) );
+			$verbs = array( 'on' => __( 'Turned on', 'optima-build' ), 'off' => __( 'Turned off', 'optima-build' ), 'back' => __( 'Went back a version', 'optima-build' ), 'channel' => __( 'Release channel', 'optima-build' ) );
 			?>
 			<section class="sh-box">
 				<p class="sh-label"><?php esc_html_e( 'Recent changes', 'optima-build' ); ?></p>
@@ -888,7 +927,8 @@ final class Optima_Hub_Admin {
 						<tr>
 							<td><?php echo esc_html( wp_date( 'M j, g:i a', (int) $row['time'] ) ); ?></td>
 							<td><?php echo esc_html( $row['who'] ); ?></td>
-							<td><?php echo esc_html( ( $verbs[ $row['do'] ] ?? $row['do'] ) . ': ' . ( $features[ $row['slug'] ]['name'] ?? $row['slug'] ) ); ?></td>
+							<?php $what = 'channel' === $row['do'] ? ( 'test' === $row['note'] ? __( 'Test', 'optima-build' ) : __( 'Stable', 'optima-build' ) ) : ( $features[ $row['slug'] ]['name'] ?? $row['slug'] ); ?>
+							<td><?php echo esc_html( ( $verbs[ $row['do'] ] ?? $row['do'] ) . ': ' . $what ); ?></td>
 							<td><?php echo $row['ok'] ? esc_html__( 'Done', 'optima-build' ) : esc_html( __( 'Failed: ', 'optima-build' ) . $row['note'] ); ?></td>
 						</tr>
 					<?php endforeach; ?>
@@ -897,6 +937,9 @@ final class Optima_Hub_Admin {
 			</section>
 		<?php endif; ?>
 		<?php
+		if ( Optima_Hub_Access::is_operator() ) {
+			self::channel_card(); // Optima: test or stable release channel (Build 0.7.9.14).
+		}
 		Optima_Hub_Lock::card(); // Optima: who may edit this site, on the Build page every operator opens.
 	}
 
@@ -922,6 +965,7 @@ final class Optima_Hub_Admin {
 				<?php if ( $s['version'] ) : ?><span class="sh-ver"><?php echo esc_html( 'v' . $s['version'] ); ?></span><?php endif; ?>
 				<?php if ( $s['update'] ) : ?>
 					<span class="sh-tag is-update"><?php echo esc_html( sprintf( /* translators: %s: version */ __( 'Update ready: v%s', 'optima-build' ), $s['update'] ) ); ?></span>
+					<?php if ( ! empty( $s['test'] ) ) : ?><span class="sh-tag is-held"><?php esc_html_e( 'Test release', 'optima-build' ); ?></span><?php endif; ?>
 				<?php elseif ( $s['version'] && $s['checked'] ) : ?>
 					<span class="sh-tag is-current"><?php esc_html_e( 'Up to date', 'optima-build' ); ?></span>
 				<?php endif; ?>

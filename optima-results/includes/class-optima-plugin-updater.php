@@ -12,9 +12,20 @@
  * Releases live on the Optima Plugins repo. Each plugin is tagged and released
  * on its own, as `<slug>-v<version>`, carrying a `<slug>.zip` asset.
  *
+ * Release channels: a release can be published as a GitHub pre-release (a
+ * test release). A site on the stable channel (the default) never sees those
+ * and only updates to normal releases. A site on the test channel (the
+ * agency's own staging site) also sees test releases and takes the newest
+ * version from either list, so it gets each release before the client sites.
+ * The channel is Optima Build's setting (Build, Updates, Release channel) or
+ * the OPTIMA_HUB_CHANNEL constant in wp-config.php; without Optima Build a
+ * site is always on stable.
+ *
  * This file ships identically inside every plugin in the suite so each one can
  * update itself even when the others are inactive. The first copy to load wins;
- * they are released together and kept in sync.
+ * they are released together and kept in sync. The source copy is
+ * tools/updater/class-optima-plugin-updater.php, and the Lint workflow fails
+ * when a plugin's copy differs from it.
  *
  * @package Optima_Plugins
  */
@@ -76,6 +87,9 @@ final class Optima_Plugin_Updater {
 	 * @var bool
 	 */
 	private static $feed_ok = true;
+
+	/** This copy knows about release channels (Optima Build's Site health checks for it). */
+	const CHANNELS = true;
 
 	/**
 	 * Absolute path to the plugin's main file.
@@ -177,7 +191,76 @@ final class Optima_Plugin_Updater {
 			'package'      => $release['package'],
 			'requires'     => isset( $plugin_data['RequiresWP'] ) ? $plugin_data['RequiresWP'] : '',
 			'requires_php' => isset( $plugin_data['RequiresPHP'] ) ? $plugin_data['RequiresPHP'] : '',
+			// Optima Build labels these "Test release" in its update queue.
+			'prerelease'   => ! empty( $release['prerelease'] ),
 		);
+	}
+
+	/**
+	 * The site's release channel: 'test' or 'stable'.
+	 *
+	 * Asks Optima Build when it is active and knows about channels; anything
+	 * else (no Build, an older Build, an unknown value) is 'stable', so a site
+	 * only ever sees test releases when someone chose that on purpose.
+	 *
+	 * @return string
+	 */
+	public static function channel(): string {
+		$channel = 'stable';
+		if ( class_exists( 'Optima_Hub_Access', false ) && method_exists( 'Optima_Hub_Access', 'channel' ) ) {
+			$channel = (string) Optima_Hub_Access::channel();
+		}
+		return 'test' === $channel ? 'test' : 'stable';
+	}
+
+	/**
+	 * Pick the newest installable release of one plugin from the release list.
+	 *
+	 * Drafts are always skipped. Pre-releases (test releases) count only when
+	 * $with_test is true; otherwise the answer is exactly what a site got
+	 * before release channels existed.
+	 *
+	 * @param array  $releases  Release list (tag_name, draft, prerelease, body, assets).
+	 * @param string $slug      Plugin folder name.
+	 * @param bool   $with_test Also consider pre-releases.
+	 * @return array{version:string,package:string,notes:string,prerelease:bool}|null
+	 */
+	public static function pick( array $releases, string $slug, bool $with_test ): ?array {
+		// GitHub sorts by tag name as text ("v0.4.9" before "v0.4.11"), so
+		// compare version numbers and keep the highest.
+		$prefix = $slug . '-v';
+		$best   = null;
+		foreach ( $releases as $release ) {
+			if ( ! is_array( $release ) || empty( $release['tag_name'] ) ) {
+				continue;
+			}
+			if ( ! empty( $release['draft'] ) ) {
+				continue;
+			}
+			if ( ! empty( $release['prerelease'] ) && ! $with_test ) {
+				continue;
+			}
+			if ( 0 !== strpos( (string) $release['tag_name'], $prefix ) ) {
+				continue;
+			}
+
+			$package = self::zip_url( $release, $slug );
+			if ( null === $package ) {
+				continue; // Tagged but no built asset; not installable.
+			}
+
+			$version = substr( (string) $release['tag_name'], strlen( $prefix ) );
+			if ( null === $best || version_compare( $version, $best['version'], '>' ) ) {
+				$best = array(
+					'version'    => $version,
+					'package'    => $package,
+					'notes'      => isset( $release['body'] ) ? (string) $release['body'] : '',
+					'prerelease' => ! empty( $release['prerelease'] ),
+				);
+			}
+		}
+
+		return $best;
 	}
 
 	/**
@@ -234,14 +317,15 @@ final class Optima_Plugin_Updater {
 	 * @return void
 	 */
 	public function flush(): void {
-		delete_transient( $this->cache_key() );
+		delete_transient( self::cache_key_for( $this->slug, 'stable' ) );
+		delete_transient( self::cache_key_for( $this->slug, 'test' ) );
 	}
 
 	/**
 	 * The newest published release for this plugin.
 	 *
-	 * @return array{version:string,package:string,notes:string}|null Null when
-	 *         there is no usable release or the lookup failed.
+	 * @return array{version:string,package:string,notes:string,prerelease:bool}|null
+	 *         Null when there is no usable release or the lookup failed.
 	 */
 	private function latest_release(): ?array {
 		$cached = get_transient( $this->cache_key() );
@@ -260,43 +344,13 @@ final class Optima_Plugin_Updater {
 	}
 
 	/**
-	 * Ask GitHub for this plugin's releases and pick the newest usable one.
+	 * Ask GitHub for this plugin's releases and pick the newest usable one for
+	 * this site's channel.
 	 *
-	 * @return array{version:string,package:string,notes:string}|null
+	 * @return array{version:string,package:string,notes:string,prerelease:bool}|null
 	 */
 	private function fetch_release(): ?array {
-		$releases = self::feed();
-		// GitHub sorts by tag name as text ("v0.4.9" before "v0.4.11"), so
-		// compare version numbers and keep the highest.
-		$prefix = $this->slug . '-v';
-		$best   = null;
-		foreach ( $releases as $release ) {
-			if ( ! is_array( $release ) || empty( $release['tag_name'] ) ) {
-				continue;
-			}
-			if ( ! empty( $release['draft'] ) || ! empty( $release['prerelease'] ) ) {
-				continue;
-			}
-			if ( 0 !== strpos( (string) $release['tag_name'], $prefix ) ) {
-				continue;
-			}
-
-			$package = $this->zip_url( $release );
-			if ( null === $package ) {
-				continue; // Tagged but no built asset; not installable.
-			}
-
-			$version = substr( (string) $release['tag_name'], strlen( $prefix ) );
-			if ( null === $best || version_compare( $version, $best['version'], '>' ) ) {
-				$best = array(
-					'version' => $version,
-					'package' => $package,
-					'notes'   => isset( $release['body'] ) ? (string) $release['body'] : '',
-				);
-			}
-		}
-
-		return $best;
+		return self::pick( self::feed(), $this->slug, 'test' === self::channel() );
 	}
 
 	/**
@@ -380,15 +434,16 @@ final class Optima_Plugin_Updater {
 	/**
 	 * The download URL of a release's plugin zip.
 	 *
-	 * @param array $release Release payload from the GitHub API.
+	 * @param array  $release Release payload from the GitHub API.
+	 * @param string $slug    Plugin folder name.
 	 * @return string|null Null when the release carries no matching asset.
 	 */
-	private function zip_url( array $release ): ?string {
+	private static function zip_url( array $release, string $slug ): ?string {
 		if ( empty( $release['assets'] ) || ! is_array( $release['assets'] ) ) {
 			return null;
 		}
 		foreach ( $release['assets'] as $asset ) {
-			if ( isset( $asset['name'], $asset['browser_download_url'] ) && $this->slug . '.zip' === $asset['name'] ) {
+			if ( isset( $asset['name'], $asset['browser_download_url'] ) && $slug . '.zip' === $asset['name'] ) {
 				return (string) $asset['browser_download_url'];
 			}
 		}
@@ -396,12 +451,25 @@ final class Optima_Plugin_Updater {
 	}
 
 	/**
-	 * Transient key for this plugin's cached lookup.
+	 * Transient key for this plugin's cached lookup on this site's channel.
 	 *
 	 * @return string
 	 */
 	private function cache_key(): string {
-		return 'optima_updater_' . $this->slug;
+		return self::cache_key_for( $this->slug, self::channel() );
+	}
+
+	/**
+	 * Transient key for one plugin's cached lookup on one channel. The stable
+	 * key is the one every earlier copy used, so switching to stable (or
+	 * running an older copy) reads the same answer as before.
+	 *
+	 * @param string $slug    Plugin folder name.
+	 * @param string $channel 'stable' or 'test'.
+	 * @return string
+	 */
+	public static function cache_key_for( string $slug, string $channel ): string {
+		return 'optima_updater_' . $slug . ( 'test' === $channel ? '__test' : '' );
 	}
 }
 
