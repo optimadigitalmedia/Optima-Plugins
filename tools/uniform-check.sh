@@ -29,7 +29,8 @@ check_theme() {
     done
   fi
   local menus
-  menus=$(grep -rlE "add_menu_page\(" "$t" --include=*.php 2>/dev/null || true)
+  # A menu only for sites without Optima Build (guarded by Optima_Hub_Admin) is a fallback, not a second menu.
+  menus=$(grep -rlE "add_menu_page\(" "$t" --include=*.php 2>/dev/null | xargs -r grep -LE "class_exists\(\s*'Optima_Hub_Admin'\s*\)" 2>/dev/null || true)
   [ -z "$menus" ] && ok "no theme admin menus" || bad "theme registers its own admin menu: $menus"
   local fonts
   fonts=$(grep -rlE "fonts\.googleapis|fonts\.gstatic" "$t" --include=*.php 2>/dev/null || true)
