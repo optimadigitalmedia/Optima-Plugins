@@ -48,7 +48,7 @@ if ( function_exists( 'optima_owns' ) && optima_owns( 'seo' ) ) {
 
 ## 3. DESIGN.md: plugins dress in the theme's brand
 
-- Every theme ships `DESIGN.md` at its root: the human design rules (like Scout's `DESIGN.md`) **plus one machine block** the plugins read:
+- Every theme ships `DESIGN.md` at its root: the human design rules **plus one machine block** the plugins read:
 
   ````md
   ```json optima-design
@@ -91,9 +91,40 @@ if ( function_exists( 'optima_owns' ) && optima_owns( 'seo' ) ) {
 | Collier | Theme forms → Gravity Forms (so the spam guard covers them). Add `optima-setup.json` and `DESIGN.md`. |
 | `client-kit/template/` | Ships `DESIGN.md`, `optima-setup.json` and the `optima_owns()` wrapper pattern, so every new build starts plugin-first. |
 
+## 4a. Same everywhere (Joy, Nov 4 2026)
+
+Joy: "i want all plugins and themes to be uniformly created so that when you go from one site to another there is no confusion about where to find the call buttons or whatever."
+
+**In the dashboard, every site looks the same:**
+
+- One top-level menu, **Optima Build**, on every site, in the same order: Features, Business info, then one item per feature that has settings (Call buttons, Hours, Reviews, Team, Results, Cards, Chat, Redirects, Accessibility, Analytics), then Site health, Request a change.
+- **A feature's settings live in one place:** Optima Build → that feature's name. Never under Settings, Tools, Appearance, or a theme page.
+- **Themes put no feature settings anywhere.** A theme's own screen (if any) holds design only, under Optima Build → Design.
+- Every feature card on the Features screen has the same buttons in the same place: Settings, Turn off, version.
+
+**On the site, every feature sits in the same spot:**
+
+- Call bar: bottom of the screen on phones. Cookie notice: bottom left. Chat: bottom right. Hours: footer, beside the address. Reviews: their own block, placed by the theme through one hook (`optima_slot( 'reviews' )`). Accessibility statement: `/accessibility/`. Team profiles: `/team/<name>/`. Case results: `/results/`.
+- Themes place plugin blocks only through `optima_slot( $name )` calls in fixed template spots (header, footer, after-hero, before-close), so a feature lands in the same place on every site.
+
+**Every theme has the same files:**
+
+```
+<theme>/
+  DESIGN.md            design rules + the optima-design token block
+  optima-setup.json    the client's facts and which features it uses
+  inc/fallbacks/       one file per job, used only when its plugin is off
+  inc/slots.php        where plugin blocks render
+  templates, assets    the look
+```
+
+**Every plugin has the same files:** `<slug>.php` (header and version), `includes/`, `assets/css/` (variables only), `readme.txt`, and the same settings-page layout from Optima Build's admin kit.
+
+**Checked by a script:** `tools/uniform-check.sh` fails if a theme is missing a required file, a theme registers a menu outside Optima Build, or a plugin hard-codes a color.
+
 ## 5. Order (each step on staging, head-and-schema diff before and after)
 
-1. Optima Build: `optima_owns()` and the `DESIGN.md` reader. Nothing changes on any site yet.
+1. Optima Build: `optima_owns()`, `optima_slot()`, the `DESIGN.md` reader, the uniform menu and `tools/uniform-check.sh`. Nothing changes on any site yet.
 2. **RMN first** (every feature on, so it tests the most).
 3. GJNOLA, then Collier.
 4. **Optima last.** Its SEO and schema scored 11,250 in the Oct 28 audit; the core port must match it tag for tag before the theme hands over.
@@ -109,4 +140,3 @@ if ( function_exists( 'optima_owns' ) && optima_owns( 'seo' ) ) {
 1. **DESIGN.md format:** human rules plus one `optima-design` JSON block (above). OK?
 2. **Order:** RMN first, Optima last (above), or Optima first?
 3. **Retire Optima Site Kit** once its three jobs move into the plugins?
-4. **Scout side:** port the same contract to Scout-Plugins and Scout themes (Scout's own rule already says features ship as plugins)?
