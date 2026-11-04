@@ -18,4 +18,7 @@ The plugin suite behind every Optima client site. Before changing any plugin, re
   every theme; plugins installed and updated only by Optima Build; every theme updates through
   Optima Build from its own GitHub repo; every release is a GitHub release built by the shared
   script; same plugin skeleton and admin kit.
+- **One home, one path for content.** One repo per site (`optimadigitalmedia/<Client>`), the
+  same folders in every repo, words only in `content/*.md`, delivered only through the theme
+  release plus Optima Build → Content updates. Same SOP for every site, any size.
 - Optima names only in code, comments and docs.

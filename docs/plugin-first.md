@@ -4,7 +4,7 @@ Status: **Adopted, Joy, Nov 4 2026. These rules are binding for every Optima plu
 
 ## 0. Strict rules (read before touching any plugin or theme)
 
-Every rule is a MUST or a NEVER (29 rules). If a task would break one, stop and ask Joy first.
+Every rule is a MUST or a NEVER (36 rules). If a task would break one, stop and ask Joy first.
 
 **Who does the work**
 
@@ -54,9 +54,19 @@ Every rule is a MUST or a NEVER (29 rules). If a task would break one, stop and 
 27. Every theme repo MUST carry the same release workflow and check scripts from `client-kit/template/` (`build-theme-zip.sh`, `uniform-check.sh`), copied, not rewritten.
 28. Every plugin MUST be built from the same skeleton: main file with the standard header, `includes/class-<slug>-*.php`, settings pages from Optima Build's admin kit, and the shared updater. NEVER a plugin-specific settings framework.
 
+**Content: one home, one path (Joy, Nov 4 2026)**
+
+29. Every site MUST have exactly one repo, `optimadigitalmedia/<Client>`, and that repo is the only home of its words, design and theme. Its theme MUST update from that same repo. (Optima's theme still updates from `optima-digital-theme`; that moves into the site repo when Optima is converted, last.)
+30. Every site repo MUST use the same folders: `content/pages/`, `content/posts/`, `content/results/` (case results for firms, case studies for Optima), `content/internal/` (never ships), `docs/` (brief, decisions, facts), `site/` (static build), `wordpress/<theme>/` (with `DESIGN.md` and `optima-setup.json`).
+31. Words MUST live only in `content/*.md`. NEVER type or paste copy into WordPress by hand.
+32. Approved copy MUST reach WordPress one way: the theme release carries it, and Optima Build → Content updates (Site Sync, owned by optima-core) applies it with a revision and an undo. A WordPress import file is used only for the first import of new posts.
+33. Every site's Optima Build screen names its repo on the theme card. That is where its content lives; nothing else needs remembering.
+34. All content lands on staging first. Live gets it only through the launch go-live card.
+35. The same SOP (`client-kit/SOP.md`) and the same repo layout apply to every site, small or large. A bigger site (CSCS, CGBB, Fran) has more pages, never a different structure.
+
 **Naming**
 
-29. Plugin and theme code, comments, readmes and docs in Optima repos use Optima names only.
+36. Plugin and theme code, comments, readmes and docs in Optima repos use Optima names only.
 
 
 Joy, Nov 4 2026: "i want all the plugins to take over all theme edits... the theme should not do what the plugin also does... why would we build both? i want the plugin to pull design.md from the theme... i want plugin to do the lifting of all of it's responsibilities and then the theme only takes over if the plugin can't do it."
