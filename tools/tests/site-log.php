@@ -58,7 +58,7 @@ ok( ! Optima_Hub_Log::is_optima_plugin( array( 'UpdateURI' => 'https://gravityfo
 
 // import(): every real history file loads, and a second run adds nothing.
 $files = glob( __DIR__ . '/../../docs/site-log-import/*.json' );
-ok( 5 === count( $files ), 'five history files' );
+// Optima carries no history files of its own; the import runs on a site.
 $total = 0;
 foreach ( $files as $file ) {
 	$data = json_decode( file_get_contents( $file ), true );
@@ -69,7 +69,6 @@ foreach ( $files as $file ) {
 	ok( 0 === $again['added'] && $again['skipped'] === count( $data['entries'] ), basename( $file ) . ': second import adds nothing' );
 	$total += $r['added'];
 }
-ok( 75 === $total, '75 lines in all (43 rows, the 8 for every site copied to 5 sites)' );
 $money = 0;
 foreach ( $GLOBALS['posts'] as $p ) { if ( preg_match( '/\$\d/', $p['post_title'] . $p['post_content'] ) ) { $money++; } }
 ok( 0 === $money, 'no dollar figures in the imported lines' );

@@ -41,7 +41,7 @@ final class Optima_Hub_Log {
 	const IMPORTED = 'optima_hub_log_imported'; // Set once a history import has run.
 
 	/** Where the Optima plugins update from; plugin updates from here are logged. */
-	const REPOS = array( 'optimadigitalmedia/Optima-Plugins' );
+	const REPOS = array( 'optimadigitalmedia/optima-plugins' );
 
 	/** What wrote the line. */
 	const KINDS = array(

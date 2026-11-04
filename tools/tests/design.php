@@ -75,8 +75,8 @@ ok( 'keep' === $empty['a'], 'merge: an empty string never erases a value' );
 
 ok( 21.0 === Optima_Core_Design::contrast( '#000000', '#FFFFFF' ), 'contrast black on white is 21' );
 ok( 1.0 === Optima_Core_Design::contrast( '#777', '#777777' ), 'contrast: short hex, same color is 1' );
-ok( abs( Optima_Core_Design::contrast( '#FFFFFF', '#0F63AB' ) - 4.69 ) < 0.05, 'white on the accent fill is about 4.69 (passes AA)' );
-ok( abs( Optima_Core_Design::contrast( '#FFFFFF', '#1272C4' ) - 3.45 ) < 0.05, 'white on bright azure is about 3.45 (fails AA)' );
+ok( abs( Optima_Core_Design::contrast( '#FFFFFF', '#0A78C2' ) - 4.69 ) < 0.05, 'white on the accent fill is about 4.69 (passes AA)' );
+ok( abs( Optima_Core_Design::contrast( '#FFFFFF', '#0E8FE6' ) - 3.45 ) < 0.05, 'white on bright azure is about 3.45 (fails AA)' );
 ok( 0.0 === Optima_Core_Design::contrast( '#FFF', 'rgba(0,0,0,.5)' ), 'translucent colors are not judged' );
 ok( array( 18, 114, 196 ) === Optima_Core_Design::rgb( 'rgb(18, 114, 196)' ), 'rgb() parsed' );
 
@@ -85,7 +85,7 @@ $by = array();
 foreach ( $issues as $i ) { $by[ substr( $i['pair'], 0, strpos( $i['pair'], ' (' ) ) ] = $i; }
 ok( ! empty( $by['Button text on the accent fill']['ok'] ), 'issues: the Optima fill passes' );
 ok( ! empty( $by['Text on the page']['ok'] ), 'issues: light text on the dark page passes' );
-$bad = $merged; $bad['colors']['accent_fill'] = '#1272C4';
+$bad = $merged; $bad['colors']['accent_fill'] = '#0E8FE6';
 $bad_issues = Optima_Core_Design::issues( $bad );
 ok( in_array( false, array_column( $bad_issues, 'ok' ), true ), 'issues: a bright fill under white text fails' );
 

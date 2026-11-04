@@ -14,6 +14,7 @@ function get_option( $k, $d = false ) { return $d; }
 function update_option( ...$a ) {}
 function wp_date( $f ) { return gmdate( $f ); }
 function plugin_dir_path( $f ) { return dirname( $f ) . '/'; }
+function rgar( $a, $k, $d = null ) { return is_array( $a ) && isset( $a[ $k ] ) ? $a[ $k ] : $d; }
 function plugin_basename( $f ) { return basename( $f ); }
 function register_activation_hook( ...$a ) {}
 function is_admin() { return false; }
