@@ -63,6 +63,17 @@ final class Optima_Hub_Menu {
 
 	public static function boot(): void {
 		add_action( 'admin_menu', array( __CLASS__, 'tidy' ), 9999 );
+		add_action( 'admin_head', array( __CLASS__, 'hide_css' ) );
+	}
+
+	/** Screens that live behind Updates stay reachable but leave the sidebar. */
+	public static function hide_css(): void {
+		$sel = array();
+		foreach ( self::BEHIND_UPDATES as $slug ) {
+			$sel[] = '#adminmenu a[href$="page=' . esc_attr( $slug ) . '"]';
+			$sel[] = '#adminmenu a[href$="' . esc_attr( $slug ) . '"]';
+		}
+		echo '<style id="optima-behind-updates">' . implode( ',', $sel ) . '{display:none!important}</style>' . "\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped constants.
 	}
 
 	public static function tidy(): void {
@@ -75,7 +86,8 @@ final class Optima_Hub_Menu {
 		foreach ( $submenu[ $parent ] as $item ) {
 			$slug = (string) ( $item[2] ?? '' );
 			if ( in_array( $slug, self::BEHIND_UPDATES, true ) ) {
-				continue;
+				// Keep it registered (WordPress refuses a page that leaves the menu); hide it from the sidebar instead.
+				$item[4] = trim( ( $item[4] ?? '' ) . ' optima-behind-updates' );
 			}
 			$name = trim( wp_strip_all_tags( (string) ( $item[0] ?? '' ) ) );
 			$name = preg_replace( '/\s*\d+$/', '', $name ); // Drop a count bubble from the name used for sorting.
