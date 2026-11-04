@@ -2,13 +2,17 @@
 /**
  * Who may change features, and which plan the site is on.
  *
- * Operators are the people who build and look after the site (the Optima team by
- * default). The list lives in wp-config.php, so a client admin cannot add
- * themselves from the dashboard:
+ * Operators are the people who build and look after the site. By default they
+ * are the administrators on the agency's own domain (@optimadigitalmedia.com).
+ * A site can narrow or change that in wp-config.php, so a client admin cannot
+ * add themselves from the dashboard:
  *
- *   define( 'OPTIMA_HUB_OPERATORS', 'sean@optimadigitalmedia.com' );
+ *   define( 'OPTIMA_HUB_OPERATORS', 'name@example.com, @example.com' );
  *
- * Everyone else with dashboard access sees what is on and can ask for more.
+ * An exact address is one person (who must be able to manage plugins). An entry
+ * starting with @ is a whole domain: any user whose address ends with it and who
+ * can manage the site's settings. Everyone else with dashboard access sees what
+ * is on and can ask for more.
  *
  * @package Optima_Build
  */
@@ -28,27 +32,42 @@ final class Optima_Hub_Access {
 		'portfolio'   => 'Full Portfolio',
 	);
 
-	/** @return string[] Lower-case operator emails. */
+	/** The default operators: administrators on the agency's own domain. */
+	const DEFAULT_OPERATORS = '@optimadigitalmedia.com';
+
+	/** @return string[] Lower-case operator emails and @domains. */
 	public static function operators(): array {
-		$raw = defined( 'OPTIMA_HUB_OPERATORS' ) ? (string) OPTIMA_HUB_OPERATORS : 'sean@optimadigitalmedia.com';
+		$raw = defined( 'OPTIMA_HUB_OPERATORS' ) ? (string) OPTIMA_HUB_OPERATORS : self::DEFAULT_OPERATORS;
 		$out = array();
-		foreach ( explode( ',', $raw ) as $email ) {
-			$email = strtolower( trim( $email ) );
-			if ( is_email( $email ) ) {
-				$out[] = $email;
+		foreach ( explode( ',', $raw ) as $entry ) {
+			$entry = strtolower( trim( $entry ) );
+			if ( is_email( $entry ) || preg_match( '/^@[a-z0-9-]+(\.[a-z0-9-]+)+$/', $entry ) ) {
+				$out[] = $entry;
 			}
 		}
 		return $out;
 	}
 
-	/** True for an operator who can also manage plugins on this site. */
+	/**
+	 * True for an operator: a listed address who can also manage plugins, or a
+	 * user on a listed @domain who can manage the site's settings.
+	 */
 	public static function is_operator( ?WP_User $user = null ): bool {
 		$user = $user ? $user : wp_get_current_user();
 		if ( ! $user || ! $user->exists() ) {
 			return false;
 		}
-		return in_array( strtolower( (string) $user->user_email ), self::operators(), true )
-			&& user_can( $user, 'activate_plugins' );
+		$email = strtolower( (string) $user->user_email );
+		foreach ( self::operators() as $entry ) {
+			if ( '@' === $entry[0] ) {
+				if ( substr( $email, -strlen( $entry ) ) === $entry && user_can( $user, 'manage_options' ) ) {
+					return true;
+				}
+			} elseif ( $email === $entry && user_can( $user, 'activate_plugins' ) ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/** Plugin installs are possible on this site (not locked by the host). */

@@ -99,7 +99,7 @@ final class Optima_Hub_Themes {
 		}
 		self::forget();
 		Optima_Hub_Features::refresh();
-		wp_safe_redirect( admin_url( 'admin.php?page=' . Optima_Hub_Admin::PAGE ) . '#sh-theme' );
+		wp_safe_redirect( Optima_Hub_Admin::url( 'updates' ) . '#sh-theme' );
 		exit;
 	}
 

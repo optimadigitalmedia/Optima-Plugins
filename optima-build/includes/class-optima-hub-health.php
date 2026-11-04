@@ -703,7 +703,7 @@ final class Optima_Hub_Health {
 			'value' => $schema ? __( 'On', 'optima-build' ) : __( 'Missing', 'optima-build' ),
 			'state' => $schema ? 'good' : 'bad',
 			'note'  => $schema ? __( 'Pages tell search and AI tools who the business is, in their own format.', 'optima-build' ) : __( 'No schema found. Turn on Business info and SEO.', 'optima-build' ),
-		) + ( $schema ? array() : array( 'link' => Optima_Hub_Admin::url( 'features' ), 'link_text' => __( 'Your features', 'optima-build' ) ) );
+		) + ( $schema ? array() : array( 'link' => Optima_Hub_Admin::url( 'features' ), 'link_text' => __( 'Features', 'optima-build' ) ) );
 
 		// 4. Business details complete (Optima Core sites).
 		if ( class_exists( 'Optima_Core_Business' ) ) {

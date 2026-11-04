@@ -1,8 +1,8 @@
 <?php
 /**
- * The Optima box on the WordPress Dashboard: what the site has on, what needs a
- * look, and one click into the Optima screens. First box on the page, so the
- * person who logs in sees it before anything else.
+ * The Optima box on the WordPress Dashboard: Overview's status line, what is
+ * waiting in the Inbox, review totals and spam blocked, and one click into
+ * Overview. First box on the page, so the person who logs in sees it first.
  *
  * @package Optima_Build
  */
@@ -20,7 +20,7 @@ final class Optima_Hub_Dashboard {
 	}
 
 	public static function register(): void {
-		if ( ! current_user_can( 'edit_posts' ) ) {
+		if ( ! current_user_can( Optima_Hub_Lock::VIEW ) ) {
 			return;
 		}
 		$title = Optima_Hub_Admin::branded() ? __( 'Optima', 'optima-build' ) : __( 'Site Build', 'optima-build' );
@@ -103,76 +103,42 @@ final class Optima_Hub_Dashboard {
 	}
 
 	public static function render(): void {
-		$on = 0;
-		foreach ( array_keys( Optima_Hub_Catalog::features() ) as $slug ) {
-			$on += 'on' === Optima_Hub_Features::status( $slug )['state'] ? 1 : 0;
-		}
-		$ai     = Optima_Hub_Health::ai_checks();
-		$basics = Optima_Hub_Health::checks();
-		$fix    = array_values( array_filter( $basics, static fn( $c ) => 'bad' === $c['state'] ) );
-		$look   = array_values( array_filter( $basics, static fn( $c ) => 'warn' === $c['state'] ) );
-		$todo   = array_slice( array_merge( $fix, $look ), 0, 4 );
-		$open   = count( array_filter( Optima_Hub_Requests::all(), static fn( $p ) => 'done' !== get_post_meta( $p->ID, Optima_Hub_Requests::META_STATUS, true ) ) );
-		$mail   = class_exists( 'Optima_Hub_Mail' ) && Optima_Hub_Mail::ready();
-		$stats  = array(
-			array( (string) $on, __( 'features on', 'optima-build' ), Optima_Hub_Admin::url( 'features' ) ),
-			/* translators: 1: checks passed, 2: total */
-			array( sprintf( '%1$d/%2$d', count( array_filter( $ai, static fn( $c ) => 'good' === $c['state'] ) ), count( $ai ) ), __( 'ready for AI search', 'optima-build' ), Optima_Hub_Admin::url( 'health' ) ),
-			array( $mail ? __( 'On', 'optima-build' ) : __( 'Off', 'optima-build' ), __( 'Google email', 'optima-build' ), current_user_can( 'manage_options' ) && class_exists( 'Optima_Hub_Mail' ) ? Optima_Hub_Mail::url() : '' ),
-			array( (string) $open, __( 'open requests', 'optima-build' ), Optima_Hub_Admin::url( 'requests' ) ),
-		);
+		$status = Optima_Hub_Overview::status();
+		$count  = Optima_Hub_Inbox::count();
 		?>
 		<style>
 			#<?php echo esc_attr( self::ID ); ?> .hndle::before{content:""; display:inline-block; width:12px; height:15px; margin-right:8px; background:#1272C4; clip-path:polygon(35% 0,100% 0,100% 65%,76% 41%,17% 100%,0 83%,59% 24%); vertical-align:-2px}
-			.sd-stats{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:4px 0 12px}
-			.sd-stat{display:block; padding:10px; border:1px solid #DDE4EE; border-radius:10px; text-decoration:none; color:inherit}
-			a.sd-stat:hover{border-color:#0F63AB}
-			.sd-stat b{display:block; font-size:20px; line-height:1.1; font-weight:600}
-			.sd-stat span{display:block; font-size:12px; color:#50575e; margin-top:2px}
+			.sd-status{display:grid; grid-template-columns:10px 1fr; gap:8px; align-items:start; margin:4px 0 12px; font-size:14px}
+			.sd-status strong{font-weight:600}
+			.sd-dot{width:8px; height:8px; border-radius:50%; margin-top:6px; background:#0B6B3A}
+			.sd-dot.is-warn{background:#FDC134}
+			.sd-dot.is-bad{background:#E23B2E}
 			.sd-reviews{margin:0 0 12px; padding:10px 12px; border-radius:10px; background:#f6f7f7}
 			.sd-stars{color:#FDC134; margin-right:4px}
-			.sd-todo{margin:0 0 12px; padding:0; list-style:none; display:grid; gap:6px}
-			.sd-todo li{display:grid; grid-template-columns:10px 1fr; gap:8px; align-items:start}
-			.sd-dot{width:8px; height:8px; border-radius:50%; margin-top:6px; background:#FDC134}
-			.sd-dot.is-bad{background:#E23B2E}
-			.sd-ok{margin:0 0 12px; color:#0E7A5A}
-			.sd-ask{display:grid; gap:6px; margin:0 0 12px; padding-top:12px; border-top:1px solid #DDE4EE}
-			.sd-ask textarea{width:100%}
-			.sd-ask .button{justify-self:start}
-			.sd-links{display:flex; flex-wrap:wrap; gap:8px}
-			@media (max-width:600px){.sd-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+			.sd-links{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:0}
 		</style>
-		<div class="sd-stats">
-			<?php foreach ( $stats as $s ) : ?>
-				<?php if ( '' !== $s[2] ) : ?>
-					<a class="sd-stat" href="<?php echo esc_url( $s[2] ); ?>"><b><?php echo esc_html( $s[0] ); ?></b><span><?php echo esc_html( $s[1] ); ?></span></a>
-				<?php else : ?>
-					<div class="sd-stat"><b><?php echo esc_html( $s[0] ); ?></b><span><?php echo esc_html( $s[1] ); ?></span></div>
+		<p class="sd-status">
+			<span class="sd-dot is-<?php echo esc_attr( $status['state'] ); ?>" aria-hidden="true"></span>
+			<span>
+				<strong><?php echo esc_html( $status['text'] ); ?></strong>
+				<?php if ( $count ) : ?>
+					<br><a href="<?php echo esc_url( Optima_Hub_Inbox::url() ); ?>">
+						<?php
+						/* translators: %d: items waiting */
+						echo esc_html( sprintf( _n( '%d item waiting in the Inbox', '%d items waiting in the Inbox', $count, 'optima-build' ), $count ) );
+						?>
+					</a>
 				<?php endif; ?>
-			<?php endforeach; ?>
-		</div>
-		<?php self::reviews(); ?>
-		<?php if ( $todo ) : ?>
-			<ul class="sd-todo">
-				<?php foreach ( $todo as $c ) : ?>
-					<li><span class="sd-dot<?php echo 'bad' === $c['state'] ? ' is-bad' : ''; ?>" aria-hidden="true"></span><span><strong><?php echo esc_html( $c['label'] . ': ' . $c['value'] ); ?>.</strong> <?php echo esc_html( $c['note'] ); ?></span></li>
-				<?php endforeach; ?>
-			</ul>
-		<?php else : ?>
-			<p class="sd-ok"><?php esc_html_e( 'Every site check passes.', 'optima-build' ); ?></p>
+			</span>
+		</p>
+		<?php $waiting = Optima_Hub_Lock::waiting_note(); ?>
+		<?php if ( '' !== $waiting ) : ?>
+			<p class="sd-status"><span class="sd-dot is-warn" aria-hidden="true"></span><span><?php echo esc_html( $waiting ); ?></span></p>
 		<?php endif; ?>
-		<form class="sd-ask" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-			<input type="hidden" name="action" value="<?php echo esc_attr( Optima_Hub_Requests::ACTION ); ?>">
-			<input type="hidden" name="do" value="new">
-			<?php wp_nonce_field( Optima_Hub_Requests::ACTION ); ?>
-			<label for="sd-what"><strong><?php esc_html_e( 'Need something changed?', 'optima-build' ); ?></strong></label>
-			<textarea id="sd-what" name="what" rows="3" required placeholder="<?php esc_attr_e( 'Tell us what and where. We\'ll take it from here.', 'optima-build' ); ?>"></textarea>
-			<button type="submit" class="button button-primary"><?php esc_html_e( 'Send request', 'optima-build' ); ?></button>
-		</form>
+		<?php self::reviews(); ?>
 		<p class="sd-links">
-			<a class="button" href="<?php echo esc_url( Optima_Hub_Admin::url( 'features' ) ); ?>"><?php esc_html_e( 'Open Optima', 'optima-build' ); ?></a>
-			<a class="button" href="<?php echo esc_url( Optima_Hub_Admin::url( 'health' ) ); ?>"><?php esc_html_e( 'Site health', 'optima-build' ); ?></a>
-			<a class="button" href="<?php echo esc_url( Optima_Hub_Admin::url( 'requests' ) ); ?>"><?php esc_html_e( 'Your requests', 'optima-build' ); ?></a>
+			<a class="button button-primary" href="<?php echo esc_url( Optima_Hub_Overview::url() ); ?>"><?php esc_html_e( 'Open Overview', 'optima-build' ); ?></a>
+			<a class="button" href="<?php echo esc_url( $status['url'] ); ?>"><?php esc_html_e( 'Site health', 'optima-build' ); ?></a>
 		</p>
 		<?php
 	}

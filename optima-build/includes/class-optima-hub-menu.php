@@ -1,12 +1,13 @@
 <?php
 /**
- * One menu, the same on every site (plugin-first rules 9 and 10).
+ * One menu, the same on every site (plugin-first rules 9, 10 and 44).
  *
  * Every Optima plugin adds its screen under the Optima menu. This class runs
- * last and tidies that menu: one fixed order, plain names ("Team", not
- * "Team settings"), and every update tool behind one item, Updates. Screens
- * that move behind Updates stay reachable at their own address; they just
- * leave the sidebar. No plugin has to change for this.
+ * last and tidies that menu: one fixed order that follows the seven groups
+ * (Overview, Your business, Content, Search and AI, Site health, Inbox, Build),
+ * plain names ("Team", not "Team settings"), and Build only for operators.
+ * The shared admin kit then shows one sidebar link per group. Every screen
+ * keeps its own address; no plugin has to change for this.
  *
  * @package Optima_Build
  */
@@ -17,37 +18,57 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class Optima_Hub_Menu {
 
-	/** Sidebar order by item name. Names not listed sit after the feature group, before the tools. */
+	/**
+	 * Sidebar order by screen address, group by group. Inside a group the first
+	 * screen is the one the group's sidebar link opens. "{hub}" is the hub's own
+	 * page (site-build-features, or site-build when the hub made the menu).
+	 * Screens not listed sit at the end of their group.
+	 */
 	const ORDER = array(
-		'Features',
-		'Business info',
-		// Features with settings, in a fixed order.
-		'Call buttons',
-		'Hours',
-		'Reviews',
-		'Team',
-		'Team members',
-		'Case results',
-		'All case results',
-		'Cards & Links',
-		'Chat',
-		'Chat questions',
-		'Redirects',
-		'Accessibility',
-		'Analytics',
-		'AI search',
-		'SEO',
-		'Spam protection',
-		'Email',
-		'Site check',
-		'Site checks',
-		'Customer list',
-		// Tools, always last.
-		'Design',
-		'Updates',
-		'Site health',
-		'Search health',
-		'Request a change',
+		// Overview.
+		'optima-overview',
+		// Your business.
+		'optima',
+		'optima&tab=business',
+		'optima-contact',
+		'optima-hours',
+		'optima-team',
+		'edit.php?post_type=optima_team',
+		'optima-results',
+		'edit.php?post_type=optima_result',
+		'edit.php?post_type=optima_review',
+		'optima-reviews-settings',
+		'optima-cards',
+		'optima-chat',
+		// Content.
+		'optima&tab=sync',
+		'optima-redirects',
+		'optima-optimize',
+		// Search and AI.
+		'optima&tab=seo',
+		'optima-ai-search',
+		'optima-analytics',
+		'optima-accessibility',
+		'optima&tab=protect',
+		// Site health.
+		'{hub}&tab=health',
+		'optima&tab=dashboard',
+		// Inbox.
+		'optima-inbox',
+		'{hub}&tab=requests',
+		'edit.php?post_type=optima_chat_q',
+		'optima-reviews-inbox',
+		'optima-reviews-ask',
+		// Build: the update queue first.
+		'{hub}&tab=updates',
+		'{hub}',
+		'optima-design',
+		'optima-mail',
+		'edit.php?post_type=optima_sitecheck',
+		'optima-sitecheck',
+		'optima-events-crm',
+		'optima-build',
+		'optima-content-updates',
 	);
 
 	/** Old name => plain name. */
@@ -58,50 +79,63 @@ final class Optima_Hub_Menu {
 		'Site check settings'   => 'Site check',
 	);
 
-	/** Items that live behind Updates instead of in the sidebar (matched on the menu slug). */
-	const BEHIND_UPDATES = array( 'optima&tab=sync', 'optima-content-updates', 'optima-build' );
-
 	public static function boot(): void {
-		add_action( 'admin_menu', array( __CLASS__, 'tidy' ), 9999 );
-		add_action( 'admin_head', array( __CLASS__, 'hide_css' ) );
-		// After WordPress has checked access to the screen, the screens behind Updates leave
-		// the menu list, so neither the sidebar nor the shared tab row shows them.
-		add_action( 'admin_head', array( __CLASS__, 'drop_behind' ), 999 );
-		add_filter( 'optima_admin_nav_group', array( __CLASS__, 'nav_group' ), 10, 2 );
+		add_action( 'admin_menu', array( __CLASS__, 'tidy' ), 999 ); // Before the admin kit picks each group's link (1000).
+		// After WordPress has checked access to the screen, Build's screens leave the
+		// menu list for anyone who is not an operator, so neither the sidebar nor the
+		// shared tab row shows them.
+		add_action( 'admin_head', array( __CLASS__, 'drop_build' ), 999 );
 		// The admin footer's help link: Request a change, never a personal address.
 		add_filter( 'optima_admin_help_url', static fn() => Optima_Hub_Admin::url( 'requests' ) );
 	}
 
-	/** Remove the screens behind Updates from the menu list, except the one being viewed. */
-	public static function drop_behind(): void {
+	/** Is this menu entry one of Build's screens? */
+	public static function is_build( string $slug ): bool {
+		return 'build' === Optima_Admin_UI::listed( $slug );
+	}
+
+	/** Remove Build's screens from the menu list for anyone who is not an operator. */
+	public static function drop_build(): void {
 		global $submenu;
+		if ( Optima_Hub_Access::is_operator() ) {
+			return;
+		}
 		$parent = Optima_Hub_Admin::parent();
 		if ( empty( $submenu[ $parent ] ) || ! is_array( $submenu[ $parent ] ) ) {
 			return;
 		}
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- reading the screen address only.
-		$page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$tab  = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : '';
-		$here = $page . ( '' !== $tab ? '&tab=' . $tab : '' );
 		foreach ( $submenu[ $parent ] as $i => $item ) {
-			$slug = (string) ( $item[2] ?? '' );
-			if ( in_array( $slug, self::BEHIND_UPDATES, true ) && $slug !== $here && $slug !== $page ) {
+			if ( self::is_build( (string) ( $item[2] ?? '' ) ) ) {
 				unset( $submenu[ $parent ][ $i ] ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- hiding our own items after the access check.
 			}
 		}
 	}
 
-	/** While one of those screens is open, it sits in Home, next to Updates. */
-	public static function nav_group( string $group, string $slug ): string {
-		if ( in_array( $slug, self::BEHIND_UPDATES, true ) ) {
-			return 'home';
+	public static function tidy(): void {
+		global $submenu;
+		$parent = Optima_Hub_Admin::parent();
+		if ( empty( $submenu[ $parent ] ) || ! is_array( $submenu[ $parent ] ) ) {
+			return;
 		}
-		// Business info is about the business, not search: it sits with Call buttons, Hours and Team.
-		if ( 'optima' === $slug || 'optima&tab=business' === $slug ) {
-			return 'business';
+		$hub   = 'site-build' === $parent ? 'site-build' : Optima_Hub_Admin::PAGE;
+		$rank  = array_flip( str_replace( '{hub}', $hub, self::ORDER ) );
+		$items = array();
+		foreach ( array_values( $submenu[ $parent ] ) as $i => $item ) {
+			$slug = (string) ( $item[2] ?? '' );
+			$name = trim( wp_strip_all_tags( (string) ( $item[0] ?? '' ) ) );
+			$name = preg_replace( '/\s*\d+$/', '', $name ); // Drop a count bubble from the name.
+			foreach ( self::RENAME as $from => $to ) {
+				if ( 0 === strcasecmp( $name, $from ) ) {
+					$item[0] = str_ireplace( $from, $to, (string) $item[0] );
+				}
+			}
+			$items[] = array( 'rank' => $rank[ $slug ] ?? count( $rank ), 'pos' => $i, 'item' => $item );
 		}
-		return $group;
+		usort(
+			$items,
+			static fn( $a, $b ) => $a['rank'] <=> $b['rank'] ?: $a['pos'] <=> $b['pos']
+		);
+		$submenu[ $parent ] = array_values( array_column( $items, 'item' ) ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- reordering our own menu.
 	}
 
 	/** The theme's own setup screen (fallback when no plugin does the job), if the theme registers one. */
@@ -115,56 +149,6 @@ final class Optima_Hub_Menu {
 			);
 		}
 		return array();
-	}
-
-	/** Screens that live behind Updates stay reachable but leave the sidebar. */
-	public static function hide_css(): void {
-		$sel = array();
-		foreach ( self::BEHIND_UPDATES as $slug ) {
-			$sel[] = '#adminmenu a[href$="page=' . esc_attr( $slug ) . '"]';
-			$sel[] = '#adminmenu a[href$="' . esc_attr( $slug ) . '"]';
-		}
-		echo '<style id="optima-behind-updates">' . implode( ',', $sel ) . '{display:none!important}</style>' . "\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped constants.
-	}
-
-	public static function tidy(): void {
-		global $submenu;
-		$parent = Optima_Hub_Admin::parent();
-		if ( empty( $submenu[ $parent ] ) || ! is_array( $submenu[ $parent ] ) ) {
-			return;
-		}
-		$items = array();
-		foreach ( $submenu[ $parent ] as $item ) {
-			$slug = (string) ( $item[2] ?? '' );
-			if ( in_array( $slug, self::BEHIND_UPDATES, true ) ) {
-				// Keep it registered (WordPress refuses a page that leaves the menu); hide it from the sidebar instead.
-				$item[4] = trim( ( $item[4] ?? '' ) . ' optima-behind-updates' );
-			}
-			$name = trim( wp_strip_all_tags( (string) ( $item[0] ?? '' ) ) );
-			$name = preg_replace( '/\s*\d+$/', '', $name ); // Drop a count bubble from the name used for sorting.
-			foreach ( self::RENAME as $from => $to ) {
-				if ( 0 === strcasecmp( $name, $from ) ) {
-					$item[0] = str_ireplace( $from, $to, (string) $item[0] );
-					$name    = $to;
-				}
-			}
-			$items[] = array( 'name' => $name, 'item' => $item );
-		}
-		$rank  = array_flip( self::ORDER );
-		$tools = $rank['Design'];
-		foreach ( $items as $i => $row ) {
-			$slug = (string) ( $row['item'][2] ?? '' );
-			// The hub's own screen (Features) always comes first, whatever the shared nav calls it,
-			// so clicking the top-level menu item opens it.
-			$first = in_array( $slug, array( Optima_Hub_Admin::PAGE, 'site-build' ), true );
-			$items[ $i ]['rank'] = $first ? -1 : ( $rank[ $row['name'] ] ?? ( $tools - 0.5 ) );
-			$items[ $i ]['pos']  = $i;
-		}
-		usort(
-			$items,
-			static fn( $a, $b ) => $a['rank'] <=> $b['rank'] ?: $a['pos'] <=> $b['pos']
-		);
-		$submenu[ $parent ] = array_values( array_column( $items, 'item' ) ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- reordering our own menu.
 	}
 
 	/** The screen that applies approved theme copy: Optima Core's Site Sync, or the theme's own fallback screen. */

@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.7.9.11 (2026-11-04)
+
+- **The site lock waits for an operator account.** It applies only when at least one user on the site passes the operator check, so a site can never be locked with nobody able to edit it. The answer is kept in a transient (keyed to the operator list) and cleared whenever a user is added, changed, removed or given a new role. While it waits, administrators see "Site lock is waiting: no Optima operator account on this site yet." on Overview and in the WordPress Dashboard box, and the Site lock card on Build reads On, Waiting for an operator account, or Off.
+
+## 0.7.9.10 (2026-11-04)
+
+Dashboard redesign, release 1 (`docs/dashboard-redesign-plan.md`).
+
+- **The Optima menu has seven items:** Overview, Your business, Content, Search and AI, Site health, Inbox, Build, in that order on every site. The sidebar shows the group names and each screen's eyebrow repeats them (rule 44). Every screen keeps its address and its page title.
+- **Overview** (new, `admin.php?page=optima-overview`) is what the Optima menu opens on: one status line from Site health, Needs you (chat questions, new reviews, review request notes, hours not confirmed), With Optima (open change requests and where each stands), four everyday jobs as links (edit a team bio, write a post, change hours, ask for a review; each only when its feature is on), one request box that uses the Request a change handler and comes back to Overview, and "Want something added? Ask Optima". Operators also see a strip with updates waiting and the last version check.
+- **Inbox** (new, `admin.php?page=optima-inbox`) lists everything waiting on a person from the stores the features already keep: change requests not done, chat questions not answered, new reviews and notes from the review page. Each row links to the screen that handles it. Read only. One count on the Inbox link in the sidebar.
+- **Build is for operators only.** Its first view is the update queue (Check for new versions, the theme, plugin updates with one Update now button each, Fill from theme again, Approved copy, Theme setup); every button comes back to Build, and the WordPress update screens get a "Back to Build" link. Features, Updates, Design, Email, Site checks, Customer list, Site setup and Content updates sit under Build. Anyone else who opens Updates, Features, Design or Email by its address lands on Overview, and never sees turn-on buttons, the plan selector or update buttons.
+- **Operators by default are the administrators on the agency's domain** (`@optimadigitalmedia.com`): a user whose address ends with it and who can manage the site's settings. `OPTIMA_HUB_OPERATORS` in wp-config still narrows or changes it; an entry starting with `@` is a whole domain, an exact address is one person (who must be able to manage plugins). No personal address is in the code any more.
+- **Site lock, on by default: only operators edit the site.** Anyone else keeps their account and role, but while the lock is on cannot edit, publish or delete posts, pages or any other post type, upload files, change Optima, theme or WordPress settings, manage users, import or export, or install, activate or update plugins and themes (held back by a `user_has_cap` filter; no role changes in the database). They still see Overview, Site health and Inbox (read only), send requests, and Overview tells them: "Changes to this site go through Optima. Send a request below." Never applies to WP-CLI, cron or an operator. Off switches: the Site lock card on Build (operators only) or `add_filter( 'optima_build_site_lock', '__return_false' )`. Overview, Site health, Inbox and Request a change open with a new capability, `optima_view_hub`, given to anyone whose role can edit posts, so the lock does not hide them and subscribers never see them.
+- **The WordPress Dashboard box** shows Overview's status line, what is waiting in the Inbox and the review totals, with Open Overview and Site health buttons.
+- **The toolbar's Optima menu** opens Overview; Build in it shows to operators only.
+- Site Sync shows under Content (it was hidden behind Updates); Approved copy on Build still links to it.
+
 ## 0.7.9.9 (2026-11-04)
 
 - Optima admin footer: no personal email address. It reads "Built and looked after by Optima Digital" with a Request a change link (shared admin kit 1.5.1.5).

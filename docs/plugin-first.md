@@ -4,7 +4,7 @@ Status: **Adopted Nov 4, 2026. These rules are binding for every Optima plugin, 
 
 ## 0. Strict rules (read before touching any plugin or theme)
 
-Every rule is a MUST or a NEVER (43 rules). If a task would break one, stop and ask the site owner first.
+Every rule is a MUST or a NEVER (46 rules). If a task would break one, stop and ask the site owner first.
 
 **Who does the work**
 
@@ -22,9 +22,9 @@ Every rule is a MUST or a NEVER (43 rules). If a task would break one, stop and 
 
 **Same everywhere**
 
-9. Every site MUST have one top-level dashboard menu, **Optima Build**, in the order in section 4a.
-10. A feature's settings MUST live only at Optima Build → <feature name>. NEVER under Settings, Tools, Appearance or a theme screen.
-11. A theme MUST NEVER register its own admin menu for features. Design-only settings go under Optima Build → Design.
+9. Every site MUST have one top-level dashboard menu, **Optima**, with the same seven items in the same order (section 4a): Overview, Your business, Content, Search and AI, Site health, Inbox, Build. Build shows only to operators. By default the operators are the administrators on the agency domain (`@optimadigitalmedia.com`, with the right to manage the site's settings); a site can narrow or change that with `OPTIMA_HUB_OPERATORS` in wp-config.
+10. A feature's settings MUST live only on its tab inside one of those seven items (Optima → Your business → Contact buttons). NEVER under Settings, Tools, Appearance or a theme screen. Every existing screen keeps its address; only the sidebar, the home and the words move.
+11. A theme MUST NEVER register its own admin menu for features. Design-only settings go under Optima → Build → Design.
 12. Plugin blocks MUST render only through `optima_slot( $name )` in the fixed spots in section 4a, so each feature appears in the same place on every site.
 13. Every theme MUST have the required files in section 4a (`DESIGN.md`, `optima-setup.json`, `inc/fallbacks/`, `inc/slots.php`). Every plugin MUST have the required plugin files.
 14. Client facts (team, hours, phone, results data) MUST live in `optima-setup.json`. NEVER hard-code them in templates.
@@ -59,8 +59,8 @@ Every rule is a MUST or a NEVER (43 rules). If a task would break one, stop and 
 29. Every site MUST have exactly one repo, `optimadigitalmedia/<Client>`, and that repo is the only home of its words, design and theme. Its theme MUST update from that same repo. (Optima's theme still updates from `optima-digital-theme`; that moves into the site repo when Optima is converted, last.)
 30. Every site repo MUST use the same folders: `content/pages/`, `content/blog/`, `content/results/` (case results for firms, case studies for Optima), `content/legal/`, `content/internal/` (never ships), `docs/` (brief, decisions, facts), `site/` (static build), `wordpress/<theme>/` (with `DESIGN.md` and `optima-setup.json`).
 31. Words MUST live only in `content/*.md`. NEVER type or paste copy into WordPress by hand.
-32. Approved copy MUST reach WordPress one way: the theme release carries it, and Optima Build → Content updates (Site Sync, owned by optima-core) applies it with a revision and an undo. A WordPress import file is used only for the first import of new posts.
-33. Every site's Optima Build screen names its repo on the theme card. That is where its content lives; nothing else needs remembering.
+32. Approved copy MUST reach WordPress one way: the theme release carries it, and Optima → Build → Approved copy (Site Sync, owned by optima-core) applies it with a revision and an undo. A WordPress import file is used only for the first import of new posts.
+33. Every site's Optima → Build page names its repo on the theme card. That is where its content lives; nothing else needs remembering.
 34. All content lands on staging first. Live gets it only through the launch go-live card.
 35. The same SOP (`client-kit/SOP.md`) and the same repo layout apply to every site, small or large. A bigger site has more pages, never a different structure.
 
@@ -77,6 +77,12 @@ Every rule is a MUST or a NEVER (43 rules). If a task would break one, stop and 
 **Naming**
 
 43. Plugin and theme code, comments, readmes and docs in Optima repos use Optima names only.
+
+**The dashboard**
+
+44. The sidebar and the screen MUST use the same words: a sidebar item's name is the screen's title, and a tab's name is the tab's title.
+45. A fact (phone, hours, name, address) MUST be typed on one tab only. Every other screen that uses it shows it read-only with a link to that tab.
+46. Optima → Overview MUST answer three things first: is the site all right, what needs the client, and what Optima is doing. Clients never see turn-on buttons; what they want added goes through one line, "Want something added? Ask Optima".
 
 
 
@@ -214,9 +220,9 @@ When a theme hands its SEO head and JSON-LD to Optima Core (jobs `seo` and `sche
 
 **Addresses.** `https://...` is used as is (moved to this host off production, see `production_url`). `/about/` and `#business` are on the site (`home_url`). A file name (`assets/og/home.png`) is a file in the theme, child theme first. Plain words stay plain. In schema this applies to `@id`, `url`, `image`, `logo`, `sameAs`, `contentUrl`, `thumbnailUrl`, `embedUrl`, `mainEntityOfPage`, `hasMap`, `item` (breadcrumbs), `primaryImageOfPage`, `significantLink`, `relatedLink`, `downloadUrl` and `urlTemplate`.
 
-**Which value wins.** The Optima SEO box on the post (title, description, canonical, noindex) wins over everything. Then the theme's per-URL value. Then Core's own fallbacks (featured image, excerpt, term description, the editor's defaults on Optima Build → SEO; on the home page the editor's homepage description also beats `pages["/"].description`). Then the theme's `site` defaults.
+**Which value wins.** The Optima SEO box on the post (title, description, canonical, noindex) wins over everything. Then the theme's per-URL value. Then Core's own fallbacks (featured image, excerpt, term description, the editor’s defaults on Optima → Search and AI → SEO; on the home page the editor's homepage description also beats `pages["/"].description`). Then the theme's `site` defaults.
 
-**How it gets there.** Optima Build's setup filler copies the section whole (cleaned) into the option `optima_core_seo_setup` (not autoloaded: a big site's section runs to hundreds of KB), which Optima Core reads. Unlike the other sections it is a mirror of the theme, not blanks to fill: it is rewritten when the section or the theme version changes and on "Fill from theme again", and removed when the theme drops the section. It never touches the SEO box or Optima Build → SEO. The data applies only while Core prints the head (the theme does not declare `optima-seo-head` or define `optima_head`).
+**How it gets there.** Optima Build's setup filler copies the section whole (cleaned) into the option `optima_core_seo_setup` (not autoloaded: a big site's section runs to hundreds of KB), which Optima Core reads. Unlike the other sections it is a mirror of the theme, not blanks to fill: it is rewritten when the section or the theme version changes and on "Fill from theme again", and removed when the theme drops the section. It never touches the SEO box or Optima → Search and AI → SEO. The data applies only while Core prints the head (the theme does not declare `optima-seo-head` or define `optima_head`).
 
 **Not expressible yet.** `<link>` tags other than canonical (preloads, `hreflang`; WordPress's own feed `alternate` links stay as they were), anything outside `<head>`, values computed per request beyond the tokens, automatic breadcrumbs, posts described from the post itself (fitted title and description, share card then category card), headers on text files (`X-Robots-Tag` on llms.txt is AI Search's), and per-post-type rules other than path patterns. Those stay in the theme (preloads are the theme's look anyway) or become a Core feature first.
 
@@ -255,10 +261,23 @@ When a theme hands its SEO head and JSON-LD to Optima Core (jobs `seo` and `sche
 
 **In the dashboard, every site looks the same:**
 
-- One top-level menu, **Optima Build**, on every site, in the same order: Features, Business info, then one item per feature that has settings (Call buttons, Hours, Reviews, Team, Results, Cards, Chat, Redirects, Accessibility, Analytics), then Site health, Request a change.
-- **A feature's settings live in one place:** Optima Build → that feature's name. Never under Settings, Tools, Appearance, or a theme page.
-- **Themes put no feature settings anywhere.** A theme's own screen (if any) holds design only, under Optima Build → Design.
-- Every feature card on the Features screen has the same buttons in the same place: Settings, Turn off, version.
+- One top-level menu, **Optima**, on every site, with seven items in this order:
+
+  | Item | Who sees it | What it holds |
+  |---|---|---|
+  | Overview | Everyone | Status line, Needs you, With Optima, the client's four everyday jobs (bio, post, hours, review), one request box |
+  | Your business | Client, editor | Tabs: Details, Hours, Contact buttons, Team, Case results, Reviews, Cards. Each fact typed once; each tab says where it shows |
+  | Content | Editor | Pages and posts with dates, the site's own types, Approved copy, Redirects, Images |
+  | Search and AI | Client admin | SEO, AI search, Analytics and cookie notice, Accessibility, Spam protection; each tab shows its own checks |
+  | Site health | Everyone | The whole report, one score per group, Copy for Claude |
+  | Inbox | Client, operator | Everything waiting on a person (change requests, chat questions, new reviews, review requests), one count in the sidebar |
+  | Build | Operators only | The update queue (every update, one button each, each returning here), setup file against the site, features, health, theme and key, design tokens, the change log |
+
+- **Only operators edit the site** (site lock, Optima Build, on by default since dashboard release 1). Everyone else sees Overview, Site health and Inbox and sends requests; the lock holds back editing, settings, users and plugin and theme changes without touching roles. Off: the Site lock card on Build or the `optima_build_site_lock` filter. Never applies to WP-CLI, cron or an operator, and waits (applies to nobody) until the site has at least one operator account.
+- **A feature's settings live in one place:** its tab inside one of the seven items. Never under Settings, Tools, Appearance, or a theme page.
+- **Themes put no feature settings anywhere.** A theme's own screen (if any) holds design only, under Optima → Build → Design.
+- **Look:** the Optima brand with the client's logo (the admin kit's white-label switch stays). DESIGN.md dresses the site, not the dashboard.
+- Every feature card in Build has the same buttons in the same place: Settings, Turn off, version.
 
 **On the site, every feature sits in the same spot:**
 
@@ -278,9 +297,15 @@ When a theme hands its SEO head and JSON-LD to Optima Core (jobs `seo` and `sche
 
 **Every plugin has the same files:** `<slug>.php` (header and version), `includes/`, `assets/css/` (variables only), `readme.txt`, and the same settings-page layout from Optima Build's admin kit.
 
-**Checked by a script:** `tools/uniform-check.sh` fails if a theme is missing a required file, a theme registers a menu outside Optima Build, or a plugin hard-codes a color.
+**Checked by a script:** `tools/uniform-check.sh` fails if a theme is missing a required file, a theme registers a menu outside Optima, a plugin hard-codes a color, or a screen's sidebar group does not match the seven items (`tools/uniform-check.sh screens`, added with dashboard release 1: every `add_submenu_page()` address must be listed in `Optima_Admin_UI::SCREENS` in the shared admin kit).
+
+**Dashboard release 1: built** (2026-11-04, Optima Build 0.7.9.10, admin kit 1.6.0.0): the seven items, Overview, Inbox, Build for operators, the WordPress Dashboard box. Plan and test notes: `docs/dashboard-redesign-plan.md`.
 
 ## 5. Order (each step on staging, head-and-schema diff before and after)
+
+**Every release from Nov 4, 2026:** everything lands on staging first, on every site, and the agency's own site (Optima Digital) is the first place each release is checked. Client sites follow once it looks right there. Live sites get changes only at their go-live. (Plugins update themselves on every site at once, so "first" means first reviewed, not first installed.)
+
+The original conversion order, kept for the record:
 
 1. Optima Build: `optima_owns()`, `optima_slot()`, the `DESIGN.md` reader, the uniform menu and `tools/uniform-check.sh`. Nothing changes on any site yet.
 2. **The client site with the most features on goes first**, so it tests the most.

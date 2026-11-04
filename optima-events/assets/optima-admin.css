@@ -462,3 +462,17 @@ html:has(.wrap.sh), body.wp-admin:has(.wrap.sh), body:has(.wrap.sh) #wpcontent, 
 	.sh .sh-card, .sh .button { transition: none; }
 	.sh .sh-card:hover { transform: none; }
 }
+
+/* ---- Overview and Inbox ---- */
+.sh-status { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.sh-status .sh-value { font-size: 17px; font-weight: 600; margin: 0; color: var(--sh-text); }
+.sh-status .sh-note { margin: 0; }
+.sh-status.is-warn .sh-dot { background: var(--sh-warn); }
+.sh-status.is-bad .sh-dot { background: var(--sh-bad); }
+.sh-waiting { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.sh-waiting li { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--sh-border); }
+.sh-waiting li:last-child { border-bottom: 0; padding-bottom: 0; }
+.sh-waiting .sh-note { margin: 2px 0 0; }
+.sh-waiting .sh-pill { flex: none; }
+.sh-ask textarea { width: 100%; }
+.sh-ask .button { margin-top: 10px; }

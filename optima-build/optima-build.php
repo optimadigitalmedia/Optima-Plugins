@@ -2,8 +2,8 @@
 /**
  * Plugin Name:       Optima Build
  * Plugin URI:        https://optimadigitalmedia.com
- * Description:       One screen for the site's features: see what is on, turn features on or off (site operators only), roll one back, request a change, and check the site's health at a glance.
- * Version:           0.7.9.9
+ * Description:       The Optima menu on every site: Overview (is the site all right, what needs you, what Optima is doing), one Inbox, Site health, and Build for the site's operators (updates, features, design).
+ * Version:           0.7.9.11
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Author:            Optima Digital
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // Prefixed OPTIMA_HUB_ on purpose: the Optima Digital theme already defines a
 // OPTIMA_BUILD_MENU constant for its own menu.
-define( 'OPTIMA_HUB_VERSION', '0.7.9.9' );
+define( 'OPTIMA_HUB_VERSION', '0.7.9.11' );
 define( 'OPTIMA_HUB_FILE', __FILE__ );
 define( 'OPTIMA_HUB_DIR', plugin_dir_path( __FILE__ ) );
 define( 'OPTIMA_HUB_URL', plugin_dir_url( __FILE__ ) );
@@ -43,6 +43,7 @@ require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-owns.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-design.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-menu.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-access.php';
+require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-lock.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-catalog.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-features.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-requests.php';
@@ -51,6 +52,8 @@ require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-robots.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-privacy.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-setup.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-admin.php';
+require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-overview.php';
+require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-inbox.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-mail.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-dashboard.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-themes.php';
@@ -58,9 +61,12 @@ require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-watch.php';
 
 Optima_Hub_Design::boot();
 Optima_Hub_Menu::boot();
+Optima_Hub_Lock::boot();
 Optima_Hub_Features::boot();
 Optima_Hub_Requests::boot();
 Optima_Hub_Admin::boot();
+Optima_Hub_Overview::boot();
+Optima_Hub_Inbox::boot();
 Optima_Hub_Health::boot();
 Optima_Hub_Robots::boot();
 Optima_Hub_Privacy::boot();
