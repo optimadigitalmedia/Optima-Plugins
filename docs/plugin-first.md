@@ -57,7 +57,7 @@ Every rule is a MUST or a NEVER (36 rules). If a task would break one, stop and 
 **Content: one home, one path**
 
 29. Every site MUST have exactly one repo, `optimadigitalmedia/<Client>`, and that repo is the only home of its words, design and theme. Its theme MUST update from that same repo. (Optima's theme still updates from `optima-digital-theme`; that moves into the site repo when Optima is converted, last.)
-30. Every site repo MUST use the same folders: `content/pages/`, `content/posts/`, `content/results/` (case results for firms, case studies for Optima), `content/internal/` (never ships), `docs/` (brief, decisions, facts), `site/` (static build), `wordpress/<theme>/` (with `DESIGN.md` and `optima-setup.json`).
+30. Every site repo MUST use the same folders: `content/pages/`, `content/blog/`, `content/results/` (case results for firms, case studies for Optima), `content/legal/`, `content/internal/` (never ships), `docs/` (brief, decisions, facts), `site/` (static build), `wordpress/<theme>/` (with `DESIGN.md` and `optima-setup.json`).
 31. Words MUST live only in `content/*.md`. NEVER type or paste copy into WordPress by hand.
 32. Approved copy MUST reach WordPress one way: the theme release carries it, and Optima Build → Content updates (Site Sync, owned by optima-core) applies it with a revision and an undo. A WordPress import file is used only for the first import of new posts.
 33. Every site's Optima Build screen names its repo on the theme card. That is where its content lives; nothing else needs remembering.
