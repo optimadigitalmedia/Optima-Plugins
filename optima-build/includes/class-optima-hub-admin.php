@@ -25,10 +25,45 @@ final class Optima_Hub_Admin {
 	public static function boot(): void {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ), 15 );
 		add_action( 'admin_menu', array( __CLASS__, 'first' ), 999 );
+		add_action( 'admin_menu', array( __CLASS__, 'moved' ), 0 ); // before WordPress refuses an unknown screen
+		add_action( 'admin_init', array( __CLASS__, 'operators_only' ) );
 		add_filter( 'optima_admin_nav_hint', array( __CLASS__, 'nav_hint' ), 10, 2 );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
 		add_action( 'admin_post_' . self::PLAN_ACTION, array( __CLASS__, 'save_plan' ) );
 		add_filter( 'plugin_action_links_' . plugin_basename( OPTIMA_HUB_FILE ), array( __CLASS__, 'action_link' ) );
+	}
+
+	/**
+	 * Optima: Build is for operators (plugin-first rule 9). Anyone else who opens
+	 * Features, Updates, Design or Email lands on Overview.
+	 */
+	public static function operators_only(): void {
+		if ( wp_doing_ajax() ) {
+			return;
+		}
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- reading the screen address only.
+		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+		$tab  = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : '';
+		// phpcs:enable
+		if ( Optima_Hub_Access::is_operator() ) {
+			return;
+		}
+		$hub   = in_array( $page, array( self::PAGE, 'site-build' ), true ) && in_array( $tab, array( 'features', 'updates' ), true );
+		$other = ( class_exists( 'Optima_Hub_Design' ) && Optima_Hub_Design::PAGE === $page ) || ( class_exists( 'Optima_Hub_Mail' ) && Optima_Hub_Mail::PAGE === $page );
+		if ( $hub || $other ) {
+			wp_safe_redirect( self::url( 'overview' ) );
+			exit;
+		}
+	}
+
+	/** Optima Build 0.7.9.10 to 0.7.9.13 had Overview and Inbox at their own addresses; bookmarks keep working. */
+	public static function moved(): void {
+		$page  = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$moved = array( 'optima-overview' => 'overview', 'optima-inbox' => 'inbox' );
+		if ( isset( $moved[ $page ] ) && is_admin() && ! wp_doing_ajax() ) {
+			wp_safe_redirect( self::url( $moved[ $page ] ) );
+			exit;
+		}
 	}
 
 	public static function parent(): string {
@@ -498,13 +533,19 @@ final class Optima_Hub_Admin {
 		} elseif ( class_exists( 'Optima_Core_Admin' ) && class_exists( 'Optima_Hours_Admin' ) ) {
 			$do[] = array( admin_url( 'admin.php?page=optima&tab=business' ), __( 'Your business details', 'optima-build' ), __( 'Name, phone, address and profiles, typed once.', 'optima-build' ) );
 		}
+		// Optima: under the site lock these jobs go through a request, so they are not offered.
+		if ( class_exists( 'Optima_Hub_Lock' ) && Optima_Hub_Lock::applies() ) {
+			$do = array();
+		}
 		?>
+		<?php if ( $do ) : ?>
 		<div class="sh-section-head"><p class="sh-eyebrow"><?php esc_html_e( 'Things you can do here', 'optima-build' ); ?></p></div>
 		<div class="sh-ov-do">
 			<?php foreach ( $do as list( $url, $title, $text ) ) : ?>
 				<a href="<?php echo esc_url( $url ); ?>"><b><?php echo esc_html( $title ); ?></b><span><?php echo esc_html( $text ); ?></span></a>
 			<?php endforeach; ?>
 		</div>
+		<?php endif; ?>
 		<section class="sh-box" style="margin-top:16px">
 			<p>
 				<?php echo esc_html( self::branded() ? __( 'Want something added or changed? Ask Optima.', 'optima-build' ) : __( 'Want something added or changed? Ask us.', 'optima-build' ) ); ?>

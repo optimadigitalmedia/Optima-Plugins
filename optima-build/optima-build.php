@@ -49,6 +49,7 @@ require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-requests.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-health.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-robots.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-privacy.php';
+require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-optima.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-setup.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-admin.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-mail.php';
@@ -67,6 +68,7 @@ Optima_Hub_Admin::boot();
 Optima_Hub_Health::boot();
 Optima_Hub_Robots::boot();
 Optima_Hub_Privacy::boot();
+Optima_Hub_Optima::boot();
 Optima_Hub_Setup::boot();
 Optima_Hub_Mail::boot();
 Optima_Hub_Dashboard::boot();
@@ -77,6 +79,3 @@ Optima_Hub_Log::boot();
 Optima_Hub_Log_API::boot();
 
 register_deactivation_hook( __FILE__, array( 'Optima_Hub_Watch', 'unschedule' ) );
-
-// Optima: the admin footer's "Request a change" link (no personal address on client screens).
-add_filter( 'optima_admin_help_url', static fn() => Optima_Hub_Admin::url( 'requests' ) );

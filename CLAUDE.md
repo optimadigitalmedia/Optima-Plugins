@@ -21,4 +21,10 @@ The plugin suite behind every Optima client site. Before changing any plugin, re
 - **One home, one path for content.** One repo per site (`optimadigitalmedia/<Client>`), the
   same folders in every repo, words only in `content/*.md`, delivered only through the theme
   release plus Optima → Build → Approved copy. Same SOP for every site, any size.
+- **Where the code comes from (upstream first, Nov 4 2026).** These plugins are a port of an
+  upstream suite. Ports land on the `upstream-port` branch (ports only, never hand-edited) and are
+  merged into `main`, where Optima's own work lives; a port never overwrites it. A change any site
+  could use is made upstream first, then ported. Optima-only behavior goes in small Optima files
+  (for example `optima-build/includes/class-optima-hub-optima.php`, `-owns.php`, `-design.php`,
+  `-lock.php`) so merges stay easy. The port and its loss guard live in the internal Optima repo.
 - Optima names only in code, comments and docs.
