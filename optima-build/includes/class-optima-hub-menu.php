@@ -102,7 +102,11 @@ final class Optima_Hub_Menu {
 		$rank  = array_flip( self::ORDER );
 		$tools = $rank['Design'];
 		foreach ( $items as $i => $row ) {
-			$items[ $i ]['rank'] = $rank[ $row['name'] ] ?? ( $tools - 0.5 );
+			$slug = (string) ( $row['item'][2] ?? '' );
+			// The hub's own screen (Features) always comes first, whatever the shared nav calls it,
+			// so clicking the top-level menu item opens it.
+			$first = in_array( $slug, array( Optima_Hub_Admin::PAGE, 'site-build' ), true );
+			$items[ $i ]['rank'] = $first ? -1 : ( $rank[ $row['name'] ] ?? ( $tools - 0.5 ) );
 			$items[ $i ]['pos']  = $i;
 		}
 		usort(
