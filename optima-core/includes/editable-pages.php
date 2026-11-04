@@ -400,6 +400,10 @@ final class Optima_Core_Editable_Pages {
 
 	/** Optima Core's own graph: replace or add the FAQPage node on an editable page. */
 	public static function schema_graph( $graph ) {
+		// The theme's seo section in pages mode follows page edits itself (Optima_SEO_Setup::faq_from_page).
+		if ( class_exists( 'Optima_SEO_Setup' ) && Optima_SEO_Setup::exact() ) {
+			return $graph;
+		}
 		$faq = self::faq_entities();
 		if ( ! $faq || ! is_array( $graph ) ) {
 			return $graph;

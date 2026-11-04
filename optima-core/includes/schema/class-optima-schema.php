@@ -39,19 +39,35 @@ final class Optima_Schema {
 			return;
 		}
 
-		$graph = self::add_webpage( (array) apply_filters( 'optima_schema_graph', self::build_graph() ) );
+		// The theme's seo section in pages mode: exactly the nodes each page lists.
+		$exact = class_exists( 'Optima_SEO_Setup' ) && Optima_SEO_Setup::exact();
+		$graph = $exact ? Optima_SEO_Setup::page_graph() : self::build_graph();
+		$graph = (array) apply_filters( 'optima_schema_graph', $graph );
+		if ( ! $exact ) {
+			$graph = self::add_webpage( $graph );
+		}
+		if ( class_exists( 'Optima_SEO_Setup' ) ) {
+			$graph = Optima_SEO_Setup::finish_graph( $graph );
+		}
 		if ( empty( $graph ) ) {
 			return;
 		}
 
-		$data = array(
-			'@context' => 'https://schema.org',
-			'@graph'   => array_values( $graph ),
-		);
+		$blocks = class_exists( 'Optima_SEO_Setup' ) && Optima_SEO_Setup::active()
+			? Optima_SEO_Setup::blocks( $graph )
+			: array(
+				array(
+					'@context' => 'https://schema.org',
+					'@graph'   => array_values( $graph ),
+				),
+			);
 
-		echo "\n<script type=\"application/ld+json\">"
-			. wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE )
-			. "</script>\n";
+		echo "\n";
+		foreach ( $blocks as $data ) {
+			echo '<script type="application/ld+json">'
+				. wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE )
+				. "</script>\n";
+		}
 	}
 
 	/**

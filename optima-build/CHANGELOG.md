@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.9.8 (2026-11-04)
+
+- **The `seo` section is no longer autoloaded.** A big site's section runs to hundreds of KB; Core reads it only on the front end.
+- **Fill from theme keeps the new `seo` keys** Optima Core 1.6.0.7 reads: `production_url`, `robots_exact`, `print`, `og_type_post`, `og_url`, `schema_blocks`, `false` for no canonical or description, and the special page keys (`:search`, `:404`, `:posts`, `:archive` ...). Titles keep their spaces exactly as the theme printed them.
+- **Fix: Call buttons stayed off after Fill from theme.** A new option now starts from the plugin's defaults (switched on included). An option an editor already saved is never re-enabled.
+- Site setup and Content updates sit behind Updates: gone from the sidebar and the tab row, and Updates links to both.
+- The Design screen uses the Optima layout, and its swatches wrap.
+- The Features screen stays first in the Optima menu (the shared nav names it "Home", so the name sort missed it).
+
 ## 0.7.9.7 (2026-11-04)
 
 - **Fill from theme carries the SEO head.** A new `seo` section in `optima-setup.json` (site defaults, per-URL title, description, canonical, robots, share tags, and JSON-LD for the organization, people and other nodes) is copied whole into the `optima_core_seo_setup` option that Optima Core 1.6.0.6 reads. It refreshes when the file or the theme version changes and on "Fill from theme again", and is removed when the theme drops the section. Editors' SEO box values are never touched. Spec: docs/plugin-first.md, section 3a.

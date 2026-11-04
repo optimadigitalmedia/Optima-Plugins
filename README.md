@@ -9,14 +9,14 @@ a theme never orphans content.
 
 | Plugin | Version |
 |---|---|
-| `optima-accessibility` | 0.1.12.4 |
+| `optima-accessibility` | 0.1.12.5 |
 | `optima-aeo` | 0.2.4.4 |
 | `optima-analytics` | 0.1.15.4 |
-| `optima-build` | 0.7.9.7 |
+| `optima-build` | 0.7.9.8 |
 | `optima-cards` | 1.0.21.5 |
 | `optima-chat` | 0.2.4.5 |
 | `optima-contact` | 0.1.11.5 |
-| `optima-core` | 1.6.0.6 |
+| `optima-core` | 1.6.0.7 |
 | `optima-crm` | 0.1.1.4 |
 | `optima-events` | 0.14.3.5 |
 | `optima-forms-guard` | 0.3.2.4 |

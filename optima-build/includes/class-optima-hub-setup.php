@@ -431,7 +431,11 @@ final class Optima_Hub_Setup {
 			'version'    => self::theme_version(),
 			'filled'     => gmdate( 'c' ),
 		);
-		update_option( self::SEO_OPTION, $out, true );
+		// Large (every page's JSON-LD), and read only on the front end: never autoloaded.
+		update_option( self::SEO_OPTION, $out, false );
+		if ( function_exists( 'wp_set_option_autoload' ) ) {
+			wp_set_option_autoload( self::SEO_OPTION, false );
+		}
 		if ( class_exists( 'Optima_SEO_Setup' ) ) {
 			Optima_SEO_Setup::flush();
 		}
@@ -440,14 +444,33 @@ final class Optima_Hub_Setup {
 
 	/** One site or page entry: known keys only, each cleaned for what it holds. */
 	private static function seo_fields( array $in ): array {
-		$text = array( 'title', 'title_format', 'site_name', 'og_title', 'og_type', 'twitter', 'robots', 'locale', 'image_alt' );
+		$text = array( 'title', 'title_format', 'site_name', 'og_title', 'og_type', 'og_type_post', 'twitter', 'robots', 'locale', 'image_alt' );
 		$long = array( 'description', 'default_description', 'og_description' );
-		$addr = array( 'canonical', 'image', 'default_image' );
+		$addr = array( 'canonical', 'og_url', 'image', 'default_image', 'production_url' );
 		$out  = array();
 		foreach ( $in as $key => $value ) {
 			$key = (string) $key;
-			if ( in_array( $key, $text, true ) && is_scalar( $value ) ) {
-				$out[ $key ] = sanitize_text_field( (string) $value );
+			// false means "none" (no canonical, no og:url, no description): kept as false.
+			if ( false === $value && ( in_array( $key, $addr, true ) || in_array( $key, $long, true ) ) ) {
+				$out[ $key ] = false;
+			} elseif ( 'robots_exact' === $key ) {
+				$out[ $key ] = (bool) $value;
+			} elseif ( 'print' === $key && is_array( $value ) ) {
+				$out['print'] = array();
+				foreach ( $value as $tag => $on ) {
+					$tag = sanitize_key( (string) $tag );
+					if ( '' !== $tag && ( is_bool( $on ) || is_string( $on ) ) ) {
+						$out['print'][ $tag ] = is_bool( $on ) ? $on : sanitize_key( $on );
+					}
+				}
+			} elseif ( 'schema_blocks' === $key && is_array( $value ) ) {
+				$out['schema_blocks'] = array_values( array_map( 'absint', array_filter( $value, 'is_numeric' ) ) );
+			} elseif ( in_array( $key, $text, true ) && is_scalar( $value ) ) {
+				// Titles keep their spaces exactly as the theme printed them (" | Example Firm" on an archive,
+				// a doubled space inside); tags and line breaks still go.
+				$out[ $key ] = in_array( $key, array( 'title', 'og_title' ), true )
+					? (string) preg_replace( '/[\r\n\t]+/', ' ', strip_tags( (string) preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', wp_check_invalid_utf8( (string) $value ) ) ) ) // phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags -- wp_strip_all_tags() would trim the spaces we keep.
+					: sanitize_text_field( (string) $value );
 			} elseif ( in_array( $key, $long, true ) && is_scalar( $value ) ) {
 				$out[ $key ] = sanitize_textarea_field( (string) $value );
 			} elseif ( in_array( $key, $addr, true ) && is_scalar( $value ) ) {
@@ -476,9 +499,13 @@ final class Optima_Hub_Setup {
 		return $out;
 	}
 
-	/** A page key: "/about/" style, or a prefix pattern ending in "*" ("/blog/*"). */
+	/** A page key: "/about/" style, a prefix pattern ending in "*" ("/blog/*"), or a special key (":search"). */
 	private static function seo_path( string $path ): string {
 		$path = trim( $path );
+		// Requests without a path of their own (search, 404, posts page, archives) keep their special key.
+		if ( in_array( $path, array( ':search', ':404', ':posts', ':category', ':tag', ':date', ':author', ':archive' ), true ) ) {
+			return $path;
+		}
 		if ( '' === $path || preg_match( '#^[a-z]+://#i', $path ) ) {
 			$path = (string) wp_parse_url( $path, PHP_URL_PATH );
 		}
@@ -530,9 +557,10 @@ final class Optima_Hub_Setup {
 	 * (from $defaults) also counts as blank, since nobody chose it.
 	 */
 	private static function fill_option( string $option, array $fill, array $defaults = array() ): void {
-		$saved = get_option( $option, array() );
-		$saved = is_array( $saved ) ? $saved : array();
-		$dirty = false;
+		$saved = get_option( $option, null );
+		// A new option starts from the plugin's defaults (enabled included); a saved one is never re-enabled.
+		$dirty = null === $saved && $defaults;
+		$saved = is_array( $saved ) ? $saved : ( null === $saved ? $defaults : array() );
 		foreach ( $fill as $key => $value ) {
 			$current = isset( $saved[ $key ] ) ? (string) $saved[ $key ] : '';
 			$default = isset( $defaults[ $key ] ) && is_scalar( $defaults[ $key ] ) ? (string) $defaults[ $key ] : null;

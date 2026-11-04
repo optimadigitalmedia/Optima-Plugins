@@ -386,9 +386,23 @@ final class Optima_Core_Protection {
 		if ( ! is_admin() ) {
 			add_filter( 'comments_open', '__return_false', 20 );
 			add_filter( 'pings_open', '__return_false', 20 );
+			// The head keeps the comment-feed link WordPress printed before (feed_links_extra, wp_head 3).
+			add_action( 'wp_head', array( __CLASS__, 'feed_links_open' ), 2 );
+			add_action( 'wp_head', array( __CLASS__, 'feed_links_close' ), 4 );
 		}
 		add_filter( 'wp_headers', array( __CLASS__, 'drop_pingback_header' ) );
 		add_filter( 'xmlrpc_methods', array( __CLASS__, 'drop_pingback_methods' ) );
+	}
+
+	/** Let feed_links_extra see the post's real comment status, so its feed link stays. */
+	public static function feed_links_open() {
+		remove_filter( 'comments_open', '__return_false', 20 );
+		remove_filter( 'pings_open', '__return_false', 20 );
+	}
+
+	public static function feed_links_close() {
+		add_filter( 'comments_open', '__return_false', 20 );
+		add_filter( 'pings_open', '__return_false', 20 );
 	}
 
 	public static function drop_pingback_header( $headers ) {
