@@ -4,7 +4,7 @@ Status: **Adopted Nov 4, 2026. These rules are binding for every Optima plugin, 
 
 ## 0. Strict rules (read before touching any plugin or theme)
 
-Every rule is a MUST or a NEVER (36 rules). If a task would break one, stop and ask the site owner first.
+Every rule is a MUST or a NEVER (43 rules). If a task would break one, stop and ask the site owner first.
 
 **Who does the work**
 
@@ -64,9 +64,19 @@ Every rule is a MUST or a NEVER (36 rules). If a task would break one, stop and 
 34. All content lands on staging first. Live gets it only through the launch go-live card.
 35. The same SOP (`client-kit/SOP.md`) and the same repo layout apply to every site, small or large. A bigger site has more pages, never a different structure.
 
+**Running the fleet**
+
+36. Every site MUST have a row in the agency's private fleet list (site, staging, live domain, host install, repo, plan, versions, access), updated the same day anything changes. Never in this public repo.
+37. Every site MUST decide its update paths at kickoff and record them in its repo (`docs/11-update-paths.md`): theme template, editable field, plugin, or bulk import, chosen by how often the content changes.
+38. A site that differs from this standard MUST record what and why in its decisions log, or be fixed.
+39. Existing sites converge when touched: the next work session brings the site up to the standard one job at a time, never in one big rewrite.
+40. Client repos MUST NEVER carry platform code. Themes and client-specific pieces yes; the shared plugins come only from this repo's releases.
+41. Skills and check scripts MUST come from one source (the client kit) and be refreshed from it, never edited in a client repo. Each repo stamps the kit version it was refreshed from.
+42. Every removal (feature, template, file, schema node, copy) MUST get a removed-log line in the same commit: what, why, where the job lives now, last commit with it. Versions only go up; changelogs are append-only.
+
 **Naming**
 
-36. Plugin and theme code, comments, readmes and docs in Optima repos use Optima names only.
+43. Plugin and theme code, comments, readmes and docs in Optima repos use Optima names only.
 
 
 
