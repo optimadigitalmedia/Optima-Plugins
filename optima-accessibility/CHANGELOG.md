@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.12.5 (2026-11-04)
+
+- The Weekly checks section no longer shows its title twice ("Weekly" above "Weekly checks").
+
 ## 0.1.12.4 (2026-10-31)
 
 - Optima release of upstream 0.1.12.
