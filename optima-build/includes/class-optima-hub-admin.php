@@ -74,6 +74,7 @@ final class Optima_Hub_Admin {
 		$base = 'site-build' === $parent ? 'site-build' : self::PAGE;
 		add_submenu_page( $parent, __( 'Request a change', 'optima-build' ), __( 'Request a change', 'optima-build' ), 'edit_posts', $base . '&tab=requests', array( __CLASS__, 'render' ) );
 		add_submenu_page( $parent, __( 'Site health', 'optima-build' ), __( 'Site health', 'optima-build' ), 'edit_posts', $base . '&tab=health', array( __CLASS__, 'render' ) );
+		add_submenu_page( $parent, __( 'Updates', 'optima-build' ), __( 'Updates', 'optima-build' ), 'edit_posts', $base . '&tab=updates', array( __CLASS__, 'render' ) );
 		$slug = 'site-build' === $parent ? 'site-build' : self::PAGE;
 		if ( get_option( 'optima_hub_page' ) !== $slug ) {
 			update_option( 'optima_hub_page', $slug, false );
@@ -132,6 +133,14 @@ final class Optima_Hub_Admin {
 			$open = count( array_filter( Optima_Hub_Requests::all(), static fn( $p ) => 'done' !== get_post_meta( $p->ID, Optima_Hub_Requests::META_STATUS, true ) ) );
 			/* translators: %d: open requests */
 			return $open ? sprintf( __( '%d open', 'optima-build' ), $open ) : '';
+		}
+		if ( false !== strpos( $slug, 'tab=updates' ) ) {
+			$waiting = 0;
+			foreach ( array_keys( Optima_Hub_Catalog::features() ) as $f ) {
+				$waiting += '' !== ( Optima_Hub_Features::status( $f )['update'] ?? '' ) ? 1 : 0;
+			}
+			/* translators: %d: updates waiting */
+			return $waiting ? sprintf( __( '%d ready', 'optima-build' ), $waiting ) : '';
 		}
 		$on = 0;
 		foreach ( array_keys( Optima_Hub_Catalog::features() ) as $f ) {
@@ -196,6 +205,7 @@ final class Optima_Hub_Admin {
 			'features' => __( 'Your features', 'optima-build' ),
 			'requests' => __( 'Request a change', 'optima-build' ),
 			'health'   => __( 'Site health', 'optima-build' ),
+			'updates'  => __( 'Updates', 'optima-build' ),
 		);
 		$tab  = isset( $tabs[ $tab ] ) ? $tab : 'features';
 		// Site name in the eyebrow, trimmed at a " | " tagline so it fits a phone.
@@ -208,6 +218,8 @@ final class Optima_Hub_Admin {
 				self::requests();
 			} elseif ( 'health' === $tab ) {
 				self::health();
+			} elseif ( 'updates' === $tab ) {
+				self::updates();
 			} else {
 				self::features();
 			}
@@ -235,6 +247,62 @@ final class Optima_Hub_Admin {
 	}
 
 	/* ------------------------------------------------------------------ */
+
+	/**
+	 * Updates: every update tool on one screen, the same on every site.
+	 * New versions of features and Optima Build, the theme (and its key),
+	 * filling features from the theme's setup file, and applying approved
+	 * copy (Site Sync, or the theme's Content updates screen).
+	 */
+	private static function updates(): void {
+		$operator = Optima_Hub_Access::is_operator();
+		$content  = Optima_Hub_Menu::content_screen();
+		?>
+		<section class="sh-card">
+			<h2><?php esc_html_e( 'Features and Optima Build', 'optima-build' ); ?></h2>
+			<p class="sh-note"><?php esc_html_e( 'Features update themselves. Check now to see a release published in the last few hours.', 'optima-build' ); ?></p>
+			<?php if ( $operator ) : ?>
+				<?php echo Optima_Hub_Features::button( '', 'refresh', __( 'Check for new versions', 'optima-build' ), 'button button-primary' ); // phpcs:ignore WordPress.Security.EscapeOutput -- built from escaped parts. ?>
+			<?php endif; ?>
+			<p class="sh-note">
+				<?php
+				/* translators: %s: Optima Build version */
+				echo esc_html( sprintf( __( 'Optima Build %s', 'optima-build' ), OPTIMA_HUB_VERSION ) );
+				?>
+			</p>
+		</section>
+
+		<?php Optima_Hub_Themes::panel( $operator ); ?>
+
+		<?php if ( Optima_Hub_Setup::data() ) : ?>
+			<section class="sh-card">
+				<h2><?php esc_html_e( 'Fill from the theme', 'optima-build' ); ?></h2>
+				<p class="sh-note"><?php esc_html_e( 'The theme carries this site\'s facts (team, hours, call buttons, which features it uses). Fill again after a theme update brings new facts. Only blank or default fields change.', 'optima-build' ); ?></p>
+				<?php if ( $operator ) : ?>
+					<?php echo Optima_Hub_Features::button( '', 'refill', __( 'Fill from theme again', 'optima-build' ), 'button' ); // phpcs:ignore WordPress.Security.EscapeOutput -- built from escaped parts. ?>
+				<?php endif; ?>
+			</section>
+		<?php endif; ?>
+
+		<section class="sh-card">
+			<h2><?php esc_html_e( 'Approved copy', 'optima-build' ); ?></h2>
+			<p class="sh-note"><?php esc_html_e( 'New words come from this site\'s repo: approve the page in content/, release the theme, then apply it here. Every change keeps a revision.', 'optima-build' ); ?></p>
+			<?php if ( $content ) : ?>
+				<p>
+					<a class="button" href="<?php echo esc_url( $content['url'] ); ?>"><?php echo esc_html( $content['label'] ); ?></a>
+					<span class="sh-note">
+						<?php
+						/* translators: %s: who provides the screen */
+						echo esc_html( sprintf( __( 'Provided by %s.', 'optima-build' ), $content['by'] ) );
+						?>
+					</span>
+				</p>
+			<?php else : ?>
+				<p class="sh-note"><?php esc_html_e( 'Turn on Business info and SEO (Optima Core) to apply approved copy from the theme.', 'optima-build' ); ?></p>
+			<?php endif; ?>
+		</section>
+		<?php
+	}
 
 	private static function features(): void {
 		$operator = Optima_Hub_Access::is_operator();
@@ -313,10 +381,7 @@ final class Optima_Hub_Admin {
 						</select>
 						<button type="submit" class="button"><?php esc_html_e( 'Save plan', 'optima-build' ); ?></button>
 					</form>
-					<?php echo Optima_Hub_Features::button( '', 'refresh', __( 'Check for new versions', 'optima-build' ), 'button sh-quiet' ); // phpcs:ignore WordPress.Security.EscapeOutput -- built from escaped parts. ?>
-					<?php if ( Optima_Hub_Setup::data() ) : ?>
-						<?php echo Optima_Hub_Features::button( '', 'refill', __( 'Fill from theme again', 'optima-build' ), 'button sh-quiet' ); // phpcs:ignore WordPress.Security.EscapeOutput -- built from escaped parts. ?>
-					<?php endif; ?>
+					<a class="button sh-quiet" href="<?php echo esc_url( self::url( 'updates' ) ); ?>"><?php esc_html_e( 'Updates', 'optima-build' ); ?></a>
 					<?php
 					$installed = array_filter( array_map( array( 'Optima_Hub_Features', 'status' ), array_keys( Optima_Hub_Catalog::features() ) ), static fn( $st ) => '' !== $st['version'] );
 					$waiting   = count( array_filter( $installed, static fn( $st ) => '' !== $st['update'] ) );
@@ -368,8 +433,6 @@ final class Optima_Hub_Admin {
 				<?php endif; ?>
 			<?php endif; ?>
 		</section>
-
-		<?php Optima_Hub_Themes::panel( $operator ); ?>
 
 		<?php
 		$titles = array(

@@ -41,6 +41,7 @@ add_action(
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-admin-ui.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-owns.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-design.php';
+require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-menu.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-access.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-catalog.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-features.php';
@@ -55,6 +56,7 @@ require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-themes.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-watch.php';
 
 Optima_Hub_Design::boot();
+Optima_Hub_Menu::boot();
 Optima_Hub_Features::boot();
 Optima_Hub_Requests::boot();
 Optima_Hub_Admin::boot();
