@@ -38,8 +38,12 @@ optima-core/includes/business.php | public static function get() | optima-aeo (/
 optima-core/optima-core.php | define( 'OPTIMA_SEO_META_NOINDEX' | optima-aeo (noindexed pages stay out of /llms.txt)
 optima-core/includes/admin.php | public static function checks() | optima-build (Site health: search listing checks)
 optima-core/includes/admin.php | public static function render_checks( array $checks ) | optima-build (Site health: same check cards)
+optima-core/includes/sync/class-optima-sync.php | do_action( 'optima_sync_applied', $journal['rows'], $who ); | optima-build (Site log: a line when Site Sync puts copy in; keep both arguments)
 optima-core/includes/schema/class-optima-schema.php | apply_filters( 'optima_schema_graph' | optima-events (adds Event and Person nodes to the graph)
 optima-core/includes/schema/class-optima-schema.php | home_url( '/#business' ) | optima-events (Event organizer points at the business)
+optima-core/includes/design.php | function optima_design( string $feature = '' ): array | optima-build and every plugin with a front-end look (DESIGN.md tokens from the theme)
+optima-core/includes/design.php | function optima_design_issues(): array | optima-build (Site health: design contrast)
+optima-core/includes/design.php | function optima_core_owns( string $job ): bool | every Optima theme through the theme kit (fallbacks stand down when a plugin owns the job)
 CONTRACT
 
 exit "$fail"

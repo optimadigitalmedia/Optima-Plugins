@@ -1,7 +1,8 @@
 {
   "version": 1,
-  "updated": "2026-10-22",
-  "about": "The feature list the Site Build hub (optima-build) shows on every site. Fetched from this repo's main branch; optima-build/catalog.json is the offline copy. Keep the two identical. Tiers: core, growth, portfolio, addon. client_specific features only appear on sites that already have them installed. not_with_themes lists theme folders that already do the job; the hub will not turn the feature on there. jobs lists what each feature owns under the plugin-first rule (docs/plugin-first.md): when the feature is on, optima_owns( job ) is true and the theme skips its own version. not_with_themes stays until each listed theme is converted to plugin-first.",
+  "updated": "2026-11-03",
+  "about": "The feature list the Site Build hub (optima-build) shows on every site. Fetched from this repo's main branch; optima-build/catalog.json is the offline copy. Keep the two identical. Tiers: core, growth, portfolio, addon. client_specific features only appear on sites that already have them installed. not_with_themes lists theme folders that already do the job; the hub will not turn the feature on there. jobs lists what each feature owns under the plugin-first rule (docs/plugin-first.md): when the feature is on, optima_owns( job ) is true and the theme skips its own version. not_with_themes stays until each listed theme is converted to plugin-first. hold lists releases held back on every site (release rings).",
+  "hold": [],
   "features": [
     {
       "slug": "optima-core",
@@ -181,7 +182,7 @@
     {
       "slug": "optima-events",
       "name": "Events and schedule",
-      "summary": "Event pages with dates, venue, ticket button and what to know, a day-by-day schedule, speaker pages, and event listings Google can show. Edit a date or mark an event sold out and the site follows.",
+      "summary": "Event pages with dates, venue, tickets and what to know, a day-by-day schedule, speaker pages, and event listings Google can show. Sell tickets or take free sign-ups, with a QR ticket and signed agreements for each person and check-in at the door.",
       "tier": "addon",
       "law": false,
       "requires": []
@@ -189,7 +190,7 @@
     {
       "slug": "optima-members",
       "name": "Membership",
-      "summary": "People apply on the site, you approve each one, and members sign in to see members-only pages and events. Plans, renewal dates and a members list you run from the dashboard.",
+      "summary": "People apply on the site, you approve each one, and members sign in to see members-only pages and events. Plans, renewal dates and a members list you run from the dashboard. With a shop, members pay dues and renew through your site's own checkout, with renewal reminders.",
       "tier": "addon",
       "law": false,
       "requires": []

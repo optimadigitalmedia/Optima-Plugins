@@ -64,6 +64,9 @@ final class Optima_Members_Events {
 		if ( $m && 'applied' === $m['status'] ) {
 			return '<p class="se-cta sm-cta"><span class="se-soon">' . esc_html__( 'Members only. This opens once your membership application is approved.', 'optima-members' ) . '</span></p>';
 		}
+		if ( $m && 'approved' === $m['status'] ) {
+			return '<p class="se-cta sm-cta"><span class="se-soon">' . esc_html__( 'Members only. This opens as soon as your dues are paid.', 'optima-members' ) . '</span> <a class="se-button sm-button wp-element-button" href="' . esc_url( Optima_Members::page_url() ) . '">' . esc_html__( 'See your membership', 'optima-members' ) . '</a></p>';
+		}
 		$out = '<p class="se-cta sm-cta"><span class="se-soon">' . esc_html__( 'This event is for members.', 'optima-members' ) . '</span> <a class="se-button sm-button wp-element-button" href="' . esc_url( Optima_Members::page_url() ) . '">' . esc_html__( 'Become a member', 'optima-members' ) . '</a>';
 		if ( ! is_user_logged_in() ) {
 			$out .= ' <a class="sm-signin" href="' . esc_url( wp_login_url( (string) get_permalink( (int) $id ) ) ) . '">' . esc_html__( 'Sign in', 'optima-members' ) . '</a>';
@@ -100,6 +103,7 @@ final class Optima_Members_Events {
 		if ( ! $ids || ! class_exists( 'Optima_Events_Front' ) ) {
 			return (string) $html;
 		}
-		return (string) $html . '<h3 class="sm-sub">' . esc_html__( 'Members-only events coming up', 'optima-members' ) . '</h3>' . Optima_Events_Front::events( array_slice( $ids, 0, 6 ) );
+		// An H2 by default, so the event cards' own H3 titles sit right under it.
+		return (string) $html . Optima_Members::heading( __( 'Members-only events coming up', 'optima-members' ), 'sm-sub' ) . Optima_Events_Front::events( array_slice( $ids, 0, 6 ) );
 	}
 }

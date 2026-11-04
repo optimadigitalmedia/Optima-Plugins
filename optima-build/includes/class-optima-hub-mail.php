@@ -427,15 +427,22 @@ foreach ( array_values( $buttons ) as $i => $b ) {
 	}
 
 	/**
-	 * The site's brand color: the optima_brand_accent filter, Optima Cards, Optima
-	 * Reviews, a block theme's accent/primary/brand color, then Optima's own
-	 * darker azure.
+	 * The site's brand color: the optima_brand_accent filter, the theme's
+	 * DESIGN.md accent fill, Optima Cards, Optima Reviews, a block theme's
+	 * accent/primary/brand color, then Optima's own darker azure.
 	 */
 	private static function detected_accent(): string {
 		$hex      = '/^#[0-9a-fA-F]{6}$/';
 		$filtered = (string) apply_filters( 'optima_brand_accent', '' );
 		if ( preg_match( $hex, $filtered ) ) {
 			return $filtered;
+		}
+		// The theme's DESIGN.md, when it has one: the fill made for white text (Site Standard rule 3).
+		if ( function_exists( 'optima_design' ) ) {
+			$design = optima_design();
+			if ( ! empty( $design['sources'] ) && preg_match( $hex, (string) ( $design['colors']['accent_fill'] ?? '' ) ) ) {
+				return (string) $design['colors']['accent_fill'];
+			}
 		}
 		foreach ( array( 'optima_cards_settings', 'optima_reviews_brand', 'optima_reviews_settings' ) as $opt ) {
 			$o = get_option( $opt );

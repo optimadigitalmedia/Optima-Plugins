@@ -12,7 +12,7 @@ set -euo pipefail
 
 dir="$(mktemp -d)"
 gh api --paginate "repos/${GH_REPO}/releases?per_page=100" \
-  | jq -s '[ .[][] | select(.tag_name != "feed") | {tag_name, draft, prerelease, body: ((.body // "")[0:1500]), assets: [ .assets[] | {name, browser_download_url} ]} ]' \
+  | jq -s '[ .[][] | select(.tag_name != "feed") | {tag_name, draft, prerelease, published_at, body: ((.body // "")[0:1500]), assets: [ .assets[] | {name, browser_download_url} ]} ]' \
   > "${dir}/releases.json"
 echo "$(jq length "${dir}/releases.json") releases listed, $(jq '[.[] | select(.prerelease)] | length' "${dir}/releases.json") of them test releases."
 # Releases are immutable in this org: an asset cannot be added or replaced

@@ -255,6 +255,16 @@ final class Optima_Chat {
 			$short = $name . ': ' . wp_trim_words( '' !== $first ? $first : $kinds[ $kind ], 14 ) . ( '' !== $phone ? ' | ' . __( 'Text', 'optima-chat' ) . ' ' . self::pretty_phone( $phone ) : ( '' !== $email ? ' | ' . $email : '' ) );
 			wp_mail( $alert, __( 'Site chat', 'optima-chat' ), mb_substr( $short, 0, 150 ) );
 		}
+		// A change request from the chat also joins the site's request list in
+		// Optima Build, so one list holds every request however it came in.
+		if ( 'change' === $kind && class_exists( 'Optima_Hub_Requests' ) && method_exists( 'Optima_Hub_Requests', 'create' ) ) {
+			$ask = '' !== $first ? $first : $title;
+			$who = $name . ( '' !== $email ? ' <' . $email . '>' : '' ) . ( '' !== $phone ? ' ' . self::pretty_phone( $phone ) : '' );
+			$rid = Optima_Hub_Requests::create( $ask . "\n\n" . __( 'From the site chat:', 'optima-chat' ) . ' ' . $who, $page, 'whenever', 0, $name );
+			if ( $rid ) {
+				update_post_meta( $id, '_optima_chat_request', $rid );
+			}
+		}
 		do_action( 'optima_chat_lead', $id, $kind, $name, $email );
 		return array( 'ok' => true );
 	}

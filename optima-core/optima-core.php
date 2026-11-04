@@ -3,7 +3,7 @@
  * Plugin Name:       Optima Core
  * Plugin URI:        https://optimadigitalmedia.com
  * Description:       The Optima engine for a client site: business identity, content model (post types, fields, Block Bindings), the JSON-LD schema graph, and the in-house SEO head tags and sitemap tuning. One plugin, one Optima dashboard. The Yoast replacement, built to survive any future redesign.
- * Version:           1.6.0.10
+ * Version:           1.6.5.8
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Author:            Optima Digital
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OPTIMA_CORE_VERSION', '1.6.0.10' );
+define( 'OPTIMA_CORE_VERSION', '1.6.5.8' );
 define( 'OPTIMA_CORE_DIR', plugin_dir_path( __FILE__ ) );
 define( 'OPTIMA_CORE_FILE', __FILE__ );
 
@@ -38,6 +38,7 @@ require_once OPTIMA_CORE_DIR . 'includes/registry.php';
 require_once OPTIMA_CORE_DIR . 'includes/fieldsets.php';
 require_once OPTIMA_CORE_DIR . 'includes/settings-groups.php';
 require_once OPTIMA_CORE_DIR . 'includes/helpers.php';
+require_once OPTIMA_CORE_DIR . 'includes/design.php';
 require_once OPTIMA_CORE_DIR . 'includes/post-types.php';
 require_once OPTIMA_CORE_DIR . 'includes/meta.php';
 require_once OPTIMA_CORE_DIR . 'includes/meta-box.php';

@@ -68,7 +68,19 @@ final class Optima_Members_Front {
 
 	/* ---------- the membership page ---------- */
 
-	public static function membership(): string {
+	/**
+	 * [optima_membership level="2"]: level sets the heading level of the
+	 * sections it prints (2 unless set), so they follow the page's H1.
+	 */
+	public static function membership( $atts = array() ): string {
+		$atts                 = shortcode_atts( array( 'level' => 0 ), (array) $atts );
+		Optima_Members::$level = absint( $atts['level'] );
+		$out                  = self::render_membership();
+		Optima_Members::$level = 0;
+		return $out;
+	}
+
+	private static function render_membership(): string {
 		wp_enqueue_style( 'optima-members' );
 		// The first page that shows the membership becomes "the" membership page until Settings says otherwise.
 		if ( is_singular() && ! Optima_Members::settings()['page'] ) {
@@ -98,11 +110,29 @@ final class Optima_Members_Front {
 			'exists'   => __( 'That email already has an account here. Sign in first, then send the application.', 'optima-members' ),
 			'missing'  => __( 'A few required answers are missing. Please check the form and send it again.', 'optima-members' ),
 			'tooquick' => __( 'That was very fast. Please check your answers and send the form again.', 'optima-members' ),
+			'paylink'  => __( 'That pay link has already been used or is out of date. Sign in to see where your membership stands.', 'optima-members' ),
 		);
 		if ( ! isset( $texts[ $msg ] ) ) {
 			return '';
 		}
 		return '<p class="sm-note ' . ( 'applied' === $msg ? 'is-good' : 'is-bad' ) . '" role="status">' . esc_html( $texts[ $msg ] ) . '</p>';
+	}
+
+	/** "Pay your dues ($120)" or "Renew now ($120)", linked to the checkout. Empty when there is nothing to pay. */
+	private static function pay_button( int $user_id ): string {
+		$url = Optima_Members_Woo::pay_url( $user_id );
+		if ( '' === $url ) {
+			return '';
+		}
+		$amount = Optima_Members_Woo::amount( $user_id );
+		$renew  = 'renew' === Optima_Members_Woo::pay_kind( $user_id );
+		if ( '' !== $amount && 0.0 === (float) $amount ) {
+			$label = __( 'Renew for free', 'optima-members' );
+		} else {
+			$label = $renew ? __( 'Renew now', 'optima-members' ) : __( 'Pay your dues', 'optima-members' );
+			$label = '' !== $amount ? $label . ' (' . Optima_Members::money( $amount ) . ')' : $label;
+		}
+		return '<p class="sm-pay"><a class="sm-button wp-element-button" href="' . esc_url( $url ) . '">' . esc_html( $label ) . '</a></p>';
 	}
 
 	private static function account( WP_User $user, array $m ): string {
@@ -112,6 +142,7 @@ final class Optima_Members_Front {
 		}
 		$titles = array(
 			'applied'  => __( 'Your application is being read', 'optima-members' ),
+			'approved' => __( 'You are approved', 'optima-members' ),
 			'active'   => __( 'You are a member', 'optima-members' ),
 			'lapsed'   => __( 'Your membership is due for renewal', 'optima-members' ),
 			'paused'   => __( 'Your membership is paused', 'optima-members' ),
@@ -120,6 +151,7 @@ final class Optima_Members_Front {
 		);
 		$lines = array(
 			'applied'  => __( 'We will write to you by email once it has been read. Nothing else is needed from you for now.', 'optima-members' ),
+			'approved' => __( 'Welcome. Pay your dues and members-only pages and events open for you right away.', 'optima-members' ),
 			'active'   => __( 'Welcome. Members-only pages and events open for you whenever you are signed in.', 'optima-members' ),
 			'lapsed'   => __( 'Renew to keep members-only pages and events open. Get in touch if you have questions.', 'optima-members' ),
 			'paused'   => __( 'Members-only pages and events are closed while it is paused. Get in touch to pick it back up.', 'optima-members' ),
@@ -127,7 +159,20 @@ final class Optima_Members_Front {
 			'declined' => __( 'This membership is not the right fit at the moment. Thank you for the care you put into your answers.', 'optima-members' ),
 		);
 		$facts = array();
-		if ( '' !== $m['plan'] && '' !== Optima_Members::plan_label( $m['plan'] ) && in_array( $status, array( 'active', 'lapsed', 'paused' ), true ) ) {
+		$pay  = self::pay_button( (int) $user->ID );
+		$note = '';
+		if ( 'applied' === $status && $m['prepaid'] ) {
+			$note = __( 'Your dues are paid. Your membership starts the day your application is approved.', 'optima-members' );
+		} elseif ( 'applied' === $status && '' !== $pay ) {
+			$note = __( 'You can pay your dues now. Your membership starts the day your application is approved, and if it is not the right fit, your payment is refunded.', 'optima-members' );
+		} elseif ( 'active' === $status && Optima_Members::in_grace( (int) $user->ID ) ) {
+			/* translators: %s: date. */
+			$note = sprintf( __( 'Your renewal date has passed. Renew by %s to keep members-only pages and events open.', 'optima-members' ), Optima_Members::date_label( Optima_Members::access_until( (int) $user->ID ) ) );
+		} elseif ( 'active' === $status && '' !== $pay ) {
+			/* translators: %s: date. */
+			$note = sprintf( __( 'Your membership renews on %s. Renew any time before then; your new year starts from that date.', 'optima-members' ), Optima_Members::date_label( $m['renews'] ) );
+		}
+		if ( '' !== $m['plan'] && '' !== Optima_Members::plan_label( $m['plan'] ) && in_array( $status, array( 'approved', 'active', 'lapsed', 'paused' ), true ) ) {
 			$facts[ __( 'Plan', 'optima-members' ) ] = Optima_Members::plan_label( $m['plan'] );
 		}
 		if ( '' !== $m['since'] && 'declined' !== $status ) {
@@ -141,7 +186,11 @@ final class Optima_Members_Front {
 		<div class="sm-account is-<?php echo esc_attr( $status ); ?>">
 			<p class="sm-badge"><?php echo esc_html( $titles[ $status ] ); ?></p>
 			<p class="sm-lede"><?php echo esc_html( $lines[ $status ] ); ?></p>
-			<?php if ( ( 'active' === $status && '' === $m['paid'] ) || 'lapsed' === $status ) : ?>
+			<?php if ( '' !== $note ) : ?>
+				<p class="sm-pay-note"><?php echo esc_html( $note ); ?></p>
+			<?php endif; ?>
+			<?php echo $pay; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built with esc_url and esc_html in pay_button(). ?>
+			<?php if ( '' === $pay && ( ( 'active' === $status && '' === $m['paid'] ) || in_array( $status, array( 'lapsed', 'approved' ), true ) ) ) : ?>
 				<?php $next = (string) get_option( 'optima_members_next_step', '' ); ?>
 				<?php if ( '' !== trim( $next ) ) : ?>
 					<div class="sm-next"><?php echo wp_kses_post( wpautop( make_clickable( esc_html( $next ) ) ) ); ?></div>
@@ -183,11 +232,13 @@ final class Optima_Members_Front {
 		$out  = '<div class="sm-gate"><p class="sm-gate-title">' . esc_html__( 'For members', 'optima-members' ) . '</p>';
 		if ( $m && 'applied' === $m['status'] ) {
 			$out .= '<p>' . esc_html__( 'This opens once your membership application is approved.', 'optima-members' ) . '</p>';
+		} elseif ( $m && 'approved' === $m['status'] ) {
+			$out .= '<p>' . esc_html__( 'This opens as soon as your dues are paid.', 'optima-members' ) . '</p>' . self::pay_button( (int) $user->ID ) . '<p><a href="' . esc_url( Optima_Members::page_url() ) . '">' . esc_html__( 'See your membership', 'optima-members' ) . '</a></p>';
 		} elseif ( $plans && Optima_Members::is_member() ) {
 			/* translators: %s: plan names, such as "VIP Member". */
 			$out .= '<p>' . esc_html( sprintf( __( 'This is part of the %s membership.', 'optima-members' ), Optima_Members::plan_names( $plans ) ) ) . '</p><p><a href="' . esc_url( Optima_Members::page_url() ) . '">' . esc_html__( 'See your membership', 'optima-members' ) . '</a></p>';
 		} elseif ( $m && in_array( $m['status'], array( 'active', 'paused' ), true ) ) {
-			$out .= '<p>' . esc_html__( 'This opens again once your membership is active.', 'optima-members' ) . '</p><p><a href="' . esc_url( Optima_Members::page_url() ) . '">' . esc_html__( 'See your membership', 'optima-members' ) . '</a></p>';
+			$out .= '<p>' . esc_html__( 'This opens again once your membership is active.', 'optima-members' ) . '</p>' . self::pay_button( (int) $user->ID ) . '<p><a href="' . esc_url( Optima_Members::page_url() ) . '">' . esc_html__( 'See your membership', 'optima-members' ) . '</a></p>';
 		} else {
 			$out .= '<p>' . esc_html( '' !== $what ? $what : __( 'This part of the site is for members.', 'optima-members' ) ) . '</p>';
 			if ( $user->exists() ) {
@@ -534,7 +585,7 @@ final class Optima_Members_Front {
 			$new = true;
 		} else {
 			$current = Optima_Members::member( $user_id );
-			if ( in_array( $current['status'], array( 'applied', 'active', 'paused' ), true ) ) {
+			if ( in_array( $current['status'], array( 'applied', 'approved', 'active', 'paused' ), true ) ) {
 				wp_safe_redirect( Optima_Members::page_url() );
 				exit;
 			}
@@ -561,6 +612,12 @@ final class Optima_Members_Front {
 		// Names only: the answers stay on the site, never in an email.
 		/* translators: %s: applicant name. */
 		wp_mail( Optima_Members::notify_email(), sprintf( __( 'New membership application: %s', 'optima-members' ), trim( $first . ' ' . $last ) ), __( "A new membership application is waiting. Read it and decide here:\n", 'optima-members' ) . Optima_Members_Admin::url() );
+		// When people pay with the application, they go straight to the checkout.
+		$pay = Optima_Members_Woo::pay_url( $user_id );
+		if ( '' !== $pay ) {
+			wp_safe_redirect( $pay );
+			exit;
+		}
 		self::back( 'applied' );
 	}
 

@@ -297,7 +297,9 @@ When a theme hands its SEO head and JSON-LD to Optima Core (jobs `seo` and `sche
 
 **Every plugin has the same files:** `<slug>.php` (header and version), `includes/`, `assets/css/` (variables only), `readme.txt`, and the same settings-page layout from Optima Build's admin kit.
 
-**Checked by a script:** `tools/uniform-check.sh` fails if a theme is missing a required file, a theme registers a menu outside Optima, a plugin hard-codes a color, or a screen's sidebar group does not match the seven items (`tools/uniform-check.sh screens`, added with dashboard release 1: every `add_submenu_page()` address must be listed in `Optima_Admin_UI::SCREENS` in the shared admin kit).
+**Checked by a script:** `tools/uniform-check.sh` fails if a theme is missing a required file, a theme registers a menu outside Optima, a plugin hard-codes a color, or a screen's sidebar group does not match the seven items (`tools/uniform-check.sh screens`: with admin kit 1.7 it runs `tools/tests/admin-kit-groups.php`, which checks every screen lands in its group; older kits list every `add_submenu_page()` address in `Optima_Admin_UI::SCREENS`).
+
+**Upstream first (Nov 4 2026):** the menu, Overview, Inbox, Updates, Site log, Your site with Approve and release rings now come from the upstream suite through the `upstream-port` branch. Overview and Inbox are tabs of the Build page (`page=site-build-features&tab=overview` / `&tab=inbox`); the old `page=optima-overview` and `page=optima-inbox` addresses forward there. The site lock, account privacy, `optima_owns()`, slots and the DESIGN.md reader stay Optima's.
 
 **Dashboard release 1: built** (2026-11-04, Optima Build 0.7.9.10, admin kit 1.6.0.0): the seven items, Overview, Inbox, Build for operators, the WordPress Dashboard box. Plan and test notes: `docs/dashboard-redesign-plan.md`.
 
