@@ -116,6 +116,41 @@ final class Optima_Hub_Access {
 		return array_search( $tier, $order, true ) <= array_search( $plan, $order, true );
 	}
 
+	/**
+	 * Release channel. 'stable' (the default): this site updates only to
+	 * normal releases, after they were checked on the test site. 'test': this
+	 * site also takes test releases (GitHub pre-releases), so it gets each
+	 * release first. Every Optima plugin's updater asks this.
+	 *
+	 * wp-config.php can fix it, and the Build card then only shows it:
+	 *   define( 'OPTIMA_HUB_CHANNEL', 'test' );
+	 */
+	const CHANNEL_OPTION = 'optima_hub_channel';
+
+	public static function channel(): string {
+		$channel = defined( 'OPTIMA_HUB_CHANNEL' ) ? (string) OPTIMA_HUB_CHANNEL : (string) get_option( self::CHANNEL_OPTION, 'stable' );
+		return 'test' === strtolower( trim( $channel ) ) ? 'test' : 'stable';
+	}
+
+	/** True when wp-config.php sets the channel, so the Build toggle cannot change it. */
+	public static function channel_fixed(): bool {
+		return defined( 'OPTIMA_HUB_CHANNEL' );
+	}
+
+	public static function set_channel( string $channel ): void {
+		update_option( self::CHANNEL_OPTION, 'test' === $channel ? 'test' : 'stable', false );
+	}
+
+	/**
+	 * The updater's cached answer for one plugin on this site's channel. The
+	 * same key the updater writes (Optima_Plugin_Updater::cache_key_for), spelled
+	 * out here because an older copy of the updater class may be the one loaded.
+	 */
+	public static function updater_key( string $slug, ?string $channel = null ): string {
+		$channel = null === $channel ? self::channel() : $channel;
+		return 'optima_updater_' . $slug . ( 'test' === $channel ? '__test' : '' );
+	}
+
 	/** The label a feature card shows for its tier. */
 	public static function tier_label( string $tier ): string {
 		if ( self::included( $tier ) ) {

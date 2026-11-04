@@ -76,9 +76,11 @@ final class Optima_Hub_Catalog {
 	}
 
 	/**
-	 * Installable releases for one plugin, newest first.
+	 * Installable releases for one plugin, newest first. On the test channel
+	 * test releases (GitHub pre-releases) are in the list too, flagged
+	 * 'prerelease'; on stable they never are.
 	 *
-	 * @return array<int, array{version:string, package:string}>
+	 * @return array<int, array{version:string, package:string, prerelease:bool}>
 	 */
 	public static function releases( string $slug ): array {
 		$all = self::all_releases();
@@ -91,8 +93,14 @@ final class Optima_Hub_Catalog {
 	}
 
 	/** @return array<string, array<int, array{version:string, package:string}>> */
+	/** The cache key for this site's channel (stable keeps the old key). */
+	private static function releases_key(): string {
+		return self::RELEASES_KEY . ( 'test' === Optima_Hub_Access::channel() ? '__test' : '' );
+	}
+
 	private static function all_releases(): array {
-		$cached = get_transient( self::RELEASES_KEY );
+		$with_test = 'test' === Optima_Hub_Access::channel();
+		$cached    = get_transient( self::releases_key() );
 		if ( is_array( $cached ) ) {
 			return $cached;
 		}
@@ -135,11 +143,11 @@ final class Optima_Hub_Catalog {
 			}
 		}
 		if ( ! $data ) {
-			set_transient( self::RELEASES_KEY, array( '_unreachable' => true ), 15 * MINUTE_IN_SECONDS );
+			set_transient( self::releases_key(), array( '_unreachable' => true ), 15 * MINUTE_IN_SECONDS );
 			return array( '_unreachable' => true );
 		}
 		foreach ( $data as $release ) {
-			if ( ! is_array( $release ) || ! empty( $release['draft'] ) || ! empty( $release['prerelease'] ) ) {
+			if ( ! is_array( $release ) || ! empty( $release['draft'] ) || ( ! empty( $release['prerelease'] ) && ! $with_test ) ) {
 				continue;
 			}
 			if ( ! preg_match( '/^(optima-[a-z0-9-]+)-v(\d[\w.\-]*)$/', (string) ( $release['tag_name'] ?? '' ), $m ) ) {
@@ -148,8 +156,9 @@ final class Optima_Hub_Catalog {
 			foreach ( (array) ( $release['assets'] ?? array() ) as $asset ) {
 				if ( ( $asset['name'] ?? '' ) === $m[1] . '.zip' && ! empty( $asset['browser_download_url'] ) ) {
 					$out[ $m[1] ][] = array(
-						'version' => $m[2],
-						'package' => (string) $asset['browser_download_url'],
+						'version'    => $m[2],
+						'package'    => (string) $asset['browser_download_url'],
+						'prerelease' => ! empty( $release['prerelease'] ),
 					);
 				}
 			}
@@ -158,12 +167,13 @@ final class Optima_Hub_Catalog {
 			usort( $list, static fn( $a, $b ) => version_compare( $b['version'], $a['version'] ) );
 		}
 		unset( $list );
-		set_transient( self::RELEASES_KEY, $out, self::RELEASES_TTL );
+		set_transient( self::releases_key(), $out, self::RELEASES_TTL );
 		return $out;
 	}
 
 	public static function flush(): void {
 		delete_transient( self::CATALOG_KEY );
 		delete_transient( self::RELEASES_KEY );
+		delete_transient( self::RELEASES_KEY . '__test' );
 	}
 }

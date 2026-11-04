@@ -16,6 +16,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 
 // Always safe to drop: the cached release lookup is rebuilt on the next check.
 delete_transient( 'optima_updater_optima-reviews' );
+delete_transient( 'optima_updater_optima-reviews__test' );
 
 // The Google sign-in is a credential, never content: it always goes.
 wp_clear_scheduled_hook( 'optima_reviews_google_sync' );
