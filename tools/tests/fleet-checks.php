@@ -42,6 +42,7 @@ function untrailingslashit( $s ) { return rtrim( $s, '/\\' ); }
 function wp_specialchars_decode( $s, $q = 0 ) { return htmlspecialchars_decode( $s, ENT_QUOTES ); }
 function wp_mail( $to, $subject, $body ) { $GLOBALS['t']['mail'][] = array( $to, $subject, $body ); return true; }
 function current_user_can( $c ) { return true; }
+require dirname( __DIR__, 2 ) . '/optima-build/includes/class-optima-hub-access.php';
 require dirname( __DIR__, 2 ) . '/optima-build/includes/class-optima-hub-health.php';
 require dirname( __DIR__, 2 ) . '/optima-build/includes/class-optima-hub-watch.php';
 
@@ -60,11 +61,11 @@ function plugin( $slug, $version, $active = true ) {
 		$GLOBALS['t']['active'][] = $file;
 	}
 }
-function feed( array $tags ) {
+function feed( array $tags, array $test = array() ) {
 	$list = array();
 	foreach ( $tags as $tag ) {
 		$slug   = preg_replace( '/-v[0-9].*$/', '', $tag );
-		$list[] = array( 'tag_name' => $tag, 'draft' => false, 'prerelease' => false, 'assets' => array( array( 'name' => "$slug.zip", 'browser_download_url' => 'x' ) ) );
+		$list[] = array( 'tag_name' => $tag, 'draft' => false, 'prerelease' => in_array( $tag, $test, true ), 'assets' => array( array( 'name' => "$slug.zip", 'browser_download_url' => 'x' ) ) );
 	}
 	$GLOBALS['t']['transients']['optima_updater_feed'] = array( 'ok' => true, 'releases' => $list );
 }
@@ -120,6 +121,22 @@ t_reset();
 plugin( 'optima-forms-guard', '0.3.0' );
 $r = Optima_Hub_Health::test_builds();
 ok( 'good' === $r['state'], 'nothing cached: no guess, good' );
+
+// Release channels: a test release (GitHub pre-release) installed.
+t_reset();
+plugin( 'optima-core', '1.6.0.10' );
+feed( array( 'optima-core-v1.6.0.9', 'optima-core-v1.6.0.10' ), array( 'optima-core-v1.6.0.10' ) );
+$r = Optima_Hub_Health::test_builds();
+ok( 'warn' === $r['state'] && false !== strpos( $r['note'], 'newer than the newest release (1.6.0.9)' ), 'stable site running a test release: still warned, as before' );
+ok( null === Optima_Hub_Health::release_channel(), 'stable site: no Release channel row' );
+$GLOBALS['t']['options']['optima_hub_channel'] = 'test';
+$r = Optima_Hub_Health::test_builds();
+ok( 'good' === $r['state'], 'test-channel site running a test release: expected, not listed' );
+$GLOBALS['t']['transients']['optima_updater_optima-core'] = array( 'version' => '1.6.0.9', 'package' => 'x', 'notes' => '' );
+$GLOBALS['t']['transients']['optima_updater_optima-core__test'] = array( 'version' => '1.6.0.10', 'package' => 'x', 'notes' => '' );
+ok( 'good' === Optima_Hub_Health::test_builds()['state'], "test-channel site reads the updater's test-channel answer, not the stable one" );
+$row = Optima_Hub_Health::release_channel();
+ok( is_array( $row ) && 'Test' === $row['value'] && 'warn' === $row['state'], 'test channel, no channel-aware updater loaded: Release channel row warns' );
 
 t_reset();
 plugin( 'optima-build', '0.6.7-test.1', false );

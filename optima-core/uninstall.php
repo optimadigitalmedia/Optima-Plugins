@@ -27,6 +27,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 // Always safe to drop: the cached release lookup is derived data, rebuilt on
 // the next update check.
 delete_transient( 'optima_updater_optima-core' );
+delete_transient( 'optima_updater_optima-core__test' );
 
 $optima_core_settings = get_option( 'optima_seo_defaults', array() );
 $optima_core_purge    = is_array( $optima_core_settings ) && ! empty( $optima_core_settings['purge_on_uninstall'] );

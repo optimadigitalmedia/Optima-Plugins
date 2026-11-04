@@ -9,26 +9,26 @@ a theme never orphans content.
 
 | Plugin | Version |
 |---|---|
-| `optima-accessibility` | 0.1.12.7 |
-| `optima-aeo` | 0.2.4.6 |
-| `optima-analytics` | 0.1.15.6 |
-| `optima-build` | 0.7.9.13 |
-| `optima-cards` | 1.0.21.7 |
-| `optima-chat` | 0.2.4.7 |
-| `optima-contact` | 0.1.11.7 |
-| `optima-core` | 1.6.0.9 |
-| `optima-crm` | 0.1.1.4 |
-| `optima-events` | 0.14.3.7 |
-| `optima-forms-guard` | 0.3.2.4 |
-| `optima-hours` | 0.1.8.8 |
-| `optima-members` | 0.3.3.7 |
-| `optima-optimize` | 0.9.3.6 |
-| `optima-partners` | 0.1.2.7 |
-| `optima-redirects` | 0.1.9.6 |
-| `optima-results` | 0.1.9.7 |
-| `optima-reviews` | 0.5.5.7 |
-| `optima-sitecheck` | 0.2.4.7 |
-| `optima-team` | 0.1.9.7 |
+| `optima-accessibility` | 0.1.12.8 |
+| `optima-aeo` | 0.2.4.7 |
+| `optima-analytics` | 0.1.15.7 |
+| `optima-build` | 0.7.9.14 |
+| `optima-cards` | 1.0.21.8 |
+| `optima-chat` | 0.2.4.8 |
+| `optima-contact` | 0.1.11.8 |
+| `optima-core` | 1.6.0.10 |
+| `optima-crm` | 0.1.1.5 |
+| `optima-events` | 0.14.3.8 |
+| `optima-forms-guard` | 0.3.2.5 |
+| `optima-hours` | 0.1.8.9 |
+| `optima-members` | 0.3.3.8 |
+| `optima-optimize` | 0.9.3.7 |
+| `optima-partners` | 0.1.2.8 |
+| `optima-redirects` | 0.1.9.7 |
+| `optima-results` | 0.1.9.8 |
+| `optima-reviews` | 0.5.5.8 |
+| `optima-sitecheck` | 0.2.4.8 |
+| `optima-team` | 0.1.9.8 |
 
 ## Install
 
@@ -37,6 +37,8 @@ a theme never orphans content.
 3. Fill the business details once in **Optima → Business info**. Every plugin
    reads them from there.
 
-Plugins update themselves from this repo's releases. See `RELEASING.md`.
+Plugins update themselves from this repo's releases. Each release goes to the
+agency's own staging site first (the test channel) and to every other site once
+it is promoted. See `RELEASING.md`.
 
 Built and maintained by [Optima Digital](https://optimadigitalmedia.com).

@@ -324,15 +324,18 @@ final class Optima_Hub_Health {
 
 	/**
 	 * The newest release the updater already knows about for one Optima plugin,
-	 * read only from what it has cached (never a new call to GitHub).
+	 * read only from what it has cached (never a new call to GitHub). On the
+	 * test channel test releases (GitHub pre-releases) count, because the site
+	 * is meant to run them; on stable they never do.
 	 *
 	 * @return string|false|null The version; false when the release list was
 	 *                           read and has no release for this plugin; null
 	 *                           when nothing is cached yet.
 	 */
 	public static function known_release( string $slug, string $file ) {
-		// 1. The updater's own answer for this plugin (6 hours).
-		$cached = get_transient( 'optima_updater_' . $slug );
+		$with_test = 'test' === Optima_Hub_Access::channel();
+		// 1. The updater's own answer for this plugin on this channel (6 hours).
+		$cached = get_transient( Optima_Hub_Access::updater_key( $slug ) );
 		if ( is_array( $cached ) ) {
 			return array() === $cached ? false : (string) ( $cached['version'] ?? '' );
 		}
@@ -342,7 +345,7 @@ final class Optima_Hub_Health {
 			$best   = false;
 			$prefix = $slug . '-v';
 			foreach ( (array) $feed['releases'] as $r ) {
-				if ( ! is_array( $r ) || ! empty( $r['draft'] ) || ! empty( $r['prerelease'] ) || 0 !== strpos( (string) ( $r['tag_name'] ?? '' ), $prefix ) ) {
+				if ( ! is_array( $r ) || ! empty( $r['draft'] ) || ( ! empty( $r['prerelease'] ) && ! $with_test ) || 0 !== strpos( (string) ( $r['tag_name'] ?? '' ), $prefix ) ) {
 					continue;
 				}
 				$zip = false;
@@ -368,9 +371,34 @@ final class Optima_Hub_Health {
 	}
 
 	/**
+	 * The release channel row, shown only on a site on the test channel. It
+	 * warns when the updater copy that loaded first is older than release
+	 * channels, because that copy ignores test releases for every plugin
+	 * until the plugin it ships in is updated.
+	 */
+	public static function release_channel(): ?array {
+		if ( 'test' !== Optima_Hub_Access::channel() ) {
+			return null;
+		}
+		$aware = class_exists( 'Optima_Plugin_Updater', false ) && defined( 'Optima_Plugin_Updater::CHANNELS' );
+		return array(
+			'label' => __( 'Release channel', 'optima-build' ),
+			'value' => __( 'Test', 'optima-build' ),
+			'state' => $aware ? 'good' : 'warn',
+			'note'  => $aware
+				? __( 'This site gets each release first, before the client sites.', 'optima-build' )
+				: __( 'This site is on the test channel, but an Optima plugin with an older updater loaded first, so test releases are not offered yet. Update every Optima plugin to its newest normal release.', 'optima-build' ),
+			'link'      => class_exists( 'Optima_Hub_Admin', false ) ? Optima_Hub_Admin::url( 'updates' ) : admin_url( 'plugins.php' ),
+			'link_text' => __( 'Updates', 'optima-build' ),
+		);
+	}
+
+	/**
 	 * Optima plugins running a test build: a version with a pre-release label
 	 * (0.6.7-test.1), or one newer than any published release. Neither updates
-	 * the normal way. a client site site, Oct 2026: a test zip of Optima Build was
+	 * the normal way. A test release (a GitHub pre-release) on a site on the
+	 * test channel is expected there and is not listed; on a stable site it is
+	 * newer than any normal release, so it is listed as before. a client site site, Oct 2026: a test zip of Optima Build was
 	 * replaced by the next release and its unmerged features vanished, and a
 	 * Forms Guard test build had no release to update to.
 	 */
@@ -621,6 +649,10 @@ final class Optima_Hub_Health {
 			$out[] = $forms;
 		}
 		$out[]   = self::test_builds();
+		$channel = self::release_channel();
+		if ( $channel ) {
+			$out[] = $channel;
+		}
 		$reviews = self::review_totals();
 		if ( $reviews ) {
 			$out[] = $reviews;

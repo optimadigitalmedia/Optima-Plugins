@@ -3,7 +3,7 @@
  * Plugin Name:       Optima Build
  * Plugin URI:        https://optimadigitalmedia.com
  * Description:       The Optima menu on every site: Overview (is the site all right, what needs you, what Optima is doing), one Inbox, Site health, and Build for the site's operators (updates, features, design).
- * Version:           0.7.9.13
+ * Version:           0.7.9.14
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Author:            Optima Digital
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // Prefixed OPTIMA_HUB_ on purpose: the Optima Digital theme already defines a
 // OPTIMA_BUILD_MENU constant for its own menu.
-define( 'OPTIMA_HUB_VERSION', '0.7.9.13' );
+define( 'OPTIMA_HUB_VERSION', '0.7.9.14' );
 define( 'OPTIMA_HUB_FILE', __FILE__ );
 define( 'OPTIMA_HUB_DIR', plugin_dir_path( __FILE__ ) );
 define( 'OPTIMA_HUB_URL', plugin_dir_url( __FILE__ ) );

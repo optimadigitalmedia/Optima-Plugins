@@ -38,7 +38,10 @@ final class Optima_Hub_Features {
 	/**
 	 * Status for one feature.
 	 *
-	 * @return array{state:string, version:string, update:string, previous:string, checked:int}
+	 * 'test' is true when the update offered is a test release (a GitHub
+	 * pre-release), which only a site on the test channel is offered.
+	 *
+	 * @return array{state:string, version:string, update:string, test:bool, previous:string, checked:int}
 	 */
 	public static function status( string $slug ): array {
 		if ( ! function_exists( 'get_plugins' ) ) {
@@ -47,11 +50,12 @@ final class Optima_Hub_Features {
 		$file    = self::file( $slug );
 		$plugins = get_plugins();
 		if ( ! isset( $plugins[ $file ] ) ) {
-			return array( 'state' => 'missing', 'version' => '', 'update' => '', 'previous' => '', 'checked' => 0 );
+			return array( 'state' => 'missing', 'version' => '', 'update' => '', 'test' => false, 'previous' => '', 'checked' => 0 );
 		}
 		$version  = (string) $plugins[ $file ]['Version'];
 		$updates  = get_site_transient( 'update_plugins' );
 		$update   = ( is_object( $updates ) && isset( $updates->response[ $file ]->new_version ) ) ? (string) $updates->response[ $file ]->new_version : '';
+		$test     = '' !== $update && ! empty( $updates->response[ $file ]->prerelease );
 		$previous = '';
 		foreach ( Optima_Hub_Catalog::releases( $slug ) as $release ) {
 			if ( version_compare( $release['version'], $version, '<' ) ) {
@@ -63,6 +67,7 @@ final class Optima_Hub_Features {
 			'state'    => is_plugin_active( $file ) ? 'on' : 'off',
 			'version'  => $version,
 			'update'   => $update,
+			'test'     => $test,
 			'previous' => $previous,
 			// When WordPress last asked for new versions: "Up to date" only shows once it has.
 			'checked'  => is_object( $updates ) ? (int) ( $updates->last_checked ?? 0 ) : 0,
@@ -99,7 +104,8 @@ final class Optima_Hub_Features {
 		Optima_Hub_Health::forget_scan();
 		delete_transient( 'optima_updater_feed' ); // The release list every Optima plugin shares.
 		foreach ( array_merge( array( 'optima-build' ), array_keys( Optima_Hub_Catalog::features() ) ) as $feature_slug ) {
-			delete_transient( 'optima_updater_' . $feature_slug );
+			delete_transient( Optima_Hub_Access::updater_key( $feature_slug, 'stable' ) );
+			delete_transient( Optima_Hub_Access::updater_key( $feature_slug, 'test' ) );
 		}
 		if ( ! function_exists( 'wp_clean_plugins_cache' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/plugin.php'; // Not loaded when this runs from cron.
@@ -144,6 +150,23 @@ final class Optima_Hub_Features {
 		if ( 'refresh' === $do ) {
 			self::refresh();
 			self::back( __( 'Checked for new features and versions.', 'optima-build' ), 'success', 'updates' );
+		}
+		if ( 'channel' === $do ) {
+			if ( Optima_Hub_Access::channel_fixed() ) {
+				self::back( __( 'The release channel is set in wp-config.php (OPTIMA_HUB_CHANNEL), so it cannot be changed here.', 'optima-build' ), 'error', 'updates' );
+			}
+			$to = 'test' === Optima_Hub_Access::channel() ? 'stable' : 'test';
+			Optima_Hub_Access::set_channel( $to );
+			self::log( 'optima-build', 'channel', true, $to );
+			// Every cached answer was picked for the old channel: ask again now.
+			self::refresh();
+			self::back(
+				'test' === $to
+					? __( 'Release channel: Test. This site now gets each release first, before the client sites.', 'optima-build' )
+					: __( 'Release channel: Stable. This site now gets releases after they are checked on the test site.', 'optima-build' ),
+				'success',
+				'updates'
+			);
 		}
 		if ( 'refill' === $do ) {
 			// The setup file runs once per theme version. A save from a page that was

@@ -11,6 +11,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 }
 
 delete_option( 'optima_hub_plan' );
+delete_option( 'optima_hub_channel' );
 delete_option( 'optima_hub_update_holds' );
 delete_option( 'optima_hub_log' );
 delete_option( 'optima_hub_answer_seen' );
@@ -19,4 +20,6 @@ delete_option( 'optima_hub_hidden_alert_sent' );
 wp_clear_scheduled_hook( 'optima_hub_daily_watch' );
 delete_transient( 'optima_hub_catalog' );
 delete_transient( 'optima_hub_releases' );
+delete_transient( 'optima_hub_releases__test' );
 delete_transient( 'optima_updater_optima-build' );
+delete_transient( 'optima_updater_optima-build__test' );

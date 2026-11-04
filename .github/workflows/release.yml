@@ -13,6 +13,15 @@ name: Release
 # plugin. Or push a tag: git tag optima-core-v1.0.2 && git push origin optima-core-v1.0.2
 #
 # Each release builds <slug>.zip from the plugin folder and attaches it.
+#
+# Test channel: .github/release-channel decides how a release is published.
+#   stable  a normal release. Every site takes it within a few hours.
+#   test    a GitHub pre-release (a test release). Only sites on the test
+#           channel (the agency's own staging site) take it. After it is
+#           checked there, the Promote workflow marks it as a normal release
+#           and every other site takes it. Promote never rebuilds the zip.
+# The file is read at the commit being released, so a change to it applies
+# from the next release on. A missing or unknown value means stable.
 
 on:
   push:
@@ -51,6 +60,7 @@ jobs:
     outputs:
       targets: ${{ steps.plan.outputs.targets }}
       any: ${{ steps.plan.outputs.any }}
+      channel: ${{ steps.plan.outputs.channel }}
     steps:
       - uses: actions/checkout@v4
 
@@ -119,6 +129,11 @@ jobs:
             targets="$(jq -c --arg s "${slug}" --arg v "${version}" --arg t "${tag}" '. + [{slug:$s, version:$v, tag:$t}]' <<< "${targets}")"
           done
 
+          channel="$(tr -d '[:space:]' < .github/release-channel 2>/dev/null || true)"
+          [ "${channel}" = "test" ] || channel="stable"
+          echo "Release channel: ${channel}"
+          echo "channel=${channel}" >> "$GITHUB_OUTPUT"
+
           echo "targets=${targets}" >> "$GITHUB_OUTPUT"
           if [ "${targets}" = "[]" ]; then echo "any=false" >> "$GITHUB_OUTPUT"; else echo "any=true" >> "$GITHUB_OUTPUT"; fi
 
@@ -150,6 +165,7 @@ jobs:
       - name: Publish the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHANNEL: ${{ needs.plan.outputs.channel }}
         run: |
           slug="${{ matrix.target.slug }}"
           version="${{ matrix.target.version }}"
@@ -160,13 +176,25 @@ jobs:
             notes="See ${slug}/CHANGELOG.md."
           fi
 
+          # Test channel: publish as a pre-release. Stable sites ignore it until
+          # the Promote workflow marks it as a normal release.
+          flags=()
+          if [ "${CHANNEL}" = "test" ]; then
+            flags+=(--prerelease)
+          fi
+
           # --target creates the tag at this commit when it does not exist yet.
           gh release create "${tag}" "${slug}.zip" \
             --target "${GITHUB_SHA}" \
             --title "${slug} ${version}" \
-            --notes "${notes}"
+            --notes "${notes}" \
+            "${flags[@]}"
 
-          echo "Published ${tag}"
+          if [ "${CHANNEL}" = "test" ]; then
+            echo "Published ${tag} as a test release. Check it on the test site, then run Promote."
+          else
+            echo "Published ${tag}"
+          fi
 
   feed:
     # Sites read this one file to learn every version, instead of GitHub's API.
@@ -175,29 +203,17 @@ jobs:
     # not. A plain file download has no such limit.
     name: Publish the version list
     needs: [plan, release]
+    # One writer at a time: Release and Promote both rewrite the list.
+    concurrency:
+      group: version-list
+      cancel-in-progress: false
     if: ${{ always() && needs.plan.result == 'success' && needs.release.result != 'failure' }}
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Build releases.json and publish it on the version-list branch
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          gh api --paginate "repos/${GH_REPO}/releases?per_page=100" \
-            | jq -s '[ .[][] | select(.tag_name != "feed") | {tag_name, draft, prerelease, body: ((.body // "")[0:1500]), assets: [ .assets[] | {name, browser_download_url} ]} ]' \
-            > releases.json
-          echo "$(jq length releases.json) releases listed."
-          # Releases are immutable in this org: an asset cannot be added or
-          # replaced once a release is published. The list lives on its own
-          # branch instead, one file, replaced on every run.
-          dir="$(mktemp -d)"
-          cp releases.json "${dir}/releases.json"
-          cd "${dir}"
-          git init -q -b version-list
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases.json
-          git commit -q -m "Version list for ${GITHUB_SHA}"
-          git push -q --force "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" HEAD:version-list
-          echo "releases.json published on the version-list branch."
+        run: bash tools/release/publish-feed.sh

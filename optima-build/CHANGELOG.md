@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.9.14 (2026-11-04)
+
+- **Release channel** (Build, Updates, operators only): Test means this site gets each release first, before the client sites; Stable (the default) means it gets releases after they are checked on the test site. One button switches it and checks for new versions straight away. Stored in the `optima_hub_channel` option; `define( 'OPTIMA_HUB_CHANNEL', 'test' );` in wp-config fixes it and the card then only shows it. Plugin updates only: theme updates still follow the theme's own repo.
+- On the test channel the update queue and the feature cards label a test release (a GitHub pre-release) "Test release", and turning a feature on or going back a version can use test releases too. Stable sites never see them.
+- Site health: a test release installed on a test-channel site is expected and no longer listed under Test builds; on a stable site it is listed as before. Test-channel sites get a Release channel row, which warns when an Optima plugin with an older updater loaded first (that copy ignores test releases until it is updated).
+- Shared updater: release channels. A site on the stable channel (the default) sees only normal releases, exactly as before. A site on the test channel (Optima Build, Build, Updates, Release channel, or `OPTIMA_HUB_CHANNEL` in wp-config) also sees test releases (GitHub pre-releases) and takes the newest version from either. Without Optima Build a site is always on stable. This release goes out as a normal release so every site gets the channel-aware updater; test releases start with a later release.
+
 ## 0.7.9.13 (2026-11-04)
 
 - Fix: clicking Optima in the sidebar opened a 404 on sites without Optima Core (the Optima section is created by Build there). Overview was added before its parent menu existed, so WordPress gave it the wrong address. It is now added after the section, and the menu link opens Overview on every site.

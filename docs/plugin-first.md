@@ -303,7 +303,9 @@ When a theme hands its SEO head and JSON-LD to Optima Core (jobs `seo` and `sche
 
 ## 5. Order (each step on staging, head-and-schema diff before and after)
 
-**Every release from Nov 4, 2026:** everything lands on staging first, on every site, and the agency's own site (Optima Digital) is the first place each release is checked. Client sites follow once it looks right there. Live sites get changes only at their go-live. (Plugins update themselves on every site at once, so "first" means first reviewed, not first installed.)
+**Every release from Nov 4, 2026:** everything lands on staging first, on every site, and the agency's own site (Optima Digital) is the first place each release is checked. Client sites follow once it looks right there. Live sites get changes only at their go-live.
+
+**Plugin releases go through the test channel** (Optima Build 0.7.9.14 and the matching bump of every plugin, `RELEASING.md`). A merge to `main` publishes a test release (a GitHub pre-release). Only the agency's own staging site, on the test channel (Build, Updates, Release channel), installs it. Once it looks right there, the Promote workflow marks it as a normal release, without rebuilding it, and every other site installs that same zip within hours. Until `.github/release-channel` is switched to `test` (after the channel-aware release reaches every site), releases still go to every site at once. Theme updates are not part of this; each theme updates from its own repo.
 
 The original conversion order, kept for the record:
 

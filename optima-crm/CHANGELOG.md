@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1.5 (2026-11-04)
+
+- Shared updater: release channels. A site on the stable channel (the default) sees only normal releases, exactly as before. A site on the test channel (Optima Build, Build, Updates, Release channel, or `OPTIMA_HUB_CHANNEL` in wp-config) also sees test releases (GitHub pre-releases) and takes the newest version from either. Without Optima Build a site is always on stable. This release goes out as a normal release so every site gets the channel-aware updater; test releases start with a later release.
+
 ## 0.1.1.4 (2026-10-31)
 
 - Optima release of upstream 0.1.1.
