@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.12.6 (2026-11-04)
+
+- Optima admin footer: no personal email address. It reads "Built and looked after by Optima Digital" with a Request a change link (shared admin kit 1.5.1.5).
+
 ## 0.1.12.5 (2026-11-04)
 
 - The Weekly checks section no longer shows its title twice ("Weekly" above "Weekly checks").

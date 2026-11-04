@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.15.5 (2026-11-04)
+
+- Optima admin footer: no personal email address. It reads "Built and looked after by Optima Digital" with a Request a change link (shared admin kit 1.5.1.5).
+
 ## 0.1.15.4 (2026-10-31)
 
 - Optima release of upstream 0.1.15.

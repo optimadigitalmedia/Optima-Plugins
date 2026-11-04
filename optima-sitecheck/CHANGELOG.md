@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.4.6 (2026-11-04)
+
+- Optima admin footer: no personal email address. It reads "Built and looked after by Optima Digital" with a Request a change link (shared admin kit 1.5.1.5).
+
 ## 0.2.4.5 (2026-11-04)
 
 - Optima layer revision 5: visitor-facing styles now use the `--optima-*` design variables Optima Build 0.7.9.5 prints from the theme's DESIGN.md, so this feature dresses in each site's brand (plugin-first rule 7). Same look on sites without DESIGN.md.

@@ -39,7 +39,7 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 
 	final class Optima_Admin_UI {
 
-		const VERSION = '1.5.1.4';
+		const VERSION = '1.5.1.5';
 
 		/** Show the Optima mark and sign-off. */
 		public static function branded(): bool {
@@ -405,7 +405,10 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 		/** Close a screen with the Optima sign-off. */
 		public static function close(): void {
 			if ( self::branded() ) {
-				echo '<footer class="sh-foot"><span class="sh-mark" aria-hidden="true"></span><p>Built and looked after by Optima Digital. <a href="mailto:sean@optimadigitalmedia.com">sean@optimadigitalmedia.com</a></p></footer>';
+				// No personal address on client screens: questions go through Request a change.
+				$help = (string) apply_filters( 'optima_admin_help_url', '' );
+				echo '<footer class="sh-foot"><span class="sh-mark" aria-hidden="true"></span><p>Built and looked after by Optima Digital.'
+					. ( '' !== $help ? ' <a href="' . esc_url( $help ) . '">Request a change</a>' : '' ) . '</p></footer>';
 			}
 			echo '</div>';
 		}

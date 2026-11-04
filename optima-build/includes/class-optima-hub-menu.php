@@ -68,6 +68,8 @@ final class Optima_Hub_Menu {
 		// the menu list, so neither the sidebar nor the shared tab row shows them.
 		add_action( 'admin_head', array( __CLASS__, 'drop_behind' ), 999 );
 		add_filter( 'optima_admin_nav_group', array( __CLASS__, 'nav_group' ), 10, 2 );
+		// The admin footer's help link: Request a change, never a personal address.
+		add_filter( 'optima_admin_help_url', static fn() => Optima_Hub_Admin::url( 'requests' ) );
 	}
 
 	/** Remove the screens behind Updates from the menu list, except the one being viewed. */
@@ -92,7 +94,14 @@ final class Optima_Hub_Menu {
 
 	/** While one of those screens is open, it sits in Home, next to Updates. */
 	public static function nav_group( string $group, string $slug ): string {
-		return in_array( $slug, self::BEHIND_UPDATES, true ) ? 'home' : $group;
+		if ( in_array( $slug, self::BEHIND_UPDATES, true ) ) {
+			return 'home';
+		}
+		// Business info is about the business, not search: it sits with Call buttons, Hours and Team.
+		if ( 'optima' === $slug || 'optima&tab=business' === $slug ) {
+			return 'business';
+		}
+		return $group;
 	}
 
 	/** The theme's own setup screen (fallback when no plugin does the job), if the theme registers one. */

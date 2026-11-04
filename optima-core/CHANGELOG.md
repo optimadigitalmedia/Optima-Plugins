@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.0.8 (2026-11-04)
+
+- Optima admin footer: no personal email address. It reads "Built and looked after by Optima Digital" with a Request a change link (shared admin kit 1.5.1.5).
+
 ## 1.6.0.7 (2026-11-04)
 
 - Optima layer revision 7: **a theme's head can move to Core with no change in what search engines see.** New keys in the `seo` section of `optima-setup.json` (docs/plugin-first.md, section 3a), each optional; a site without the section prints what it printed before:

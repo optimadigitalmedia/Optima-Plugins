@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.8.7 (2026-11-04)
+
+- Optima admin footer: no personal email address. It reads "Built and looked after by Optima Digital" with a Request a change link (shared admin kit 1.5.1.5).
+
 ## 0.1.8.6 (2026-11-04)
 
 - Optima layer revision 6: **hours fill the footer beside the address.** When the hours are confirmed and at least one day is open, they print in the theme's `footer-contact` slot as one line ("Monday to Friday, 9 a.m. to 5 p.m."), so `optima_slot_has( 'footer-contact' )` is true only when there is something to show. Filter `optima_hours_footer_show` picks `summary` (default), `table`, `status` or `both`, or `''` for none; `optima_hours_summary` changes the words. Styles use the theme's type and `--optima-*` variables only.
