@@ -29,20 +29,17 @@ on:
           - optima-aeo
           - optima-analytics
           - optima-build
-          - optima-booking
           - optima-cards
           - optima-chat
           - optima-core
           - optima-events
           - optima-members
-          - optima-newsletter
           - optima-partners
           - optima-crm
           - optima-forms-guard
           - optima-optimize
           - optima-reviews
           - optima-sitecheck
-          - optima-writing
 
 permissions:
   contents: write
