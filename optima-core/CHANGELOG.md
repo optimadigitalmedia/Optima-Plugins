@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.0.5 (2026-11-04)
+
+- Optima layer revision 5: visitor-facing styles now use the `--optima-*` design variables Optima Build 0.7.9.5 prints from the theme's DESIGN.md, so this feature dresses in each site's brand (plugin-first rule 7). Same look on sites without DESIGN.md.
+
 ## 1.6.0.4 (2026-10-31)
 
 - Optima release of upstream 1.6.0.

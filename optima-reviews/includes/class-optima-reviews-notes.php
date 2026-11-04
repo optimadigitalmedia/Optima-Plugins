@@ -74,6 +74,7 @@ final class Optima_Reviews_Notes {
 <?php if ( $fonts ) : ?>
 <link rel="stylesheet" href="<?php echo esc_url( $fonts ); ?>">
 <?php endif; ?>
+<?php if ( class_exists( 'Optima_Hub_Design' ) ) { Optima_Hub_Design::print_vars(); } // Design tokens from the theme's DESIGN.md. ?>
 <link rel="stylesheet" href="<?php echo esc_url( OPTIMA_REVIEWS_URL . 'assets/review-page.css?ver=' . OPTIMA_REVIEWS_VERSION ); ?>">
 <style>:root{<?php echo wp_strip_all_tags( Optima_Reviews_Brand::page_vars( $s ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hex colors and fonts from a fixed list. ?>}</style>
 </head>

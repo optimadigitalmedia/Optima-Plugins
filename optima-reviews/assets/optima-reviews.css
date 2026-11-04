@@ -13,8 +13,8 @@
 	--sr-line: var(--line, color-mix(in srgb, currentColor 12%, transparent));
 	--sr-muted: var(--text-2, color-mix(in srgb, currentColor 68%, transparent));
 	--sr-faint: var(--text-3, color-mix(in srgb, currentColor 50%, transparent));
-	--sr-link: var(--accent-text, #0F63AB);
-	--sr-star: #FDC134;
+	--sr-link: var(--accent-text, var(--optima-accent));
+	--sr-star: var(--optima-highlight);
 	--sr-star-empty: color-mix(in srgb, currentColor 18%, transparent);
 	--sr-mono: var(--font-mono, ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace);
 	--sr-radius: var(--r-card, 18px);

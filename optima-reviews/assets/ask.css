@@ -3,21 +3,21 @@
    the on-screen previews are the same cards scaled down. */
 
 .srk.recon-theme {
-	--recon-bg: #F6F8FB;
-	--recon-surface: #FFFFFF;
-	--recon-surface-2: #EEF2F7;
-	--recon-text: #141A24;
-	--recon-text-2: #4D5768;
-	--recon-text-3: #9AA6B8;
+	--recon-bg: var(--optima-canvas);
+	--recon-surface: var(--optima-surface);
+	--recon-surface-2: var(--optima-canvas);
+	--recon-text: var(--optima-ink);
+	--recon-text-2: var(--optima-ink-2);
+	--recon-text-3: var(--optima-ink-2);
 	--recon-border: rgba(0, 0, 0, .08);
-	--recon-border-strong: #DDE4EE;
+	--recon-border-strong: var(--optima-line);
 	--recon-hairline: rgba(0, 0, 0, .06);
-	--recon-accent: #1272C4;
-	--recon-accent-ink: #0F63AB;
-	--recon-accent-text: #0F63AB;
+	--recon-accent: var(--optima-accent);
+	--recon-accent-ink: var(--optima-accent);
+	--recon-accent-text: var(--optima-accent);
 	--recon-glow: rgba(18, 114, 196, .16);
-	--recon-positive: #2BA24B;
-	--recon-caution: #FDC134;
+	--recon-positive: var(--optima-positive);
+	--recon-caution: var(--optima-highlight);
 	--recon-radius: 16px;
 	--recon-radius-sm: 10px;
 	--recon-radius-xs: 8px;
@@ -25,8 +25,8 @@
 	--recon-shadow-pop: 0 30px 60px -20px rgba(18, 114, 196, .22);
 	--recon-font: "IBM Plex Sans", system-ui, sans-serif;
 	--recon-font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
-	--srk-accent: #1272C4;
-	--srk-ink: #141A24;
+	--srk-accent: var(--optima-accent);
+	--srk-ink: var(--optima-ink);
 	--srk-font-head: var(--recon-font);
 	--srk-font-body: var(--recon-font);
 	--srk-font-label: var(--recon-font-mono);
@@ -85,8 +85,8 @@
 a.srk-btnlink, .srk a.button { display: inline-flex; align-items: center; text-decoration: none; }
 .srk .button:hover, .srk .button:focus { background: var(--recon-surface-2); border-color: var(--recon-border-strong); color: var(--recon-text); }
 .srk .button:active { transform: translateY(1px); }
-.srk .button-primary { background: var(--recon-accent); border-color: var(--recon-accent); color: #fff; }
-.srk .button-primary:hover, .srk .button-primary:focus { background: var(--recon-accent-ink); border-color: var(--recon-accent-ink); color: #fff; }
+.srk .button-primary { background: var(--recon-accent); border-color: var(--recon-accent); color: var(--optima-accent-ink); }
+.srk .button-primary:hover, .srk .button-primary:focus { background: var(--recon-accent-ink); border-color: var(--recon-accent-ink); color: var(--optima-accent-ink); }
 .srk .button:focus-visible { outline: 2px solid var(--recon-accent-text); outline-offset: 2px; box-shadow: none; }
 
 /* Link */
@@ -103,7 +103,7 @@ a.srk-btnlink, .srk a.button { display: inline-flex; align-items: center; text-d
 
 /* QR block */
 .srk-qrbox { display: grid; justify-items: start; }
-.srk-qrcard { background: #fff; border: 1px solid var(--recon-border); border-radius: 24px; padding: 24px 28px; display: grid; justify-items: center; gap: 12px; }
+.srk-qrcard { background: var(--optima-surface); border: 1px solid var(--recon-border); border-radius: 24px; padding: 24px 28px; display: grid; justify-items: center; gap: 12px; }
 .srk-qrname { margin: 0; font-weight: 600; font-size: 15px; }
 .srk-qr-lg { width: 220px; height: 220px; }
 .srk-qr svg { display: block; width: 100%; height: 100%; }
@@ -151,9 +151,9 @@ a.srk-btnlink, .srk a.button { display: inline-flex; align-items: center; text-d
 .srk-itemhead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 10px; }
 .srk-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 980px; background: var(--recon-glow); color: var(--recon-accent-text); }
 .srk-pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-.srk-pill.is-private { background: rgba(253, 193, 52, .16); color: #8A5A00; }
-.srk-pill.is-ok { background: rgba(43, 162, 75, .14); color: #0B6B3A; }
-.srk-stars { color: #FDC134; letter-spacing: 1px; }
+.srk-pill.is-private { background: rgba(253, 193, 52, .16); color: var(--optima-caution); }
+.srk-pill.is-ok { background: rgba(43, 162, 75, .14); color: var(--optima-positive); }
+.srk-stars { color: var(--optima-highlight); letter-spacing: 1px; }
 .srk-quote { margin: 0 0 14px; padding-left: 14px; border-left: 3px solid var(--recon-surface-2); color: var(--recon-text); font-size: 15px; line-height: 1.55; }
 .srk-quote p { margin: 0 0 8px; }
 .srk-topics { margin: 0 0 12px; padding: 0; border: 0; }
@@ -167,23 +167,23 @@ a.srk-btnlink, .srk a.button { display: inline-flex; align-items: center; text-d
 /* Previews are the real print size scaled down. A transform scales the same in
    every browser (Safari handles zoom differently), so the wrapper holds the
    scaled size: the sheet's own size times 0.42. */
-.srk-sheet-wrap { overflow: hidden; box-shadow: 0 0 0 1px var(--recon-border-strong); background: #fff; }
+.srk-sheet-wrap { overflow: hidden; box-shadow: 0 0 0 1px var(--recon-border-strong); background: var(--optima-surface); }
 .srk-wrap-counter { width: calc(4in * .42); height: calc(6in * .42); }
 .srk-wrap-cards { width: calc(7in * .42); height: calc(10in * .42); }
 .srk-wrap-tent { width: calc(7.5in * .42); height: calc(9in * .42); }
-.srk-sheet { transform: scale(.42); transform-origin: 0 0; background: #fff; width: max-content; }
+.srk-sheet { transform: scale(.42); transform-origin: 0 0; background: var(--optima-surface); width: max-content; }
 .srk-sheet-cards .srk-card, .srk-sheet-tent .srk-card { overflow: hidden; }
 
 .srk-card {
 	box-sizing: border-box;
 	display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
 	color: var(--srk-ink); font-family: var(--srk-font-body);
-	border: 1px dashed #c3c4c7;
+	border: 1px dashed var(--optima-line);
 }
 .srk-card p { margin: 0; text-wrap: balance; }
-.srk-biz { font-family: var(--srk-font-label); font-size: 10pt; letter-spacing: .12em; text-transform: uppercase; color: #4D5768; }
+.srk-biz { font-family: var(--srk-font-label); font-size: 10pt; letter-spacing: .12em; text-transform: uppercase; color: var(--optima-ink-2); }
 .srk-chead { font-family: var(--srk-font-head); font-weight: 600; color: var(--srk-accent); letter-spacing: -.02em; line-height: 1.08; }
-.srk-scan { font-family: var(--srk-font-label); color: #4D5768; line-height: 1.35; }
+.srk-scan { font-family: var(--srk-font-label); color: var(--optima-ink-2); line-height: 1.35; }
 
 /* Counter card: 4 x 6 in, portrait. */
 .srk-sheet-counter .srk-card { width: 4in; height: 6in; padding: .4in; gap: .2in; }

@@ -4,19 +4,19 @@
    Max 480px wide, centered on desktop. Defaults are Optima's own look. */
 
 :root {
-	--accent: #1272C4;
-	--bg: #12163A;
-	--surface: #1B2150;
-	--surface-2: #232B38;
-	--text: #F6F8FB;
-	--text-2: #B7C0D6;
-	--text-3: #9AA6B8;
+	--accent: var(--optima-accent);
+	--bg: var(--optima-ink);
+	--surface: var(--optima-ink);
+	--surface-2: var(--optima-ink);
+	--text: var(--optima-canvas);
+	--text-2: var(--optima-night-ink-2);
+	--text-3: var(--optima-ink-2);
 	--line: rgba(255, 255, 255, .10);
 	--strong: rgba(255, 255, 255, .14);
-	--link: #FDC134;
-	--positive: #2BA24B;
-	--negative: #E23B2E;
-	--on-accent: #fff;
+	--link: var(--optima-highlight);
+	--positive: var(--optima-positive);
+	--negative: var(--optima-negative);
+	--on-accent: var(--optima-surface);
 	--font-head: "IBM Plex Sans", system-ui, sans-serif;
 	--font-body: "IBM Plex Sans", system-ui, sans-serif;
 	--font-label: "IBM Plex Mono", ui-monospace, Menlo, monospace;
@@ -90,7 +90,7 @@ h1 {
 }
 .rp-btn:hover { transform: translateY(-1px); border-color: var(--link); }
 .rp-btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
-.rp-btn-primary:hover { background: color-mix(in srgb, var(--accent) 86%, #000); border-color: transparent; }
+.rp-btn-primary:hover { background: color-mix(in srgb, var(--accent) 86%, var(--optima-ink)); border-color: transparent; }
 .rp-btn:focus-visible, .rp a:focus-visible, .rp input:focus-visible, .rp textarea:focus-visible { outline: 2px solid var(--link); outline-offset: 3px; }
 .rp-quiet { text-align: center; margin: 20px 0 0; font-size: 14px; }
 .rp-quiet a { color: var(--text-2); text-underline-offset: 3px; }
@@ -115,7 +115,7 @@ h1 {
 .rp-form textarea { resize: vertical; min-height: 128px; }
 .rp-form input:focus, .rp-form textarea:focus { border-color: var(--accent); outline: none; }
 .rp-form [aria-invalid="true"] { border-color: var(--negative); }
-.rp-err { color: #FF8A7A; font-size: 14px; margin: 6px 0 0; }
+.rp-err { color: color-mix(in srgb, var(--optima-negative) 55%, var(--optima-surface)); font-size: 14px; margin: 6px 0 0; }
 .rp-stars { border: 0; margin: 0; padding: 0; }
 .rp-starrow { display: inline-flex; flex-direction: row-reverse; justify-content: flex-end; gap: 4px; }
 .rp-starrow input { position: absolute; opacity: 0; width: 1px; height: 1px; }
@@ -132,7 +132,7 @@ h1 {
 
 /* Thank-you */
 .rp-done { width: 56px; height: 56px; border-radius: 50%; background: var(--positive); display: grid; place-items: center; margin-top: 12px; }
-.rp-done svg { width: 28px; height: 28px; fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.rp-done svg { width: 28px; height: 28px; fill: none; stroke: var(--optima-surface); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 
 @media (prefers-reduced-motion: reduce) {
 	.rp-btn, .rp-starrow svg { transition: none; }

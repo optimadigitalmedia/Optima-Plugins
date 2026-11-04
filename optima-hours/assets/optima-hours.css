@@ -1,9 +1,9 @@
 /* Optima Hours on the client site. Inherits the theme's fonts and colors;
    every color is a custom property with a neutral fallback, so a theme can
    restyle it by setting, for example:
-     --optima-hours-open: #0B6B3A; --optima-hours-closed: #B3261E;
+     --optima-hours-open: var(--optima-positive); --optima-hours-closed: var(--optima-negative);
      --optima-hours-line: rgba(0,0,0,.12); --optima-hours-today: rgba(0,0,0,.05);
-     --optima-hours-bar-bg: #141A24; --optima-hours-bar-text: #FFFFFF; */
+     --optima-hours-bar-bg: var(--optima-ink); --optima-hours-bar-text: var(--optima-surface); */
 
 .optima-hours {
 	margin: 0 0 1.5em;
@@ -31,7 +31,7 @@
 	height: .6em;
 	margin-top: .45em;
 	border-radius: 50%;
-	background: var(--optima-hours-closed, #B3261E);
+	background: var(--optima-hours-closed, var(--optima-negative));
 }
 
 .optima-hours-status-text {
@@ -39,7 +39,7 @@
 }
 
 .optima-hours-status.is-open .optima-hours-dot {
-	background: var(--optima-hours-open, #0B6B3A);
+	background: var(--optima-hours-open, var(--optima-positive));
 }
 
 .optima-hours-table {
@@ -132,8 +132,8 @@
 	gap: .75em;
 	padding: .5em 3.5em .5em 1em;
 	min-height: 44px;
-	background: var(--optima-hours-bar-bg, #141A24);
-	color: var(--optima-hours-bar-text, #FFFFFF);
+	background: var(--optima-hours-bar-bg, var(--optima-ink));
+	color: var(--optima-hours-bar-text, var(--optima-accent-ink));
 	font-size: .95em;
 	line-height: 1.4;
 	text-align: center;

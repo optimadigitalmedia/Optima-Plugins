@@ -18,7 +18,7 @@ Every rule is a MUST or a NEVER (36 rules). If a task would break one, stop and 
 
 6. Every theme MUST ship `DESIGN.md` at its root with one `optima-design` JSON block (section 3).
 7. Plugin CSS MUST use only the `--optima-*` variables Optima Build prints from `DESIGN.md`. NEVER hard-code a color, font or radius in a plugin.
-8. Plugins MUST NEVER load fonts. The theme loads them; plugins name them.
+8. Plugins MUST NEVER load fonts. The theme loads them; plugins name them. Only exception: a page a plugin renders without the theme (for example a standalone review page) loads the fonts named in DESIGN.md, and `tools/uniform-check.sh` lists each such file by name.
 
 **Same everywhere**
 

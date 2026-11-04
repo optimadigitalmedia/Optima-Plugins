@@ -69,6 +69,7 @@ final class Optima_Cards_Render {
 <link rel="apple-touch-icon" href="<?php echo esc_url( get_site_icon_url( 180 ) ); ?>">
 <?php endif; ?>
 <?php endif; ?>
+<?php if ( class_exists( 'Optima_Hub_Design' ) ) { Optima_Hub_Design::print_vars(); } // Design tokens from the theme's DESIGN.md. ?>
 <style>.scc{--odc-accent:<?php echo esc_html( $accent ); ?>;--odc-font:<?php echo esc_html( $font ); ?>}</style>
 <?php wp_head(); ?>
 </head>

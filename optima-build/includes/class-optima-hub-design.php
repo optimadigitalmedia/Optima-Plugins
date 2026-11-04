@@ -39,6 +39,8 @@ final class Optima_Hub_Design {
 			'night'      => '#0B0E26',
 			'positive'   => '#2BA24B',
 			'negative'   => '#E23B2E',
+			'caution'    => '#8A5A00',
+			'night-ink-2' => '#B7C0D6',
 		),
 		'font'   => array(
 			'display' => 'Montserrat',

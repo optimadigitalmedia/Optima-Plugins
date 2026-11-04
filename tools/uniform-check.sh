@@ -50,7 +50,8 @@ check_plugins() {
     hex=$(find "$dir" -name '*.css' ! -name 'optima-admin.css' ! -name '*-admin.css' -print0 2>/dev/null | xargs -0 -r grep -oE "#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?\b" 2>/dev/null | wc -l)
     if [ "$hex" -eq 0 ]; then ok "$slug: visitor CSS uses only --optima-* variables"; else bad "$slug: $hex hard-coded colors in visitor CSS (use --optima-* variables)"; fi
     local fl
-    fl=$(grep -rlE "fonts\.googleapis|fonts\.gstatic" "$dir" --include=*.php 2>/dev/null || true)
+    # Allowed: pages that render without the theme (rule 8 exception) load the DESIGN.md fonts themselves.
+    fl=$(grep -rlE "fonts\.googleapis|fonts\.gstatic" "$dir" --include=*.php 2>/dev/null | grep -v -E "optima-reviews/includes/class-optima-reviews-brand\.php" || true)
     [ -z "$fl" ] && ok "$slug: loads no fonts" || bad "$slug: loads fonts in $fl"
   done
 }

@@ -2,10 +2,10 @@
    Reads the site's tokens when they exist (Optima themes) and falls back to
    the Optima dark palette, so a client theme can restyle it with --odc-*. */
 .scc {
-  --odc-surface: var(--surface, #1B2150); --odc-surface-2: var(--surface-2, #232B38);
-  --odc-text: var(--text, #F6F8FB); --odc-text-2: var(--text-2, #B7C0D6);
-  --odc-line: var(--line, rgba(255,255,255,.10)); --odc-accent: var(--accent, #1272C4);
-  --odc-fill: var(--accent-fill, #0F63AB); --odc-on: var(--on-accent, #FFFFFF); --odc-accent-text: var(--accent-text, #FDC134);
+  --odc-surface: var(--surface, var(--optima-ink)); --odc-surface-2: var(--surface-2, var(--optima-ink));
+  --odc-text: var(--text, var(--optima-canvas)); --odc-text-2: var(--text-2, var(--optima-night-ink-2));
+  --odc-line: var(--line, rgba(255,255,255,.10)); --odc-accent: var(--accent, var(--optima-accent));
+  --odc-fill: var(--accent-fill, var(--optima-accent)); --odc-on: var(--on-accent, var(--optima-surface)); --odc-accent-text: var(--accent-text, var(--optima-highlight));
   --odc-mono: var(--font-mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
   font-family: inherit; font-size: 16px; line-height: 1.4;
 }
@@ -17,9 +17,9 @@
   border: 1px solid rgba(255,255,255,.10); box-shadow: 0 10px 30px rgba(0,0,0,.35);
 }
 .odc-btn, .odc-main { min-height: 48px; border-radius: 980px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font: inherit; font-weight: 500; text-decoration: none; cursor: pointer; }
-.odc-btn { flex: 1 1 0; color: #F6F8FB; padding: 0 14px; }
+.odc-btn { flex: 1 1 0; color: var(--optima-canvas); padding: 0 14px; }
 .odc-btn svg { color: var(--odc-accent-text); }
-.odc-btn:hover, .odc-btn:focus-visible { background: rgba(255,255,255,.08); color: #F6F8FB; }
+.odc-btn:hover, .odc-btn:focus-visible { background: rgba(255,255,255,.08); color: var(--optima-canvas); }
 .odc-main { flex: 1.3 1 0; border: 0; background: var(--odc-fill); color: var(--odc-on); padding: 0 20px; }
 .odc-main:hover { filter: brightness(1.08); }
 .scc a:focus-visible, .scc button:focus-visible { outline: 2px solid var(--odc-accent); outline-offset: 2px; }

@@ -1,8 +1,8 @@
 /* Optima Site Check: the form, the live run, the sample and the report rows. Reads the theme's Optima tokens, with dark defaults. */
-.ssc{--ssc-bg:var(--bg,#12163A);--ssc-surface:var(--surface,#1B2150);--ssc-surface-2:var(--surface-2,#232B38);--ssc-text:var(--text,#F6F8FB);--ssc-text-2:var(--text-2,#B7C0D6);--ssc-text-3:var(--text-3,#9AA6B8);--ssc-line:var(--line,rgba(255,255,255,.10));--ssc-fill:var(--accent-fill,#0F63AB);--ssc-fill-hover:var(--accent-fill-hover,#0D5490);--ssc-accent:var(--accent,#1272C4);--ssc-accent-text:var(--accent-text,#FDC134);--ssc-pass:var(--positive,#2BA24B);--ssc-warn:var(--caution,#FDC134);--ssc-fail:var(--negative,#E23B2E);--ssc-mono:var(--font-mono,"IBM Plex Mono",ui-monospace,Menlo,monospace);display:grid;gap:20px;margin:28px 0;color:var(--ssc-text);font-family:inherit}
+.ssc{--ssc-bg:var(--bg,var(--optima-ink));--ssc-surface:var(--surface,var(--optima-ink));--ssc-surface-2:var(--surface-2,var(--optima-ink));--ssc-text:var(--text,var(--optima-canvas));--ssc-text-2:var(--text-2,var(--optima-night-ink-2));--ssc-text-3:var(--text-3,var(--optima-ink-2));--ssc-line:var(--line,rgba(255,255,255,.10));--ssc-fill:var(--accent-fill,var(--optima-accent));--ssc-fill-hover:var(--accent-fill-hover,var(--optima-accent));--ssc-accent:var(--accent,var(--optima-accent));--ssc-accent-text:var(--accent-text,var(--optima-highlight));--ssc-pass:var(--positive,var(--optima-positive));--ssc-warn:var(--caution,var(--optima-highlight));--ssc-fail:var(--negative,var(--optima-negative));--ssc-mono:var(--font-mono,"IBM Plex Mono",ui-monospace,Menlo,monospace);display:grid;gap:20px;margin:28px 0;color:var(--ssc-text);font-family:inherit}
 .ssc *{box-sizing:border-box}
 .ssc [hidden]{display:none!important}
-.ssc a.ssc-btn,.ssc a.ssc-btn:hover{color:#fff;text-decoration:none}
+.ssc a.ssc-btn,.ssc a.ssc-btn:hover{color:var(--optima-accent-ink);text-decoration:none}
 .ssc-form,.ssc-run,.ssc-sample{background:var(--ssc-surface);border:1px solid var(--ssc-line);border-radius:18px;padding:28px}
 .ssc-label{display:block;font-size:14px;font-weight:500;color:var(--ssc-text-2);margin:0 0 6px}
 .ssc-input{width:100%;min-height:48px;padding:12px 16px;border-radius:8px;border:1px solid var(--ssc-line);background:var(--ssc-surface-2);color:var(--ssc-text);font:inherit;font-size:17px}
@@ -11,7 +11,7 @@
 .ssc-url{font-size:18px}
 .ssc-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
 @media (max-width:600px){.ssc-row{grid-template-columns:1fr}.ssc-form,.ssc-run,.ssc-sample{padding:20px}}
-.ssc-btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;margin-top:20px;padding:13px 28px;border:0;border-radius:980px;background:var(--ssc-fill);color:#fff;font:inherit;font-size:16px;font-weight:500;cursor:pointer;text-decoration:none;transition:background .2s ease,transform .2s ease}
+.ssc-btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;margin-top:20px;padding:13px 28px;border:0;border-radius:980px;background:var(--ssc-fill);color:var(--optima-accent-ink);font:inherit;font-size:16px;font-weight:500;cursor:pointer;text-decoration:none;transition:background .2s ease,transform .2s ease}
 .ssc-btn:hover{background:var(--ssc-fill-hover);transform:translateY(-1px)}
 .ssc-btn:focus-visible{outline:2px solid var(--ssc-accent);outline-offset:3px}
 .ssc-btn[disabled]{opacity:.6;cursor:default;transform:none}
@@ -32,7 +32,7 @@
 .ssc-dot{flex:none;position:relative;width:18px;height:18px;border-radius:50%;border:2px solid var(--ssc-line);transition:background-color .25s ease,border-color .25s ease}
 .ssc-steps li.is-done{color:var(--ssc-text)}
 .ssc-steps li.is-done .ssc-dot{border-color:var(--ssc-pass);background:var(--ssc-pass)}
-.ssc-steps li.is-done .ssc-dot::after{content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.ssc-steps li.is-done .ssc-dot::after{content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid var(--optima-surface);border-width:0 2px 2px 0;transform:rotate(45deg)}
 
 /* score: a big mono numeral, a headline, and one segment per check */
 .ssc-score{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;margin:16px 0 6px}
@@ -51,9 +51,9 @@
 .ssc-r{display:grid;grid-template-columns:26px 1fr;gap:12px;margin:0;padding:13px 0;border-top:1px solid var(--ssc-line);color:var(--ssc-text-2);font-size:15px;line-height:1.5}
 .ssc-r::before{content:none}
 .ssc-r strong{display:block;color:var(--ssc-text);font-weight:600}
-.ssc-ico{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:600;line-height:1;color:#fff;background:var(--ssc-text-3);border:2px solid transparent;transition:background-color .25s ease,border-color .25s ease,color .25s ease,transform .25s ease}
+.ssc-ico{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:600;line-height:1;color:var(--optima-accent-ink);background:var(--ssc-text-3);border:2px solid transparent;transition:background-color .25s ease,border-color .25s ease,color .25s ease,transform .25s ease}
 .ssc-r.is-pass .ssc-ico{background:var(--ssc-pass)}
-.ssc-r.is-warn .ssc-ico{background:var(--ssc-warn);color:#141A24}
+.ssc-r.is-warn .ssc-ico{background:var(--ssc-warn);color:var(--optima-ink)}
 .ssc-r.is-fail .ssc-ico{background:var(--ssc-fail)}
 .ssc-rt{transition:opacity .25s ease}
 .ssc-src{display:block;margin-top:2px;font-family:var(--ssc-mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--ssc-text-3)}
@@ -78,4 +78,4 @@
 .ssc-follow .ssc-btn{margin-top:0}
 .ssc .screen-reader-text{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(1px,1px,1px,1px);white-space:nowrap}
 @media (prefers-reduced-motion:reduce){.ssc *{transition:none!important}}
-.ssc-admin{--ssc-surface:#fff;--ssc-text:#1d2327;--ssc-text-2:#50575e;--ssc-text-3:#787c82;--ssc-line:#DDE4EE;margin:0}
+.ssc-admin{--ssc-surface:var(--optima-surface);--ssc-text:var(--optima-ink);--ssc-text-2:var(--optima-ink-2);--ssc-text-3:var(--optima-ink-2);--ssc-line:var(--optima-line);margin:0}
