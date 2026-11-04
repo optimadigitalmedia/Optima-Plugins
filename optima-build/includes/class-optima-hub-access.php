@@ -3,7 +3,9 @@
  * Who may change features, and which plan the site is on.
  *
  * Operators are the people who build and look after the site. By default they
- * are the administrators on the agency's own domain (@optimadigitalmedia.com).
+ * are the administrators on the agency's own domain (@optimadigitalmedia.com)
+ * and on the agency's web-team partner domain. The partner domain is stored
+ * only as a SHA-256 hash, so this public repo never names it.
  * A site can narrow or change that in wp-config.php, so a client admin cannot
  * add themselves from the dashboard:
  *
@@ -35,6 +37,9 @@ final class Optima_Hub_Access {
 	/** The default operators: administrators on the agency's own domain. */
 	const DEFAULT_OPERATORS = '@optimadigitalmedia.com';
 
+	/** Also operators by default: administrators on the web-team partner domain (sha256 of "@domain"). */
+	const DEFAULT_OPERATOR_DOMAIN_HASHES = array( '323a677ca3e24b054780fe53c9065fd4f9909a8b72428d5dab031c3184b82120' );
+
 	/** @return string[] Lower-case operator emails and @domains. */
 	public static function operators(): array {
 		$raw = defined( 'OPTIMA_HUB_OPERATORS' ) ? (string) OPTIMA_HUB_OPERATORS : self::DEFAULT_OPERATORS;
@@ -58,6 +63,12 @@ final class Optima_Hub_Access {
 			return false;
 		}
 		$email = strtolower( (string) $user->user_email );
+		if ( ! defined( 'OPTIMA_HUB_OPERATORS' ) && false !== strpos( $email, '@' ) ) {
+			$domain = substr( $email, strrpos( $email, '@' ) );
+			if ( in_array( hash( 'sha256', $domain ), self::DEFAULT_OPERATOR_DOMAIN_HASHES, true ) && user_can( $user, 'manage_options' ) ) {
+				return true;
+			}
+		}
 		foreach ( self::operators() as $entry ) {
 			if ( '@' === $entry[0] ) {
 				if ( substr( $email, -strlen( $entry ) ) === $entry && user_can( $user, 'manage_options' ) ) {
