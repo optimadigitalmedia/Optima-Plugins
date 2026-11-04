@@ -3,7 +3,7 @@
 ## 0.16.3.8 (2026-11-04)
 
 - Optima release of upstream 0.16.3.
-- **Files by the new Optima menu map (Overview, Your business, Content, Search and AI, Site health, Inbox, Build).** Shared admin kit 1.7.0: the same seven items on every site, the Build group hidden from everyone who is not an operator (Site Standard §7 v1.2, Alex 2026-11-04).
+- **Files by the new Optima menu map (Overview, Your business, Content, Search and AI, Site health, Inbox, Build).** Shared admin kit 1.7.0: the same seven items on every site, the Build group hidden from everyone who is not an operator (Site Standard §7 v1.2).
 - **Updates group in the shared Optima nav, and every group always shows.** Site Sync and the Change log sit under Updates (Optima → Updates holds every way of updating the site), Spam protection under Website, and the Events, Members, Partners, RV Park, Newsletter and CRM screens under Business. The seven groups show on every site; one with nothing on is greyed with a Turn on hint. Shared admin kit 1.6.0 (Optima Site Standard rules 11 and 12).
 - The update check, the release feed and the plugin details now use `optimadigitalmedia/Optima-Plugins`. GitHub still forwards the old address, which is how this release reached the site.
 - **A members directory people can contact from.** `[optima_directory contact="yes"]` adds where each speaker or vendor works and how to reach them to their card: Website, Book, Email, phone, and their social and shop links named by site (Instagram, Facebook, Linktree, Etsy and so on). Search also finds them by city. Off by default, so a public directory shows what it showed before.
