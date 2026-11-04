@@ -33,6 +33,7 @@ final class Optima_Hub_Owns {
 		'analytics'     => 'optima-analytics',
 		'forms-guard'   => 'optima-forms-guard',
 		'chat'          => 'optima-chat',
+		'account-privacy' => 'optima-build',
 	);
 
 	/** The fixed spots a theme offers for plugin blocks. */

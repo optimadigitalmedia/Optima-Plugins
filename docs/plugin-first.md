@@ -110,6 +110,7 @@ This reverses today's rule. Today `catalog.json` uses `not_with_themes` to make 
 | `analytics` (Tag Manager, consent, click events) | optima-analytics |
 | `forms-guard` | optima-forms-guard |
 | `chat` | optima-chat |
+| `account-privacy` | optima-build (on every site: author pages, the public users list and the users sitemap closed to visitors) |
 
 **Every theme wraps its own version of a job:**
 

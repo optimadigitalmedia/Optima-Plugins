@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.9.6 (2026-11-04)
+
+- **Account names stay private on every site** (new job `account-privacy`). For visitors, author pages and `?author=N` go to the About page (or home), the public REST users list and the users sitemap are closed, and author links point to About. Signed-in people and the editor are unaffected; bylines and schema keep the display name, so nothing visible changes. Login names are often email addresses and can show who has access to a site. Filters: `optima_build_account_privacy`, `optima_build_author_target`.
+
 ## 0.7.9.5 (2026-11-04)
 
 - Optima layer revision 5: the plugin-first foundation (`docs/plugin-first.md`).
