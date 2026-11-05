@@ -28,6 +28,20 @@ final class Optima_Results_Editor {
 		add_filter( 'manage_' . Optima_Results::POST_TYPE . '_posts_columns', array( __CLASS__, 'columns' ) );
 		add_action( 'manage_' . Optima_Results::POST_TYPE . '_posts_custom_column', array( __CLASS__, 'column' ), 10, 2 );
 		add_filter( 'post_updated_messages', array( __CLASS__, 'messages' ) );
+		add_action( 'pre_get_posts', array( __CLASS__, 'filter_by_attorney' ) );
+	}
+
+	/** ?optima_attorney=<profile id> on the results list: that person's results (linked from People). */
+	public static function filter_by_attorney( WP_Query $q ): void {
+		if ( ! is_admin() || ! $q->is_main_query() || Optima_Results::POST_TYPE !== $q->get( 'post_type' ) ) {
+			return;
+		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- a list filter, read only.
+		$who = isset( $_GET['optima_attorney'] ) ? absint( wp_unslash( $_GET['optima_attorney'] ) ) : 0;
+		if ( $who ) {
+			$q->set( 'meta_key', Optima_Results::META['attorney'] );
+			$q->set( 'meta_value', (string) $who );
+		}
 	}
 
 	/** Set when this request held a result back, so the redirect can say why. */
@@ -97,6 +111,30 @@ final class Optima_Results_Editor {
 					<span class="sr-help"><?php esc_html_e( 'Shown as month and year.', 'optima-results' ); ?></span>
 				</p>
 			</div>
+			<?php if ( class_exists( 'Optima_Team' ) && post_type_exists( Optima_Team::POST_TYPE ) ) : ?>
+				<?php
+				$people = get_posts(
+					array(
+						'post_type'      => Optima_Team::POST_TYPE,
+						'post_status'    => 'publish',
+						'posts_per_page' => 200,
+						'orderby'        => 'title',
+						'order'          => 'ASC',
+						'no_found_rows'  => true,
+					)
+				);
+				?>
+				<p class="sr-field">
+					<label for="sr-attorney"><?php esc_html_e( 'Attorney', 'optima-results' ); ?></label>
+					<select id="sr-attorney" name="optima_result[attorney]">
+						<option value="0"><?php esc_html_e( 'Not named', 'optima-results' ); ?></option>
+						<?php foreach ( $people as $person ) : ?>
+							<option value="<?php echo esc_attr( (string) $person->ID ); ?>" <?php selected( $r['attorney_id'], (int) $person->ID ); ?>><?php echo esc_html( $person->post_title ); ?></option>
+						<?php endforeach; ?>
+					</select>
+					<span class="sr-help"><?php esc_html_e( 'From People. The name shows on the result and the result counts on their profile. Nobody here? Add the person under Optima, People first.', 'optima-results' ); ?></span>
+				</p>
+			<?php endif; ?>
 			<p class="sr-field">
 				<label for="sr-description"><?php esc_html_e( 'Short description', 'optima-results' ); ?></label>
 				<textarea id="sr-description" name="optima_result[description]" rows="4" maxlength="600"><?php echo esc_textarea( $r['description'] ); ?></textarea>
@@ -174,6 +212,7 @@ final class Optima_Results_Editor {
 			'approved'    => ! empty( $in['approved'] ),
 			'approver'    => sanitize_text_field( (string) ( $in['approver'] ?? '' ) ),
 			'approved_on' => Optima_Results::valid_date( $on ) ? $on : '',
+			'attorney'    => absint( $in['attorney'] ?? 0 ),
 		);
 	}
 
@@ -213,6 +252,9 @@ final class Optima_Results_Editor {
 		update_post_meta( $post_id, $m['date'], $p['date'] );
 		update_post_meta( $post_id, $m['description'], $p['description'] );
 		update_post_meta( $post_id, $m['approver'], $p['approver'] );
+		// Only a real People profile may be named.
+		$attorney = $p['attorney'] && class_exists( 'Optima_Team' ) && Optima_Team::POST_TYPE === get_post_type( $p['attorney'] ) ? $p['attorney'] : 0;
+		update_post_meta( $post_id, $m['attorney'], (string) $attorney );
 		if ( $p['approved'] ) {
 			update_post_meta( $post_id, $m['approved'], '1' );
 			// Fill in today when the approval is ticked without a date.
@@ -312,6 +354,9 @@ final class Optima_Results_Editor {
 			if ( 'title' === $key ) {
 				$out[ $key ] = __( 'Headline', 'optima-results' );
 				$out['sr_type'] = __( 'Type', 'optima-results' );
+				if ( class_exists( 'Optima_Team' ) ) {
+					$out['sr_attorney'] = __( 'Attorney', 'optima-results' );
+				}
 				continue;
 			}
 			if ( 'date' === $key ) {
@@ -326,6 +371,8 @@ final class Optima_Results_Editor {
 		$r = Optima_Results::get( $post_id );
 		if ( 'sr_type' === $col ) {
 			echo esc_html( $r['type_label'] );
+		} elseif ( 'sr_attorney' === $col ) {
+			echo $r['attorney_id'] ? '<a href="' . esc_url( (string) get_edit_post_link( $r['attorney_id'] ) ) . '">' . esc_html( $r['attorney'] ) . '</a>' : '<span class="description">' . esc_html__( 'Not named', 'optima-results' ) . '</span>';
 		} elseif ( 'sr_approval' === $col ) {
 			if ( Optima_Results::is_approved( $r['approved'], $r['approver'] ) ) {
 				/* translators: 1: approver name, 2: date */

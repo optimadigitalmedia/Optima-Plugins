@@ -83,3 +83,7 @@
 }
 
 .optima-team-profile .screen-reader-text { border: 0; clip: rect(1px, 1px, 1px, 1px); clip-path: inset(50%); height: 1px; margin: -1px; overflow: hidden; padding: 0; position: absolute; width: 1px; word-wrap: normal !important; }
+
+/* Reviewed by: one line at the end of a page, printed through the theme's before-close slot. */
+.optima-reviewed { margin: var(--optima-team-gap, 1.5rem) 0 0; font-size: .9rem; color: var(--optima-team-muted, inherit); }
+.optima-reviewed a { color: var(--optima-team-accent, inherit); text-decoration: underline; text-underline-offset: .15em; }

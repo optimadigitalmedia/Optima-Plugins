@@ -64,3 +64,8 @@
 @media (prefers-reduced-motion: reduce) {
 	.optima-results__filter { transition: none; }
 }
+
+/* The attorney named on a result, from People (rule 47). Same line as the area and date. */
+.optima-result__attorney { display: inline; }
+.optima-result__attorney a { color: inherit; text-decoration: underline; text-underline-offset: .15em; }
+.optima-result__attorney[hidden] { display: none; }

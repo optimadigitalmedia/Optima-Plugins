@@ -95,7 +95,14 @@ final class Optima_Results_Render {
 		$h    .= '<p class="optima-result__amount" data-sr="amount"' . ( '' === $r['amount'] ? ' hidden' : '' ) . '>' . esc_html( $r['amount'] ) . '</p>';
 		$h    .= '<p class="optima-result__description" data-sr="description"' . ( '' === $r['description'] ? ' hidden' : '' ) . '>' . esc_html( $r['description'] ) . '</p>';
 		$h    .= '<p class="optima-result__meta"><span class="optima-result__area" data-sr="area"' . ( '' === $r['area'] ? ' hidden' : '' ) . '>' . esc_html( $r['area'] ) . '</span>';
-		$h    .= '<span class="optima-result__date" data-sr="date"' . ( '' === $date ? ' hidden' : '' ) . '>' . esc_html( $date ) . '</span></p>';
+		$h    .= '<span class="optima-result__date" data-sr="date"' . ( '' === $date ? ' hidden' : '' ) . '>' . esc_html( $date ) . '</span>';
+		// The attorney, from People: a link to the profile page while it is published.
+		$attorney = (string) ( $r['attorney'] ?? '' );
+		$link     = ! empty( $r['attorney_id'] ) ? get_permalink( (int) $r['attorney_id'] ) : '';
+		$h       .= '<span class="optima-result__attorney" data-sr="attorney"' . ( '' === $attorney ? ' hidden' : '' ) . '>'
+			/* translators: %s: attorney's name */
+			. ( '' !== $link ? '<a href="' . esc_url( $link ) . '">' : '' ) . esc_html( '' !== $attorney ? sprintf( __( 'Attorney: %s', 'optima-results' ), $attorney ) : '' ) . ( '' !== $link ? '</a>' : '' )
+			. '</span></p>';
 		$h    .= self::disclaimer_html();
 		$h    .= '</article>';
 		return $h;

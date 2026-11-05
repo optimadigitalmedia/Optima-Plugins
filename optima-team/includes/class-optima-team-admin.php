@@ -155,7 +155,7 @@ final class Optima_Team_Admin {
 			<p><?php esc_html_e( 'People show in order of the Order number on each profile, lowest first, then by name. Open a person to fill in their credentials.', 'optima-team' ); ?></p>
 			<?php if ( $people ) : ?>
 				<table class="widefat striped">
-					<thead><tr><th scope="col"><?php esc_html_e( 'Name', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Role', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Trust signals', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Status', 'optima-team' ); ?></th></tr></thead>
+					<thead><tr><th scope="col"><?php esc_html_e( 'Name', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Role', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Feeds', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Trust signals', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Status', 'optima-team' ); ?></th></tr></thead>
 					<tbody>
 					<?php foreach ( $people as $person ) : ?>
 						<?php
@@ -167,10 +167,22 @@ final class Optima_Team_Admin {
 								$todo[] = $check[0];
 							}
 						}
+						$c     = Optima_Team_Links::counts( (int) $person->ID );
+						$u     = Optima_Team_Links::urls( (int) $person->ID );
+						$feeds = array();
+						/* translators: %d: posts */
+						$feeds[] = '' !== $u['posts'] ? '<a href="' . esc_url( $u['posts'] ) . '">' . esc_html( sprintf( _n( '%d post', '%d posts', $c['posts'], 'optima-team' ), $c['posts'] ) ) . '</a>' : esc_html__( 'no byline', 'optima-team' );
+						if ( post_type_exists( 'optima_result' ) ) {
+							/* translators: %d: case results */
+							$feeds[] = '<a href="' . esc_url( $u['results'] ) . '">' . esc_html( sprintf( _n( '%d result', '%d results', $c['results'], 'optima-team' ), $c['results'] ) ) . '</a>';
+						}
+						/* translators: %d: reviewed pages */
+						$feeds[] = '<a href="' . esc_url( $u['reviewed'] ) . '">' . esc_html( sprintf( _n( '%d reviewed page', '%d reviewed pages', $c['reviewed'], 'optima-team' ), $c['reviewed'] ) ) . '</a>';
 						?>
 						<tr>
 							<td><a href="<?php echo esc_url( (string) get_edit_post_link( $person->ID ) ); ?>"><strong><?php echo esc_html( '' !== $person->post_title ? $person->post_title : __( '(no name)', 'optima-team' ) ); ?></strong></a></td>
 							<td><?php echo esc_html( Optima_Team::profile( (int) $person->ID )['role'] ); ?></td>
+							<td><?php echo wp_kses_post( implode( ' · ', $feeds ) ); ?></td>
 							<td>
 								<span class="sh-pill <?php echo $done === count( $checks ) ? 'is-done' : 'is-received'; ?>">
 									<?php

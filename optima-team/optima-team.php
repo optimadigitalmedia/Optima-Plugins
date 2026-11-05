@@ -40,6 +40,8 @@ require_once __DIR__ . '/includes/class-optima-team-front.php';
 require_once __DIR__ . '/includes/class-optima-team-schema.php';
 require_once __DIR__ . '/includes/class-optima-team-admin.php';
 require_once __DIR__ . '/includes/class-optima-team-add.php';
+require_once __DIR__ . '/includes/class-optima-team-links.php';
+require_once __DIR__ . '/includes/class-optima-team-reviewed.php';
 
 Optima_Team::boot();
 Optima_Team_Editor::boot();
@@ -47,6 +49,8 @@ Optima_Team_Front::boot();
 Optima_Team_Schema::boot();
 Optima_Team_Admin::boot();
 Optima_Team_Add::boot();
+Optima_Team_Links::boot();
+Optima_Team_Reviewed::boot();
 
 register_activation_hook(
 	__FILE__,
