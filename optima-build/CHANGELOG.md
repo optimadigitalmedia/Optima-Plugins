@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.11.0 (2026-11-05)
+
+- Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).
+- One Update Screen: Build, Updates holds ten blocks in update order (site status with Copy for Claude, plugin updates, theme, fill from theme again, approved copy, release channel, email, what Site health flags, site lock, last update), each Needs you, Ready or Done. Update now updates a plugin or the theme in place through Optima_Hub_Features::handle() and returns to Updates; WordPress's bare update screen is no longer used.
+- The release list asks again when it is older than an hour or WordPress's update list is gone; Overview, Updates and Features say when it was last checked.
+- One count: change requests leave the Inbox count and have their own list; Inbox lists exactly what it counts and hides empty groups; review counts read the Review inbox's list.
+- Overview: body-size status line with a state pill, the six dashboard tiles always (Not linked yet), plain last change, no link a viewer cannot open. Everyone who can view lands on Overview after sign-in.
+- Site health: score line and one score per group, Copy for Claude beside it, HTTPS, test builds in one line, Real authors links to People. Features: one sentence, same card footer, Go back behind a menu and a confirm. Request a change: operators get the list with a status select that saves on change and Log a request.
+- New screens: Your business, Details on a site without Optima Core (same option and address as Core's), and Content, Pages and posts. Details lists values typed on other screens before that differ. The WordPress Dashboard drops the Welcome panel and its own site-health box. site-build and site-build-features open the same tab on every site.
+
 ## 0.7.10.0 (2026-11-05)
 
 - Overview is the operator glance (rule 46): one status line (health, updates waiting, Inbox count, last version check), the dashboards row (Recon, Analytics, Search Console, Business Profile and the host from a new optional "dashboards" section of the theme's setup file, plus the site's repo and the site itself), the queue (Updates, Inbox, Requests, each a short list with one action), and the site facts row (theme, Optima Build and channel, features on, last change, site lock). The client answers, everyday-job links and request box left this screen; the request form stays under Inbox, Request a change. An operator who signs in with no deep link lands on Overview.

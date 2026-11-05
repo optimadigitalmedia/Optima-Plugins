@@ -82,8 +82,12 @@ final class Optima_Sync_Admin {
 		self::flash();
 
 		if ( ! $plan['manifest'] ) {
-			echo '<section class="sh-box"><h2>This theme does not bundle any copy yet</h2>';
-			echo '<p>Site Sync keeps pages in step with the copy a theme ships in its <code>optima-sync.json</code> file. This theme has none, so there is nothing to sync and nothing will change.</p></section>';
+			echo '<section class="sh-box"><h2>No approved copy in this theme yet</h2>';
+			echo '<p>This theme carries no approved copy yet. Approved words reach the site with the next theme release: approve the page in the site repo\'s content folder, release the theme, then apply it here.</p>';
+			if ( class_exists( 'Optima_Hub_Admin' ) ) {
+				echo '<p><a class="button" href="' . esc_url( Optima_Hub_Admin::url( 'updates' ) . '#sh-theme' ) . '">The theme and its repo on Build, Updates</a></p>';
+			}
+			echo '</section>';
 			return;
 		}
 
@@ -241,6 +245,12 @@ final class Optima_Sync_Admin {
 		} else {
 			$result = Optima_Sync::apply( $review, 'safe' );
 			$text   = is_wp_error( $result ) ? $result->get_error_message() : sprintf( 'Synced %d item(s). Purge the hosting cache to see them live.', $result['written'] );
+		}
+		// Applied from Build, Updates: back there, with the result as its notice.
+		if ( 'updates' === sanitize_key( wp_unslash( $_POST['back'] ?? '' ) ) && class_exists( 'Optima_Hub_Admin' ) ) {
+			set_transient( 'optima_hub_notice_' . get_current_user_id(), array( 'type' => is_wp_error( $result ) ? 'error' : 'success', 'message' => $text ), MINUTE_IN_SECONDS );
+			wp_safe_redirect( Optima_Hub_Admin::url( 'updates' ) . '#sh-up-copy' );
+			exit;
 		}
 		set_transient( 'optima_sync_flash_' . get_current_user_id(), array( 'type' => is_wp_error( $result ) ? 'error' : 'success', 'text' => $text ), 300 );
 		wp_safe_redirect( self::url() );

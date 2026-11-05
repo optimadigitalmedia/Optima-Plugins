@@ -85,6 +85,56 @@ final class Optima_Team_Editor {
 
 	/* ---------- the Profile box ---------- */
 
+	/**
+	 * The credentials, read-only (rule 47): bar admissions, education, awards,
+	 * memberships and profile links come from the theme's setup file, exported
+	 * from the client's Knowledge Hub, and are never typed here. Fill from theme
+	 * again on Build, Updates brings in a change.
+	 */
+	private static function facts( array $p, bool $law ): void {
+		$lines = array();
+		foreach ( $p['education'] as $r ) {
+			$lines['education'][] = trim( implode( ', ', array_filter( array( $r['school'] ?? '', $r['degree'] ?? '', $r['year'] ?? '' ) ) ) );
+		}
+		foreach ( $p['bar'] as $r ) {
+			$lines['bar'][] = trim( implode( ', ', array_filter( array( $r['state'] ?? '', $r['year'] ?? '', ! empty( $r['number'] ) ? '#' . $r['number'] : '' ) ) ) );
+		}
+		foreach ( $p['awards'] as $r ) {
+			$lines['awards'][] = trim( implode( ', ', array_filter( array( $r['name'] ?? '', $r['year'] ?? '', $r['issuer'] ?? '' ) ) ) );
+		}
+		$lines['memberships'] = $p['memberships'];
+		$lines['same_as']     = $p['same_as'];
+		$labels = array(
+			'education'   => __( 'Education', 'optima-team' ),
+			'bar'         => __( 'Bar admissions', 'optima-team' ),
+			'awards'      => __( 'Awards and honors', 'optima-team' ),
+			'memberships' => __( 'Professional memberships', 'optima-team' ),
+			'same_as'     => __( 'Profile links', 'optima-team' ),
+		);
+		if ( ! $law ) {
+			unset( $labels['bar'] );
+		}
+		$refill = class_exists( 'Optima_Hub_Admin' ) ? Optima_Hub_Admin::url( 'updates' ) . '#sh-up-fill' : '';
+		echo '<fieldset class="st-group st-facts"><legend>' . esc_html__( 'Credentials', 'optima-team' ) . '</legend>';
+		echo '<p class="sh-note">' . esc_html__( 'Facts come from the setup file (exported from the client\'s Knowledge Hub), never typed here. Change them in the Hub, release the theme, then fill from theme again.', 'optima-team' );
+		if ( '' !== $refill ) {
+			echo ' <a href="' . esc_url( $refill ) . '">' . esc_html__( 'Fill from theme again', 'optima-team' ) . ' &rsaquo;</a>';
+		}
+		echo '</p>';
+		foreach ( $labels as $key => $label ) {
+			$items = array_values( array_filter( (array) ( $lines[ $key ] ?? array() ) ) );
+			echo '<div class="sh-fact"><span class="sh-label">' . esc_html( $label ) . '</span>';
+			echo $items ? '<strong>' . esc_html( implode( '; ', $items ) ) . '</strong>' : '<strong class="sh-fact-empty">' . esc_html__( 'None in the setup file', 'optima-team' ) . '</strong>';
+			echo '<span></span></div>';
+		}
+		if ( $law ) {
+			echo '<p class="st-check"><label><input type="checkbox" name="optima_team[attorney]" value="1" ' . checked( $p['attorney'], 1, false ) . '> ' . esc_html__( 'This person is an attorney', 'optima-team' ) . '</label></p>';
+		} else {
+			echo '<input type="hidden" name="optima_team[attorney]" value="' . esc_attr( (string) $p['attorney'] ) . '">';
+		}
+		echo '</fieldset>';
+	}
+
 	public static function render_profile( $post ): void {
 		$p = Optima_Team::profile( (int) $post->ID );
 		wp_nonce_field( 'optima_team_save', self::NONCE );
@@ -128,43 +178,7 @@ final class Optima_Team_Editor {
 				</div>
 			</fieldset>
 
-			<?php self::repeater( 'education', __( 'Education', 'optima-team' ), __( 'Add a school', 'optima-team' ), array( 'school' => __( 'School', 'optima-team' ), 'degree' => __( 'Degree', 'optima-team' ), 'year' => __( 'Year', 'optima-team' ) ), $p['education'] ); ?>
-
-			<?php if ( $law ) : ?>
-				<div class="st-law">
-					<p class="st-check">
-						<label><input type="checkbox" name="optima_team[attorney]" value="1" <?php checked( $p['attorney'] ); ?> data-st-toggle="bar"> <?php esc_html_e( 'This person is an attorney', 'optima-team' ); ?></label>
-					</p>
-					<div data-st-show="bar" <?php echo $p['attorney'] ? '' : 'hidden'; ?>>
-						<?php self::repeater( 'bar', __( 'Bar admissions', 'optima-team' ), __( 'Add a bar admission', 'optima-team' ), array( 'state' => __( 'State or court', 'optima-team' ), 'year' => __( 'Year admitted', 'optima-team' ), 'number' => __( 'Bar number (optional)', 'optima-team' ), 'url' => __( 'Bar profile link (optional)', 'optima-team' ) ), $p['bar'], __( 'Shows only when filled in. A bar profile link lets visitors confirm the license themselves.', 'optima-team' ) ); ?>
-					</div>
-				</div>
-			<?php else : ?>
-				<?php
-				// Keep any saved admissions if the site is switched out of law mode.
-				foreach ( $p['bar'] as $i => $row ) {
-					foreach ( $row as $col => $value ) {
-						echo '<input type="hidden" name="optima_team[bar][' . esc_attr( (string) $i ) . '][' . esc_attr( $col ) . ']" value="' . esc_attr( $value ) . '">';
-					}
-				}
-				?>
-				<input type="hidden" name="optima_team[attorney]" value="<?php echo esc_attr( (string) $p['attorney'] ); ?>">
-			<?php endif; ?>
-
-			<?php self::repeater( 'awards', __( 'Awards and honors', 'optima-team' ), __( 'Add an award', 'optima-team' ), array( 'name' => __( 'Award', 'optima-team' ), 'year' => __( 'Year', 'optima-team' ), 'issuer' => __( 'Given by', 'optima-team' ) ), $p['awards'], __( 'List only recognitions you can document, with the group that gave each one.', 'optima-team' ) ); ?>
-
-			<div class="st-grid">
-				<p class="st-field">
-					<label for="st-memberships"><?php esc_html_e( 'Professional memberships', 'optima-team' ); ?></label>
-					<textarea id="st-memberships" name="optima_team[memberships]" rows="3"><?php echo esc_textarea( implode( "\n", $p['memberships'] ) ); ?></textarea>
-					<span class="description"><?php esc_html_e( 'One per line.', 'optima-team' ); ?></span>
-				</p>
-				<p class="st-field">
-					<label for="st-sameas"><?php esc_html_e( 'Profile links', 'optima-team' ); ?></label>
-					<textarea id="st-sameas" name="optima_team[same_as]" rows="3" placeholder="https://www.linkedin.com/in/..."><?php echo esc_textarea( implode( "\n", $p['same_as'] ) ); ?></textarea>
-					<span class="description"><?php esc_html_e( 'One link per line: LinkedIn, a state bar profile, Avvo, or another public profile of this person.', 'optima-team' ); ?></span>
-				</p>
-			</div>
+			<?php self::facts( $p, $law ); ?>
 
 			<fieldset class="st-group">
 				<legend><?php esc_html_e( 'Contact and byline', 'optima-team' ); ?></legend>
@@ -294,6 +308,11 @@ final class Optima_Team_Editor {
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- every key is sanitized in sanitize_profile().
 		$raw = isset( $_POST['optima_team'] ) ? (array) wp_unslash( $_POST['optima_team'] ) : array();
 		$p   = Optima_Team::sanitize_profile( $raw );
+		// Credentials are read-only on this screen (rule 47): the saved ones always stay.
+		$was = Optima_Team::profile( (int) $post_id );
+		foreach ( array( 'bar', 'education', 'awards', 'memberships', 'same_as' ) as $key ) {
+			$p[ $key ] = $was[ $key ];
+		}
 		// Only someone who can edit other people's posts may tie a profile to another login.
 		if ( $p['user'] && get_current_user_id() !== $p['user'] && ! current_user_can( 'edit_others_posts' ) ) {
 			$p['user'] = (int) Optima_Team::profile( (int) $post_id )['user'];

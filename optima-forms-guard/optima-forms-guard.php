@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Optima Forms Guard
  * Description:       In-house spam protection for Gravity Forms: a hidden honeypot, a time trap, and a signed token. Also refuses files sent to File Upload fields set to Hidden (a reported Gravity Forms security flaw) and names those fields for you to fix. No reCAPTCHA, no Akismet, no third-party calls.
- * Version:           0.3.2.5
+ * Version:           0.3.2.6
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Requires Plugins:  gravityforms
@@ -34,6 +34,13 @@ add_action(
 // registered before plugins_loaded fires.
 require_once __DIR__ . '/includes/class-optima-forms-guard-uploads.php';
 Optima_Forms_Guard_Uploads::boot();
+
+define( 'OPTIMA_FORMS_GUARD_FILE', __FILE__ );
+if ( is_admin() ) {
+	require_once __DIR__ . '/includes/class-optima-admin-ui.php';
+	require_once __DIR__ . '/includes/class-optima-forms-guard-admin.php';
+	Optima_Forms_Guard_Admin::boot();
+}
 
 final class Optima_Forms_Guard {
 

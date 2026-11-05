@@ -98,15 +98,22 @@ final class Optima_Chat_Admin {
 			'optima_from' => __( 'From', 'optima-chat' ),
 			'optima_kind' => __( 'Type', 'optima-chat' ),
 			'optima_done' => __( 'Answered', 'optima-chat' ),
-			'date'       => __( 'Asked', 'optima-chat' ),
+			// The day it was asked. WordPress's own date column says "Last Modified" for a private post.
+			'optima_asked' => __( 'Asked', 'optima-chat' ),
 		);
 	}
 
 	public static function column( string $col, int $id ): void {
-		if ( 'optima_from' === $col ) {
+		if ( 'optima_asked' === $col ) {
+			echo esc_html( get_the_date( 'M j, Y g:i a', $id ) );
+		} elseif ( 'optima_from' === $col ) {
 			$email = (string) get_post_meta( $id, '_optima_chat_email', true );
 			$phone = (string) get_post_meta( $id, '_optima_chat_phone', true );
-			echo esc_html( (string) get_post_meta( $id, '_optima_chat_name', true ) );
+			$name  = (string) get_post_meta( $id, '_optima_chat_name', true );
+			if ( '' === $name . $email . $phone ) {
+				echo '<span class="description">' . esc_html__( 'No contact left', 'optima-chat' ) . '</span>';
+			}
+			echo esc_html( $name );
 			if ( '' !== $phone ) {
 				echo '<br><a href="' . esc_url( 'sms:+' . $phone, array( 'sms' ) ) . '">' . esc_html( Optima_Chat::pretty_phone( $phone ) ) . '</a>';
 			}
@@ -115,6 +122,7 @@ final class Optima_Chat_Admin {
 			}
 		} elseif ( 'optima_kind' === $col ) {
 			$k = (string) get_post_meta( $id, '_optima_chat_kind', true );
+			$k = '' !== $k ? $k : 'question'; // Saved before kinds existed: a question.
 			echo esc_html( array( 'question' => __( 'Question', 'optima-chat' ), 'change' => __( 'Change request', 'optima-chat' ), 'person' => __( 'Wants a person', 'optima-chat' ) )[ $k ] ?? $k );
 		} elseif ( 'optima_done' === $col ) {
 			echo get_post_meta( $id, '_optima_chat_answered', true ) ? '<span class="sh-pill is-good">' . esc_html__( 'Yes', 'optima-chat' ) . '</span>' : '<span class="sh-pill is-warn">' . esc_html__( 'Not yet', 'optima-chat' ) . '</span>';
@@ -197,8 +205,24 @@ final class Optima_Chat_Admin {
 		echo '<tr><th scope="row">' . esc_html( $label ) . '</th><td>' . $field . ( $help ? '<p class="description">' . esc_html( $help ) . '</p>' : '' ) . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput -- fields escaped by caller.
 	}
 
+	/** The name each field is read out as (every input has a label). */
+	const LABELS = array(
+		'team'      => 'Team names',
+		'name'      => 'Assistant name',
+		'launcher'  => 'Button text',
+		'photo_1'   => 'First photo',
+		'photo_2'   => 'Second photo',
+		'teaser_by' => 'Who the greeting is from',
+		'notify'    => 'Email new questions to',
+		'alert'     => 'Text me new questions',
+		'book_url'  => 'Booking page',
+		'work_url'  => 'Our work page',
+		'ai_url'    => 'AI server address',
+		'ai_key'    => 'Connection key',
+	);
+
 	private static function text( string $key, string $value, string $placeholder = '', string $type = 'text' ): string {
-		return '<input type="' . esc_attr( $type ) . '" class="regular-text" name="' . esc_attr( Optima_Chat::OPTION . '[' . $key . ']' ) . '" value="' . esc_attr( $value ) . '" placeholder="' . esc_attr( $placeholder ) . '">';
+		return '<input type="' . esc_attr( $type ) . '" class="regular-text" id="optima-chat-' . esc_attr( $key ) . '" aria-label="' . esc_attr( self::LABELS[ $key ] ?? $key ) . '" name="' . esc_attr( Optima_Chat::OPTION . '[' . $key . ']' ) . '" value="' . esc_attr( $value ) . '" placeholder="' . esc_attr( $placeholder ) . '">';
 	}
 
 	public static function render(): void {
@@ -213,12 +237,12 @@ final class Optima_Chat_Admin {
 		settings_errors( $o );
 		?>
 		<div class="sh-grid sh-grid-3">
-			<section class="sh-box sh-check is-<?php echo $s['enabled'] ? 'good' : 'warn'; ?>">
+			<section class="sh-box sh-check is-<?php echo $s['enabled'] ? 'good' : 'off'; ?>">
 				<p class="sh-label"><?php esc_html_e( 'On the site', 'optima-chat' ); ?></p>
 				<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php echo $s['enabled'] ? esc_html__( 'Showing', 'optima-chat' ) : esc_html__( 'Hidden', 'optima-chat' ); ?></p>
 				<p class="sh-note"><?php echo $s['enabled'] ? esc_html__( 'Visitors see the chat button on every page.', 'optima-chat' ) : esc_html__( 'Fill in the details below, then tick Show the chat on the site.', 'optima-chat' ); ?></p>
 			</section>
-			<section class="sh-box sh-check is-<?php echo $ai ? 'good' : 'warn'; ?>">
+			<section class="sh-box sh-check is-<?php echo $ai ? 'good' : 'off'; ?>">
 				<p class="sh-label"><?php esc_html_e( 'Answers', 'optima-chat' ); ?></p>
 				<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php echo $ai ? esc_html__( 'AI connected', 'optima-chat' ) : esc_html__( 'Collecting questions', 'optima-chat' ); ?></p>
 				<p class="sh-note"><?php echo $ai ? esc_html__( 'Free-text questions get an AI answer. If the AI server is down, questions are collected instead.', 'optima-chat' ) : esc_html__( 'Common questions are answered right away. Anything else is saved with the visitor\'s email for you to answer.', 'optima-chat' ); ?></p>
@@ -236,12 +260,12 @@ final class Optima_Chat_Admin {
 				<h2 class="sh-title"><?php esc_html_e( 'How it looks', 'optima-chat' ); ?></h2>
 				<table class="form-table" role="presentation">
 					<?php
-					self::row( __( 'Show the chat on the site', 'optima-chat' ), '<label><input type="checkbox" name="' . esc_attr( $o ) . '[enabled]" value="1" ' . checked( $s['enabled'], true, false ) . '> ' . esc_html__( 'Show the chat button on every page', 'optima-chat' ) . '</label>' );
+					self::row( __( 'Show the chat on the site', 'optima-chat' ), '<label class="sh-target"><input type="checkbox" name="' . esc_attr( $o ) . '[enabled]" value="1" ' . checked( $s['enabled'], true, false ) . '> ' . esc_html__( 'Show the chat button on every page', 'optima-chat' ) . '</label>' );
 					self::row( __( 'Team names', 'optima-chat' ), self::text( 'team', $s['team'], 'the Optima team' ), __( 'Who answers. Used in the button ("Ask our team") and the replies. Blank: "our team".', 'optima-chat' ) );
 					self::row( __( 'Assistant name', 'optima-chat' ), self::text( 'name', $s['name'], __( 'Site name + assistant', 'optima-chat' ) ) );
 					self::row( __( 'Button text', 'optima-chat' ), self::text( 'launcher', $s['launcher'], __( 'Ask + team names', 'optima-chat' ) ) );
 					self::row( __( 'Photos', 'optima-chat' ), self::text( 'photo_1', $s['photo_1'], 'https://', 'url' ) . '<br>' . self::text( 'photo_2', $s['photo_2'], 'https://', 'url' ), __( 'Optional. Paste the Media links of the people who answer. They show on the button and in the chat.', 'optima-chat' ) );
-					self::row( __( 'Greeting card', 'optima-chat' ), '<label><input type="checkbox" name="' . esc_attr( $o ) . '[teaser]" value="1" ' . checked( $s['teaser'], true, false ) . '> ' . esc_html__( 'Show a small greeting after a few seconds, once per visit', 'optima-chat' ) . '</label><br>' . self::text( 'teaser_by', $s['teaser_by'], 'Your team at Optima' ), __( 'Who the greeting is from.', 'optima-chat' ) );
+					self::row( __( 'Greeting card', 'optima-chat' ), '<label class="sh-target"><input type="checkbox" name="' . esc_attr( $o ) . '[teaser]" value="1" ' . checked( $s['teaser'], true, false ) . '> ' . esc_html__( 'Show a small greeting after a few seconds, once per visit', 'optima-chat' ) . '</label><br>' . self::text( 'teaser_by', $s['teaser_by'], 'Your team at Optima' ), __( 'Who the greeting is from.', 'optima-chat' ) );
 					?>
 				</table>
 			</div>
@@ -258,24 +282,28 @@ final class Optima_Chat_Admin {
 			</div>
 			<div class="sh-box">
 				<h2 class="sh-title"><?php esc_html_e( 'AI connection', 'optima-chat' ); ?></h2>
-				<p><?php esc_html_e( 'Optima\'s AI server answers free-text questions. The AI company\'s key stays on that server and never touches this site. Leave blank to keep collecting questions.', 'optima-chat' ); ?></p>
+				<div class="sh-status <?php echo $ai ? '' : 'is-off'; ?>"><span class="sh-dot" aria-hidden="true"></span><p class="sh-value"><?php echo $ai ? esc_html__( 'Connected', 'optima-chat' ) : esc_html__( 'Not connected', 'optima-chat' ); ?></p></div>
+				<p class="sh-note"><?php echo $ai ? esc_html__( 'Optima\'s AI server answers free-text questions. The AI company\'s key stays on that server and never touches this site.', 'optima-chat' ) : esc_html__( 'Free-text questions are collected for you to answer. The web team connects the AI server when this site gets it.', 'optima-chat' ); ?></p>
+				<?php Optima_Admin_UI::dev_open(); ?>
 				<table class="form-table" role="presentation">
 					<?php
 					self::row( __( 'AI server address', 'optima-chat' ), self::text( 'ai_url', $s['ai_url'], 'https://', 'url' ) );
 					if ( defined( 'OPTIMA_CHAT_AI_KEY' ) ) {
 						self::row( __( 'Connection key', 'optima-chat' ), esc_html__( 'Set in wp-config.php (OPTIMA_CHAT_AI_KEY).', 'optima-chat' ) );
 					} else {
+						// The key belongs in wp-config.php. A key saved here before keeps working until it is removed.
 						self::row(
 							__( 'Connection key', 'optima-chat' ),
-							self::text( 'ai_key', '', '' !== $s['ai_key'] ? __( 'Saved. Leave blank to keep it.', 'optima-chat' ) : '', 'password' )
-							. ( '' !== $s['ai_key'] ? '<br><label><input type="checkbox" name="' . esc_attr( $o ) . '[ai_key_clear]" value="1"> ' . esc_html__( 'Remove the saved key', 'optima-chat' ) . '</label>' : '' ),
-							__( 'The key Optima\'s server gives this site. Or define OPTIMA_CHAT_AI_KEY in wp-config.php.', 'optima-chat' )
+							( '' !== $s['ai_key']
+								? esc_html__( 'Saved on this screen earlier. Move it to wp-config.php (OPTIMA_CHAT_AI_KEY), then remove it here.', 'optima-chat' ) . '<br><label class="sh-target"><input type="checkbox" name="' . esc_attr( $o ) . '[ai_key_clear]" value="1"> ' . esc_html__( 'Remove the saved key', 'optima-chat' ) . '</label>'
+								: esc_html__( 'Not set. Define OPTIMA_CHAT_AI_KEY in wp-config.php.', 'optima-chat' ) )
 						);
 					}
 					?>
 				</table>
+				<?php Optima_Admin_UI::dev_close(); ?>
 			</div>
-			<?php submit_button(); ?>
+			<?php submit_button( __( 'Save', 'optima-chat' ) ); ?>
 		</form>
 		<?php
 		Optima_Admin_UI::close();

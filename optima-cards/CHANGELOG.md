@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.21.10 (2026-11-05)
+
+- Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).
+- Rule 47: cards come from People profiles (tick a profile; name, title, email and photo read from it). Rule 45: business facts read-only from Details. Rule 7: no accent or font fields; the card reads the design tokens. Migration, once: facts move to Details where blank, and slots link to the profile with the same name or email, keeping their card addresses; unlinked slots keep working. Labels on every input; Reset last and closed.
+
 ## 1.0.21.9 (2026-11-05)
 
 - Labels (rule 44): the screen is named Cards (section 4a), and it sits under People.

@@ -410,6 +410,7 @@ final class Optima_Team_Add {
 			Optima_Team_Admin::SLUG
 		);
 		self::print_notice();
+		echo '<p class="sh-note"><a href="' . esc_url( admin_url( 'admin.php?page=' . Optima_Team_Admin::SLUG ) ) . '">&lsaquo; ' . esc_html__( 'Back to People', 'optima-team' ) . '</a></p>';
 		self::stepper( $state['step'] );
 		switch ( $state['step'] ) {
 			case 2:
@@ -494,7 +495,7 @@ final class Optima_Team_Add {
 					<?php
 					echo esc_html(
 						class_exists( 'Optima_Hub_Setup' )
-							? __( 'Everyone the setup file names is already on the site.', 'optima-team' )
+							? ( Optima_Hub_Setup::data() ? __( 'Everyone the setup file names is already on the site.', 'optima-team' ) : __( 'This theme has no setup file yet, so there is nobody to pick from.', 'optima-team' ) )
 							: __( 'Optima Build is not on, so there is no setup file to pick from.', 'optima-team' )
 					);
 					?>
@@ -631,7 +632,7 @@ final class Optima_Team_Add {
 			<section class="sh-box">
 				<h2 class="sh-title"><?php echo esc_html( $state['name'] ); ?></h2>
 				<table class="sh-table">
-					<tr><td><?php esc_html_e( 'Title', 'optima-team' ); ?></td><td><?php echo esc_html( '' !== $state['role'] ? $state['role'] : '—' ); ?></td></tr>
+					<tr><td><?php esc_html_e( 'Title', 'optima-team' ); ?></td><td><?php echo esc_html( '' !== $state['role'] ? $state['role'] : __( 'Not set', 'optima-team' ) ); ?></td></tr>
 					<tr><td><?php esc_html_e( 'Short bio', 'optima-team' ); ?></td><td><?php echo esc_html( '' !== $state['bio'] ? wp_trim_words( $state['bio'], 30, '…' ) : __( 'None yet', 'optima-team' ) ); ?></td></tr>
 					<tr><td><?php esc_html_e( 'Photo', 'optima-team' ); ?></td><td><?php echo esc_html( $state['photo_id'] ? __( 'From the media library', 'optima-team' ) : ( '' !== $state['photo'] ? __( 'From the setup file', 'optima-team' ) : __( 'None yet', 'optima-team' ) ) ); ?></td></tr>
 					<tr><td><?php esc_html_e( 'Byline', 'optima-team' ); ?></td><td><?php echo esc_html( $user ? $user->display_name : __( 'Nobody', 'optima-team' ) ); ?></td></tr>

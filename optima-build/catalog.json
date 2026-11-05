@@ -46,7 +46,7 @@
     },
     {
       "slug": "optima-forms-guard",
-      "name": "Spam-free forms",
+      "name": "Spam protection for forms",
       "summary": "Blocks spam on your forms quietly, so visitors never have to solve a puzzle.",
       "tier": "core",
       "law": false,

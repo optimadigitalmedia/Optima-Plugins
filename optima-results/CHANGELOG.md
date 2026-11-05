@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.10.1 (2026-11-05)
+
+- Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).
+- One Case results tab with the results list on top (amount, type, year, attorney, above threshold, firm approval); Amount, Year and Above threshold columns on the WordPress list; a publishing threshold setting (default 1000000) that labels results and changes nothing on the site.
+
 ## 0.1.10.0 (2026-11-05)
 
 - A result names its attorney from People (rule 47): a select on the editor, an Attorney column on the list, a filter by profile (?optima_attorney=<id>). The card prints "Attorney: <name>" linked to the profile page while it is published; a removed profile names nobody. Results without an attorney do not change.

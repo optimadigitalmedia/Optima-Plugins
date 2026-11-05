@@ -391,6 +391,9 @@ foreach ( array_values( $buttons ) as $i => $b ) {
 			if ( $max - $min < 24 || $max < 40 || $min > 235 ) {
 				return; // Grays, near-black and near-white make poor buttons.
 			}
+			if ( '#FFFFFF' !== self::ink( $hex ) ) {
+				return; // Only colors white button text reads on at 4.5:1 (WCAG AA).
+			}
 			$out[ $hex ] = (string) $name;
 		};
 		$add( self::detected_accent(), __( 'Detected', 'optima-build' ) );
@@ -472,6 +475,16 @@ foreach ( array_values( $buttons ) as $i => $b ) {
 	}
 
 	private static function back(): void {
+		// A test sent from Build, Updates goes back there, with the result as its notice.
+		if ( 'updates' === sanitize_key( wp_unslash( (string) ( $_POST['back'] ?? '' ) ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- checked by the caller.
+			$n = get_transient( 'optima_mail_notice_' . get_current_user_id() );
+			if ( is_array( $n ) ) {
+				delete_transient( 'optima_mail_notice_' . get_current_user_id() );
+				set_transient( 'optima_hub_notice_' . get_current_user_id(), $n, MINUTE_IN_SECONDS );
+			}
+			wp_safe_redirect( Optima_Hub_Admin::url( 'updates' ) . '#sh-up-mail' );
+			exit;
+		}
 		wp_safe_redirect( self::url() );
 		exit;
 	}

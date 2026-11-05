@@ -23,7 +23,7 @@ Every rule is a MUST or a NEVER (49 rules). If a task would break one, stop and 
 **Same everywhere**
 
 9. Every site MUST have one top-level dashboard menu, **Optima**, with the same eight items in the same order (section 4a): Overview, People, Your business, Content, Search and AI, Site health, Inbox, Build. The dashboard is for operators: clients never sign in (site owner, 2026-11-05), so no screen carries a client-facing view, and Build shows only to operators. By default the operators are the administrators on the agency domain (`@optimadigitalmedia.com`, with the right to manage the site's settings); a site can narrow or change that with `OPTIMA_HUB_OPERATORS` in wp-config.
-10. A feature's settings MUST live only on its tab inside one of those eight items (Optima → Your business → Contact buttons). NEVER under Settings, Tools, Appearance or a theme screen. Every existing screen keeps its address; only the sidebar, the home and the words move.
+10. A feature's settings MUST live only on its tab inside one of those eight items (Optima → Your business → Call buttons). NEVER under Settings, Tools, Appearance or a theme screen. Every existing screen keeps its address; only the sidebar, the home and the words move.
 11. A theme MUST NEVER register its own admin menu for features. Design-only settings go under Optima → Build → Design.
 12. Plugin blocks MUST render only through `optima_slot( $name )` in the fixed spots in section 4a, so each feature appears in the same place on every site.
 13. Every theme MUST have the required files in section 4a (`DESIGN.md`, `optima-setup.json`, `inc/fallbacks/`, `inc/slots.php`). Every plugin MUST have the required plugin files.
@@ -81,7 +81,7 @@ Every rule is a MUST or a NEVER (49 rules). If a task would break one, stop and 
 **The dashboard**
 
 44. The sidebar and the screen MUST use the same words: a sidebar item's name is the screen's title, and a tab's name is the tab's title.
-45. A fact (phone, hours, name, address) MUST be typed on one tab only. Every other screen that uses it shows it read-only with a link to that tab.
+45. A fact (phone, hours, name, address) MUST be typed on one tab only. Every other screen that uses it shows it read-only with a link to that tab. Name, phone, email and address are typed on Your business → Details (option `optima_business`, Optima Core's form, or Optima Build's where Core is off); hours on Your business → Hours when Optima Hours is on, else on Details. A plugin reads them from that option (the kit's `Optima_Admin_UI::business()` and `fact()`), and keeps any value it saved before as a fallback, never deleting it. (Dashboard release 3.)
 46. Optima → Overview MUST be one screen an operator reads in a glance and leaves from: one status line (site health, updates waiting, Inbox count), the dashboards row (Recon, analytics, Search Console, Business Profile, host, repo), the queue (Updates, Inbox, Requests, each with its one action), and one row of site facts (theme, Build, features, last release, site lock). No hero band, no second group nav, no client answers. (Amended 2026-11-05; before that: three client questions and a request box.)
 47. **People.** Every site MUST hold one profile per person (optima-team owns it). The team page, bio page, bylines, case results, "reviewed by" lines, the digital card and the Person schema MUST read from that profile and nowhere else. A profile is a record, not an account: it links to a WordPress user only where the person posts under their own login (the agency's own site). Facts on a profile come from `optima-setup.json` (exported from the client's Knowledge Hub) and words from `content/`; WordPress owns only the team-page order, the card switch, the user link and reviewed-by assignments. NEVER type a credential into the profile screen.
 48. **Offboarding.** A person leaves through four steps in this order, never a delete button (Optima Team, from the profile): review (every page, post, result, photo, approval line, card and schema node that names them, and what happens to each), archive (a bundle written on the server, closed to visitors, with a zip the operator puts in the site repo under `content/people/former/` and in the client's Drive under Former, and the Knowledge Hub row moved to Former with the leave date), confirm (one link emailed to every operator, 24-hour expiry, opened by a signed-in operator; the starter and the confirmer are two people wherever the site has two operators), remove (everything about the person leaves the public site, every old address gets a 301, reviewed pages lose the name and go on the Inbox for a new reviewer, the former-people record on the People screen keeps the line, staging first). A failed archive stops the flow.
@@ -270,12 +270,12 @@ When a theme hands its SEO head and JSON-LD to Optima Core (jobs `seo` and `sche
   |---|---|---|
   | Overview | Operators | The glance (rule 46): status line, dashboards row, the queue (Updates, Inbox, Requests), site facts row |
   | People | Operators | One profile per person (rule 47): list with status and where each profile shows; a profile with tabs Profile, Bio page, Case results, Posts, Reviewed pages, Digital card, Schema; offboarding (rule 48) |
-  | Your business | Operators | Tabs: Details, Hours, Contact buttons, Case results, Reviews, Chat. Each fact typed once; each tab says where it shows and where the fact came from |
-  | Content | Operators | Pages and posts with dates, the site's own types, Approved copy, Redirects, Images |
+  | Your business | Operators | Tabs: Details, Hours, Call buttons, Case results, Reviews, Chat. Each fact typed once; each tab says where it shows and where the fact came from. One feature, one tab: the results list sits on Case results, the reviews list and Ask for reviews open under Reviews (kit `ALIASES`) |
+  | Content | Operators | Pages and posts with dates, Testimonials, FAQs (the site's own types), Approved copy, Redirects, Image optimizer |
   | Search and AI | Operators | SEO, AI search, Analytics and cookie notice, Accessibility, Spam protection; each tab shows its own checks |
   | Site health | Operators | The whole report, one score per group, Copy for Claude |
   | Inbox | Operators | Everything waiting on a person (change requests, chat questions, new reviews, review requests, reviewed pages without a reviewer), one count in the sidebar |
-  | Build | Operators | The update queue (every update, one button each, each returning here), setup file against the site, features, health, theme and key, design tokens, the change log |
+  | Build | Operators | Updates: one screen with every step of an update in order (site status, plugin updates, theme, fill from theme again, approved copy, release channel, email, what Site health flags, site lock, last update), each block Needs you, Ready or Done, every button returning there; Features; Design; Email |
 
   The agency's own site carries one more item, **Every site** (release 3): one row per site from the private fleet list plus each site's status endpoint.
 
@@ -284,7 +284,8 @@ When a theme hands its SEO head and JSON-LD to Optima Core (jobs `seo` and `sche
 - **One nav.** The sidebar is the only group navigation (rule 49). A screen is a slim top bar (the client's logo and name, a search box that opens the WordPress Command Palette, the Optima mark), the title, one lede, and one tab row where the item has tabs.
 - **Themes put no feature settings anywhere.** A theme's own screen (if any) holds design only, under Optima → Build → Design.
 - **Look:** the Optima brand with the client's logo (the admin kit's white-label switch stays). DESIGN.md dresses the site, not the dashboard.
-- Every feature card in Build has the same buttons in the same place: Settings, Turn off, version.
+- Every feature card in Build has the same buttons in the same place: Settings, Turn off, version; Go back to an earlier version sits in a small menu behind a confirm step.
+- Every Optima list screen (Profiles, Case results, Reviews, Chat questions, Testimonials, FAQs) wears the kit head: top bar, title equal to its tab, lede, tab row (kit `LISTS`). Shortcodes, constants and event names sit in one collapsed "For developers" box per screen.
 
 **On the site, every feature sits in the same spot:**
 
@@ -306,7 +307,7 @@ When a theme hands its SEO head and JSON-LD to Optima Core (jobs `seo` and `sche
 
 **Checked by a script:** `tools/uniform-check.sh` fails if a theme is missing a required file, a theme registers a menu outside Optima, a plugin hard-codes a color, or a screen's sidebar group does not match the eight items (`tools/uniform-check.sh screens`, added with dashboard release 1: every `add_submenu_page()` address must be listed in `Optima_Admin_UI::SCREENS` in the shared admin kit).
 
-**Dashboard release 1: built** (2026-11-04, Optima Build 0.7.9.10, admin kit 1.6.0.0): the seven items, Overview, Inbox, Build for operators, the WordPress Dashboard box. **Dashboard release 2: built** (2026-11-05, Optima Build 0.7.10.0, admin kit 1.7.0.0, Optima Team 0.1.11.0, Optima Case Results 0.1.10.0, every other kit plugin one revision up): operators only, the glance, one nav, People, Add a person, Reviewed by, offboarding. Plan and test notes: `docs/dashboard-redesign-plan.md`.
+**Dashboard release 1: built** (2026-11-04, Optima Build 0.7.9.10, admin kit 1.6.0.0): the seven items, Overview, Inbox, Build for operators, the WordPress Dashboard box. **Dashboard release 2: built** (2026-11-05, Optima Build 0.7.10.0, admin kit 1.7.0.0, Optima Team 0.1.11.0, Optima Case Results 0.1.10.0, every other kit plugin one revision up): operators only, the glance, one nav, People, Add a person, Reviewed by, offboarding. **Dashboard release 3: built** (2026-11-05, Optima Build 0.7.11.0, admin kit 1.8.0.0, every plugin whose files changed one revision up): the one Update screen, one count everywhere, facts typed once on Details (rule 45, with migrations), cards from People (rule 47), titles equal to tabs (rule 44), Testimonials and FAQs under Content, every list screen in the kit. Plan and test notes: `docs/dashboard-redesign-plan.md`.
 
 ## 5. Order (each step on staging, head-and-schema diff before and after)
 

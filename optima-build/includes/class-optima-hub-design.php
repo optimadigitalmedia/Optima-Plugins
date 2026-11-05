@@ -172,24 +172,24 @@ final class Optima_Hub_Design {
 		$t = self::tokens();
 		Optima_Admin_UI::open( __( 'Design', 'optima-build' ), __( 'Every feature on this site dresses in these colors, fonts and corners.', 'optima-build' ) . ' ' . $source );
 
-		echo '<section class="sh-card"><h2>' . esc_html__( 'Colors', 'optima-build' ) . '</h2>';
+		echo '<section class="sh-box"><h2>' . esc_html__( 'Colors', 'optima-build' ) . '</h2>';
 		echo '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px">';
 		foreach ( $t['color'] as $key => $value ) {
 			$color = sanitize_hex_color( (string) $value );
 			if ( ! $color ) {
 				continue;
 			}
-			echo '<div style="min-width:0;border:1px solid var(--optima-line);border-radius:var(--optima-radius-md);overflow:hidden;background:var(--optima-surface)"><div style="height:48px;background:' . esc_attr( $color ) . '"></div><div style="padding:8px 10px;font-size:12px;line-height:1.5"><strong>' . esc_html( $key ) . '</strong><br><code style="padding:0;background:none">' . esc_html( $color ) . '</code></div></div>';
+			echo '<div style="min-width:0;border:1px solid var(--optima-line);border-radius:var(--optima-radius-md);overflow:hidden;background:var(--optima-surface)"><div style="height:48px;background:' . esc_attr( $color ) . ';box-shadow:inset 0 -1px 0 rgba(18,22,58,.12)"></div><div style="padding:8px 10px;font-size:12px;line-height:1.5"><strong>' . esc_html( $key ) . '</strong><br><code style="padding:0;background:none">' . esc_html( $color ) . '</code></div></div>';
 		}
 		echo '</div></section>';
 
 		echo '<div class="sh-grid sh-grid-2">';
-		echo '<section class="sh-card"><h2>' . esc_html__( 'Fonts', 'optima-build' ) . '</h2><ul style="margin:0">';
+		echo '<section class="sh-box"><h2>' . esc_html__( 'Fonts', 'optima-build' ) . '</h2><ul style="margin:0">';
 		foreach ( $t['font'] as $key => $value ) {
 			echo '<li><strong>' . esc_html( $key ) . ':</strong> ' . esc_html( (string) $value ) . '</li>';
 		}
 		echo '</ul></section>';
-		echo '<section class="sh-card"><h2>' . esc_html__( 'Corners and buttons', 'optima-build' ) . '</h2><ul style="margin:0">';
+		echo '<section class="sh-box"><h2>' . esc_html__( 'Corners and buttons', 'optima-build' ) . '</h2><ul style="margin:0">';
 		foreach ( $t['radius'] as $key => $value ) {
 			echo '<li><strong>' . esc_html( $key ) . ':</strong> ' . absint( $value ) . 'px</li>';
 		}

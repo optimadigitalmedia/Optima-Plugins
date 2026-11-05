@@ -95,6 +95,7 @@ final class Optima_Results_Admin {
 		return array(
 			'state'      => $state,
 			'disclaimer' => $text,
+			'threshold'  => max( 0, (int) preg_replace( '/\D/', '', (string) ( $in['threshold'] ?? '1000000' ) ) ),
 		);
 	}
 
@@ -138,8 +139,7 @@ final class Optima_Results_Admin {
 
 		Optima_Admin_UI::open(
 			__( 'Case results', 'optima-results' ),
-			__( 'Show the firm\'s case results with the firm\'s approval on every one and the disclaimer printed next to each result.', 'optima-results' ),
-			__( 'Results and disclaimers', 'optima-results' )
+			__( 'Every case result with its amount and year, the firm\'s approval on each one, and the disclaimer printed next to every result.', 'optima-results' )
 		);
 		settings_errors( $o );
 		?>
@@ -161,6 +161,8 @@ final class Optima_Results_Admin {
 			</section>
 		</div>
 
+		<?php self::list_box( $list, $new ); ?>
+
 		<div class="sr-settings">
 			<form method="post" action="options.php" class="sh-box">
 				<h2 class="sh-title"><?php esc_html_e( 'Disclaimer', 'optima-results' ); ?></h2>
@@ -179,6 +181,13 @@ final class Optima_Results_Admin {
 						</td>
 					</tr>
 					<tr>
+						<th scope="row"><label for="sr-threshold"><?php esc_html_e( 'Publishing threshold', 'optima-results' ); ?></label></th>
+						<td>
+							<input id="sr-threshold" type="text" inputmode="numeric" class="regular-text" name="<?php echo esc_attr( $o ); ?>[threshold]" value="<?php echo esc_attr( (string) $s['threshold'] ); ?>">
+							<p class="description"><?php esc_html_e( 'Results at or above this amount, in dollars, may show on bio and results pages. The Optima default is 1000000; 0 means every result may show. Smaller results stay in the Knowledge Hub as facts.', 'optima-results' ); ?></p>
+						</td>
+					</tr>
+					<tr>
 						<th scope="row"><label for="sr-disclaimer"><?php esc_html_e( 'Disclaimer wording', 'optima-results' ); ?></label></th>
 						<td>
 							<textarea id="sr-disclaimer" class="large-text" rows="5" name="<?php echo esc_attr( $o ); ?>[disclaimer]" placeholder="<?php echo esc_attr( Optima_Results::default_disclaimer( $s['state'] ) ); ?>"><?php echo esc_textarea( $s['disclaimer'] ); ?></textarea>
@@ -186,7 +195,7 @@ final class Optima_Results_Admin {
 						</td>
 					</tr>
 				</table>
-				<?php submit_button( __( 'Save disclaimer', 'optima-results' ) ); ?>
+				<?php submit_button( __( 'Save', 'optima-results' ) ); ?>
 			</form>
 
 			<section class="sh-box">
@@ -211,6 +220,7 @@ final class Optima_Results_Admin {
 			</section>
 		</div>
 
+		<?php Optima_Admin_UI::dev_open(); ?>
 		<section class="sh-box">
 			<h2 class="sh-title"><?php esc_html_e( 'Put the results on a page', 'optima-results' ); ?></h2>
 			<p><?php esc_html_e( 'Add a shortcode block to any page. Visitors can filter the grid by practice area.', 'optima-results' ); ?></p>
@@ -221,12 +231,61 @@ final class Optima_Results_Admin {
 				<tr><td>[optima_results filters="no"]</td><td><?php esc_html_e( 'The grid without the filter buttons.', 'optima-results' ); ?></td></tr>
 				<tr><td>[optima_result id="12"]</td><td><?php esc_html_e( 'One result by its ID, with the disclaimer.', 'optima-results' ); ?></td></tr>
 			</table>
-			<div class="sh-links">
-				<a class="button button-primary" href="<?php echo esc_url( $new ); ?>"><?php esc_html_e( 'Add a case result', 'optima-results' ); ?></a>
-				<a class="button" href="<?php echo esc_url( admin_url( 'edit-tags.php?taxonomy=' . Optima_Results::TAXONOMY . '&post_type=' . Optima_Results::POST_TYPE ) ); ?>"><?php esc_html_e( 'Practice areas', 'optima-results' ); ?></a>
-			</div>
 		</section>
+		<?php Optima_Admin_UI::dev_close(); ?>
 		<?php
 		Optima_Admin_UI::close();
+	}
+
+	/**
+	 * The results themselves, at the top of the one Case results tab (dashboard
+	 * audit: one feature, one tab): amount, type, year, attorney, the threshold
+	 * and the firm's approval for each.
+	 */
+	private static function list_box( string $list, string $new ): void {
+		$rows = get_posts(
+			array(
+				'post_type'      => Optima_Results::POST_TYPE,
+				'post_status'    => array( 'publish', 'pending', 'draft', 'future' ),
+				'posts_per_page' => 25,
+				'orderby'        => 'date',
+				'order'          => 'DESC',
+			)
+		);
+		$all  = (int) array_sum( (array) wp_count_posts( Optima_Results::POST_TYPE ) );
+		$line = Optima_Results::settings()['threshold'];
+		echo '<section class="sh-box"><h2 class="sh-title">' . esc_html__( 'Results', 'optima-results' ) . '</h2>';
+		echo '<p class="sh-note">' . esc_html(
+			0 === $line
+				? __( 'This firm has no threshold: every result may show.', 'optima-results' )
+				/* translators: %s: amount */
+				: sprintf( __( 'Threshold: %s. A result below it stays in the Knowledge Hub and is not published.', 'optima-results' ), '$' . number_format_i18n( $line ) )
+		) . '</p>';
+		if ( $rows ) {
+			echo '<div class="sh-scroll"><table class="widefat striped"><thead><tr>';
+			foreach ( array( __( 'Headline', 'optima-results' ), __( 'Amount', 'optima-results' ), __( 'Type', 'optima-results' ), __( 'Year', 'optima-results' ), __( 'Attorney', 'optima-results' ), __( 'Above threshold', 'optima-results' ), __( 'Firm approval', 'optima-results' ) ) as $h ) {
+				echo '<th scope="col">' . esc_html( $h ) . '</th>';
+			}
+			echo '</tr></thead><tbody>';
+			foreach ( $rows as $post ) {
+				$r = Optima_Results::get( (int) $post->ID );
+				echo '<tr><td><a href="' . esc_url( (string) get_edit_post_link( $post->ID ) ) . '"><strong>' . esc_html( '' !== $r['headline'] ? $r['headline'] : __( '(no headline)', 'optima-results' ) ) . '</strong></a></td>';
+				echo '<td>' . esc_html( '' !== $r['amount'] ? $r['amount'] : __( 'Not given', 'optima-results' ) ) . '</td>';
+				echo '<td>' . esc_html( $r['type_label'] ) . '</td>';
+				echo '<td>' . esc_html( '' !== $r['date'] ? substr( $r['date'], 0, 4 ) : '' ) . '</td>';
+				echo '<td>' . esc_html( '' !== $r['attorney'] ? $r['attorney'] : __( 'Not named', 'optima-results' ) ) . '</td>';
+				$above = Optima_Results::above_threshold( $r['amount'] );
+				echo '<td><span class="sh-pill ' . ( $above ? 'is-done' : 'is-received' ) . '">' . esc_html( $above ? __( 'Yes', 'optima-results' ) : __( 'No', 'optima-results' ) ) . '</span></td>';
+				echo '<td>' . esc_html( Optima_Results::is_approved( $r['approved'], $r['approver'] ) ? __( 'Approved', 'optima-results' ) : __( 'Waiting', 'optima-results' ) ) . '</td></tr>';
+			}
+			echo '</tbody></table></div>';
+		} else {
+			echo '<p>' . esc_html__( 'No case results yet.', 'optima-results' ) . '</p>';
+		}
+		echo '<p class="sh-links" style="margin-top:12px"><a class="button button-primary" href="' . esc_url( $new ) . '">' . esc_html__( 'Add a case result', 'optima-results' ) . '</a> ';
+		/* translators: %d: results */
+		echo '<a class="button" href="' . esc_url( $list ) . '">' . esc_html( sprintf( __( 'All case results (%d)', 'optima-results' ), $all ) ) . '</a> ';
+		echo '<a class="button" href="' . esc_url( admin_url( 'edit-tags.php?taxonomy=' . Optima_Results::TAXONOMY . '&post_type=' . Optima_Results::POST_TYPE ) ) . '">' . esc_html__( 'Practice areas', 'optima-results' ) . '</a></p>';
+		echo '</section>';
 	}
 }

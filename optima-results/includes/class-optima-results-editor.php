@@ -353,14 +353,17 @@ final class Optima_Results_Editor {
 		foreach ( $cols as $key => $label ) {
 			if ( 'title' === $key ) {
 				$out[ $key ] = __( 'Headline', 'optima-results' );
+				$out['sr_amount'] = __( 'Amount', 'optima-results' );
 				$out['sr_type'] = __( 'Type', 'optima-results' );
+				$out['sr_year'] = __( 'Year', 'optima-results' );
 				if ( class_exists( 'Optima_Team' ) ) {
 					$out['sr_attorney'] = __( 'Attorney', 'optima-results' );
 				}
 				continue;
 			}
 			if ( 'date' === $key ) {
-				$out['sr_approval'] = __( 'Firm approval', 'optima-results' );
+				$out['sr_threshold'] = __( 'Above threshold', 'optima-results' );
+				$out['sr_approval']  = __( 'Firm approval', 'optima-results' );
 			}
 			$out[ $key ] = $label;
 		}
@@ -369,7 +372,13 @@ final class Optima_Results_Editor {
 
 	public static function column( string $col, int $post_id ): void {
 		$r = Optima_Results::get( $post_id );
-		if ( 'sr_type' === $col ) {
+		if ( 'sr_amount' === $col ) {
+			echo esc_html( '' !== $r['amount'] ? $r['amount'] : __( 'Not given', 'optima-results' ) );
+		} elseif ( 'sr_year' === $col ) {
+			echo esc_html( '' !== $r['date'] ? substr( $r['date'], 0, 4 ) : '' );
+		} elseif ( 'sr_threshold' === $col ) {
+			echo esc_html( Optima_Results::above_threshold( $r['amount'] ) ? __( 'Yes', 'optima-results' ) : __( 'No', 'optima-results' ) );
+		} elseif ( 'sr_type' === $col ) {
 			echo esc_html( $r['type_label'] );
 		} elseif ( 'sr_attorney' === $col ) {
 			echo $r['attorney_id'] ? '<a href="' . esc_url( (string) get_edit_post_link( $r['attorney_id'] ) ) . '">' . esc_html( $r['attorney'] ) . '</a>' : '<span class="description">' . esc_html__( 'Not named', 'optima-results' ) . '</span>';

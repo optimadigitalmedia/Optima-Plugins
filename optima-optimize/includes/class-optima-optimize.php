@@ -298,8 +298,6 @@ final class Optima_Optimize {
 
 		$s    = self::settings();
 		$caps = self::capabilities();
-		$yes  = __( 'yes', 'optima-optimize' );
-		$no   = __( 'no', 'optima-optimize' );
 
 		$toggles = array(
 			'optimize_uploads' => __( 'Optimize new uploads (compress, cap dimensions, back up the original first)', 'optima-optimize' ),
@@ -319,45 +317,41 @@ final class Optima_Optimize {
 				<input type="hidden" name="action" value="optima_optimize_save" />
 
 				<section class="sh-box">
-					<h2><?php esc_html_e( 'What to do', 'optima-optimize' ); ?></h2>
+					<h2><?php esc_html_e( 'Settings', 'optima-optimize' ); ?></h2>
 					<p><?php esc_html_e( 'Everything is off until you turn it on here. Originals are always backed up before any image is touched, so every change can be undone.', 'optima-optimize' ); ?></p>
-					<fieldset>
-						<?php foreach ( $toggles as $key => $label ) : ?>
-							<p>
-								<label>
-									<input type="checkbox" name="<?php echo esc_attr( $key ); ?>" value="1" <?php checked( ! empty( $s[ $key ] ) ); ?> />
-									<?php echo esc_html( $label ); ?>
-								</label>
-							</p>
-						<?php endforeach; ?>
-					</fieldset>
+					<table class="form-table" role="presentation">
+						<tr>
+							<th scope="row"><?php esc_html_e( 'What to do', 'optima-optimize' ); ?></th>
+							<td><fieldset><legend class="screen-reader-text"><?php esc_html_e( 'What to do', 'optima-optimize' ); ?></legend>
+								<?php foreach ( $toggles as $key => $label ) : ?>
+									<p><label class="sh-target"><input type="checkbox" name="<?php echo esc_attr( $key ); ?>" value="1" <?php checked( ! empty( $s[ $key ] ) ); ?> /> <?php echo esc_html( $label ); ?></label></p>
+								<?php endforeach; ?>
+							</fieldset></td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="oo-preset"><?php esc_html_e( 'Quality', 'optima-optimize' ); ?></label></th>
+							<td><select id="oo-preset" name="preset">
+								<?php
+								$presets = array(
+									'lossy'    => __( 'Lossy (smallest files)', 'optima-optimize' ),
+									'balanced' => __( 'Balanced (recommended)', 'optima-optimize' ),
+									'lossless' => __( 'Lossless (largest, highest quality)', 'optima-optimize' ),
+								);
+								foreach ( $presets as $key => $label ) :
+									?>
+									<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $s['preset'], $key ); ?>><?php echo esc_html( $label ); ?></option>
+								<?php endforeach; ?>
+							</select>
+							<p class="description"><?php esc_html_e( 'Balanced suits almost every site.', 'optima-optimize' ); ?></p></td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="oo-max"><?php esc_html_e( 'Largest image size', 'optima-optimize' ); ?></label></th>
+							<td><input id="oo-max" type="number" name="max_dimension" min="0" max="8000" step="10" value="<?php echo esc_attr( (string) $s['max_dimension'] ); ?>" /> <?php esc_html_e( 'pixels', 'optima-optimize' ); ?>
+							<p class="description"><?php esc_html_e( 'New uploads wider or taller than this are scaled down. 0 turns the limit off.', 'optima-optimize' ); ?></p></td>
+						</tr>
+					</table>
+					<?php submit_button( __( 'Save', 'optima-optimize' ) ); ?>
 				</section>
-
-				<div class="sh-grid sh-grid-2">
-					<section class="sh-box">
-						<h2><?php esc_html_e( 'Quality', 'optima-optimize' ); ?></h2>
-						<p><?php esc_html_e( 'Balanced suits almost every site.', 'optima-optimize' ); ?></p>
-						<select name="preset">
-							<?php
-							$presets = array(
-								'lossy'    => __( 'Lossy (smallest files)', 'optima-optimize' ),
-								'balanced' => __( 'Balanced (recommended)', 'optima-optimize' ),
-								'lossless' => __( 'Lossless (largest, highest quality)', 'optima-optimize' ),
-							);
-							foreach ( $presets as $key => $label ) :
-								?>
-								<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $s['preset'], $key ); ?>><?php echo esc_html( $label ); ?></option>
-							<?php endforeach; ?>
-						</select>
-					</section>
-					<section class="sh-box">
-						<h2><?php esc_html_e( 'Largest image size', 'optima-optimize' ); ?></h2>
-						<p><?php esc_html_e( 'New uploads wider or taller than this are scaled down. 0 turns the limit off.', 'optima-optimize' ); ?></p>
-						<p class="sh-inline"><input type="number" name="max_dimension" min="0" max="8000" step="10" value="<?php echo esc_attr( (string) $s['max_dimension'] ); ?>" /> <?php esc_html_e( 'pixels', 'optima-optimize' ); ?></p>
-					</section>
-				</div>
-
-				<?php submit_button( __( 'Save settings', 'optima-optimize' ) ); ?>
 			</form>
 
 			<div class="sh-grid sh-grid-2">
@@ -366,9 +360,9 @@ final class Optima_Optimize {
 					<p><?php esc_html_e( 'What the hosting can do with images.', 'optima-optimize' ); ?></p>
 					<table class="widefat striped">
 						<tbody>
-							<tr><td><?php esc_html_e( 'Imagick image engine', 'optima-optimize' ); ?></td><td><strong><?php echo esc_html( $caps['imagick'] ? $yes : $no ); ?></strong></td></tr>
-							<tr><td><?php esc_html_e( 'Can create WebP', 'optima-optimize' ); ?></td><td><strong><?php echo esc_html( $caps['webp'] ? $yes : $no ); ?></strong></td></tr>
-							<tr><td><?php esc_html_e( 'Can create AVIF', 'optima-optimize' ); ?></td><td><strong><?php echo esc_html( $caps['avif'] ? $yes : $no ); ?></strong></td></tr>
+							<tr><td><?php esc_html_e( 'Imagick image engine', 'optima-optimize' ); ?></td><td><span class="sh-pill <?php echo $caps['imagick'] ? 'is-done' : 'is-off'; ?>"><?php echo esc_html( $caps['imagick'] ? __( 'Yes', 'optima-optimize' ) : __( 'No', 'optima-optimize' ) ); ?></span></td></tr>
+							<tr><td><?php esc_html_e( 'Can create WebP', 'optima-optimize' ); ?></td><td><span class="sh-pill <?php echo $caps['webp'] ? 'is-done' : 'is-off'; ?>"><?php echo esc_html( $caps['webp'] ? __( 'Yes', 'optima-optimize' ) : __( 'No', 'optima-optimize' ) ); ?></span></td></tr>
+							<tr><td><?php esc_html_e( 'Can create AVIF', 'optima-optimize' ); ?></td><td><span class="sh-pill <?php echo $caps['avif'] ? 'is-done' : 'is-off'; ?>"><?php echo esc_html( $caps['avif'] ? __( 'Yes', 'optima-optimize' ) : __( 'No', 'optima-optimize' ) ); ?></span></td></tr>
 						</tbody>
 					</table>
 					<?php if ( ! $caps['avif'] ) : ?>

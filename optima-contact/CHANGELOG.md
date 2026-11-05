@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.11.10 (2026-11-05)
+
+- Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).
+- The phone comes from Details and shows read-only (rule 45). Migration, once: a phone typed here and missing from Details moves there; the old value stays in optima_contact and is used only while Details has none. Off states grey; taps link to Analytics.
+
 ## 0.1.11.9 (2026-11-05)
 
 - Optima admin kit 1.7.0.0, one nav (plugin-first rule 49): the WordPress sidebar is the only group navigation. A screen is a slim top bar (the client's logo and name, a Find box that opens the WordPress Command Palette, the Optima mark), the title with its group as the eyebrow, the lede, and one row of tabs. The hero band and the row of groups are gone. The Optima menu has eight items; People sits after Overview and holds the profiles and Cards.

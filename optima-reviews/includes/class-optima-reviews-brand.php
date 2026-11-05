@@ -69,6 +69,39 @@ final class Optima_Reviews_Brand {
 		return (array) apply_filters( 'optima_reviews_brand', $d );
 	}
 
+	/** Does the theme's design (Optima Build's tokens) dress the review page (rule 7)? */
+	public static function designed(): bool {
+		return class_exists( 'Optima_Hub_Design' );
+	}
+
+	/**
+	 * The review page and cards dress from the theme's DESIGN.md (rule 7): accent,
+	 * canvas, ink and the three fonts from Optima Build's design tokens. A font
+	 * the review page cannot load keeps the saved choice. Without Optima Build
+	 * the saved settings stay as they are.
+	 */
+	public static function from_design( array $s ): array {
+		if ( ! self::designed() ) {
+			return $s;
+		}
+		$t   = Optima_Hub_Design::tokens();
+		$hex = static fn( $v ) => sanitize_hex_color( (string) $v );
+		if ( $hex( $t['color']['accent'] ?? '' ) ) {
+			$s['accent'] = $hex( $t['color']['accent'] );
+		}
+		if ( $hex( $t['color']['canvas'] ?? '' ) ) {
+			$s['background'] = $hex( $t['color']['canvas'] );
+		}
+		$s['text_color'] = $hex( $t['color']['ink'] ?? '' ) ? $hex( $t['color']['ink'] ) : '';
+		foreach ( array( 'heading_font' => 'display', 'body_font' => 'body', 'label_font' => 'mono' ) as $key => $token ) {
+			$name = trim( (string) ( $t['font'][ $token ] ?? '' ) );
+			if ( isset( self::FONTS[ $name ] ) ) {
+				$s[ $key ] = $name;
+			}
+		}
+		return $s;
+	}
+
 	/** Clean the brand part of a settings save. */
 	public static function sanitize( array $input, array $d ): array {
 		$font = static function ( string $key, bool $allow_same ) use ( $input, $d ): string {

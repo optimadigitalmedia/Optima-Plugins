@@ -68,8 +68,27 @@ final class Optima_Accessibility {
 	}
 
 	/** @return array<string,string> */
+	/** The business facts from Your business, Details (Optima Core's form or Optima Build's), read from their one option. */
 	private static function core_business(): array {
-		return self::has_core() ? (array) Optima_Core_Business::get() : array();
+		$b = get_option( 'optima_business', array() );
+		return is_array( $b ) ? $b : array();
+	}
+
+	/**
+	 * Once (release 3): a phone typed on this screen and missing from Details
+	 * moves to Details. The old value stays in this plugin's settings.
+	 */
+	public static function migrate(): void {
+		if ( get_option( 'optima_a11y_r3_phone' ) ) {
+			return;
+		}
+		$old = trim( (string) ( self::settings()['phone'] ?? '' ) );
+		$biz = self::core_business();
+		if ( '' !== $old && '' === trim( (string) ( $biz['phone'] ?? '' ) ) ) {
+			$biz['phone'] = $old;
+			update_option( 'optima_business', $biz );
+		}
+		update_option( 'optima_a11y_r3_phone', time(), false );
 	}
 
 	/** Business name from optima-core, else the site name. */
@@ -88,8 +107,15 @@ final class Optima_Accessibility {
 		return sanitize_email( (string) ( self::core_business()['email'] ?? '' ) );
 	}
 
-	/** Contact phone: this screen first, then optima-core. */
+	/**
+	 * Contact phone: Your business, Details (rule 45: typed once). The phone this
+	 * screen saved before release 3 is used only while Details has none.
+	 */
 	public static function phone(): string {
+		$biz = trim( (string) ( self::core_business()['phone'] ?? '' ) );
+		if ( '' !== $biz ) {
+			return $biz;
+		}
 		$s = self::settings();
 		if ( '' !== $s['phone'] ) {
 			return $s['phone'];

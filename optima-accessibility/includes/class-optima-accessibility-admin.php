@@ -19,6 +19,7 @@ final class Optima_Accessibility_Admin {
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
 		add_filter( 'plugin_action_links_' . plugin_basename( OPTIMA_ACCESSIBILITY_FILE ), array( __CLASS__, 'action_link' ) );
 		add_filter( 'optima_admin_nav_hint', array( __CLASS__, 'nav_hint' ), 10, 2 );
+		add_action( 'admin_init', array( 'Optima_Accessibility', 'migrate' ), 3 ); // Release 3: the phone moves to Details once.
 		foreach ( array( 'statement', 'run', 'launch', 'footer', 'menu_add' ) as $action ) {
 			add_action( 'admin_post_optima_a11y_' . $action, array( __CLASS__, 'handle_' . $action ) );
 		}
@@ -68,7 +69,7 @@ final class Optima_Accessibility_Admin {
 		}
 		$n = self::to_fix();
 		if ( $n < 0 ) {
-			return __( 'Not checked', 'optima-accessibility' );
+			return __( 'Not run yet', 'optima-accessibility' );
 		}
 		/* translators: %d: checks to fix */
 		return $n ? sprintf( _n( '%d to fix', '%d to fix', $n, 'optima-accessibility' ), $n ) : __( 'All pass', 'optima-accessibility' );
@@ -109,7 +110,8 @@ final class Optima_Accessibility_Admin {
 		// phpcs:enable
 		$s                  = Optima_Accessibility::settings();
 		$s['email']         = sanitize_email( (string) ( $in['email'] ?? '' ) );
-		$s['phone']         = sanitize_text_field( (string) ( $in['phone'] ?? '' ) );
+		// The phone is typed on Details now; what this screen saved before stays.
+		$s['phone']         = sanitize_text_field( (string) ( $in['phone'] ?? ( Optima_Accessibility::settings()['phone'] ?? '' ) ) );
 		$s['response_days'] = min( 30, absint( $in['response_days'] ?? 0 ) );
 		$s['other_formats'] = empty( $in['other_formats'] ) ? 0 : 1;
 		$s['last_reviewed'] = self::valid_date( sanitize_text_field( (string) ( $in['last_reviewed'] ?? '' ) ) );
@@ -306,11 +308,18 @@ final class Optima_Accessibility_Admin {
 					<?php endif; ?>
 				</p>
 			</section>
-			<section class="sh-box sh-check is-<?php echo ! $ran ? 'warn' : ( $to_fix ? 'warn' : 'good' ); ?>">
+			<?php
+			// A weekly run whose time has passed is late: the tile says so, with the way to run it.
+			$next = wp_next_scheduled( Optima_Accessibility_Checks::CRON );
+			$late = $next && $next < time() - HOUR_IN_SECONDS;
+			?>
+			<section class="sh-box sh-check is-<?php echo ( ! $ran || $to_fix || $late ) ? 'needs' : 'good'; ?>">
 				<p class="sh-label"><?php esc_html_e( 'Weekly checks', 'optima-accessibility' ); ?></p>
 				<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span>
 					<?php
-					if ( ! $ran ) {
+					if ( $late ) {
+						esc_html_e( 'Late', 'optima-accessibility' );
+					} elseif ( ! $ran ) {
 						esc_html_e( 'Not run yet', 'optima-accessibility' );
 					} elseif ( $to_fix ) {
 						/* translators: %d: number of checks */
@@ -322,8 +331,10 @@ final class Optima_Accessibility_Admin {
 				</p>
 				<p class="sh-note">
 					<?php
-					$next = wp_next_scheduled( Optima_Accessibility_Checks::CRON );
-					if ( $next ) {
+					if ( $late ) {
+						/* translators: %s: date */
+						echo esc_html( sprintf( __( 'It was due %s.', 'optima-accessibility' ), wp_date( get_option( 'date_format' ), $next ) ) ) . ' <a href="#sa-weekly">' . esc_html__( 'Run now', 'optima-accessibility' ) . ' &rsaquo;</a>';
+					} elseif ( $next ) {
 						/* translators: %s: date */
 						echo esc_html( sprintf( __( 'Next run %s', 'optima-accessibility' ), wp_date( get_option( 'date_format' ), $next ) ) );
 					} else {
@@ -538,9 +549,9 @@ final class Optima_Accessibility_Admin {
 						<p class="description"><?php esc_html_e( 'Leave blank to use the email in the business info. Use an inbox someone reads.', 'optima-accessibility' ); ?></p></td>
 				</tr>
 				<tr>
-					<th scope="row"><label for="sa-phone"><?php esc_html_e( 'Phone', 'optima-accessibility' ); ?></label></th>
-					<td><input id="sa-phone" type="tel" class="regular-text" name="sa[phone]" value="<?php echo esc_attr( $s['phone'] ); ?>" placeholder="<?php echo esc_attr( Optima_Accessibility::phone() ); ?>">
-						<p class="description"><?php esc_html_e( 'Leave blank to use the phone in the business info. A second way to reach you helps people who cannot use email.', 'optima-accessibility' ); ?></p></td>
+					<th scope="row"><?php esc_html_e( 'Phone', 'optima-accessibility' ); ?></th>
+					<td><?php Optima_Admin_UI::fact( __( 'From Details', 'optima-accessibility' ), Optima_Accessibility::phone() ); ?>
+						<p class="description"><?php esc_html_e( 'A second way to reach you helps people who cannot use email.', 'optima-accessibility' ); ?></p></td>
 				</tr>
 				<tr>
 					<th scope="row"><label for="sa-days"><?php esc_html_e( 'Reply within', 'optima-accessibility' ); ?></label></th>

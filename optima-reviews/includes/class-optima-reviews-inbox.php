@@ -29,8 +29,26 @@ final class Optima_Reviews_Inbox {
 		return Optima_Reviews_Menu::url( self::PAGE );
 	}
 
+	/**
+	 * What waits in the Review inbox, split into new reviews and notes from the
+	 * review page. The one count every screen shows: the sidebar, Overview,
+	 * Inbox, the Reviews notice and the Dashboard box (dashboard audit).
+	 *
+	 * @return array{reviews:int, notes:int, all:int}
+	 */
+	public static function counts(): array {
+		$notes = 0;
+		$items = self::items();
+		foreach ( $items as $post ) {
+			if ( class_exists( 'Optima_Reviews_Notes' ) && Optima_Reviews_Notes::from_website( $post->ID ) ) {
+				++$notes;
+			}
+		}
+		return array( 'reviews' => count( $items ) - $notes, 'notes' => $notes, 'all' => count( $items ) );
+	}
+
 	public static function menu(): void {
-		$count = Optima_Reviews_Google_Sync::new_count();
+		$count = self::counts()['all'];
 		$build = Optima_Reviews_Menu::build();
 		$label = '' !== $build ? __( 'Review inbox', 'optima-reviews' ) : __( 'Inbox', 'optima-reviews' );
 		if ( $count ) {
@@ -71,11 +89,8 @@ final class Optima_Reviews_Inbox {
 		$items  = self::items();
 		$topics = Optima_Reviews_Topics::all();
 		?>
-		<div class="wrap srk recon-theme" data-theme="light">
-			<?php Optima_Reviews_Requests::header( __( 'Inbox', 'optima-reviews' ), __( 'New reviews and notes', 'optima-reviews' ) ); ?>
-			<p class="srk-lede">
-				<?php esc_html_e( 'New Google reviews and notes from your review page wait here. Check the pages each one belongs on (we pre-check the ones that match), then click Add to site. Skipped items stay saved as hidden drafts under All reviews.', 'optima-reviews' ); ?>
-			</p>
+		<?php Optima_Admin_UI::open( __( 'Review inbox', 'optima-reviews' ), __( 'New Google reviews and notes from the review page wait here. Check the pages each one belongs on (the matching ones are pre-checked), then Add to site. Skipped items stay as hidden drafts under Reviews.', 'optima-reviews' ) ); ?>
+		<div class="srk recon-theme" data-theme="light">
 
 			<?php if ( ! $items ) : ?>
 				<section class="srk-box" style="max-width:720px;">
@@ -115,6 +130,7 @@ final class Optima_Reviews_Inbox {
 			<?php endif; ?>
 		</div>
 		<?php
+		Optima_Admin_UI::close();
 	}
 
 	/**

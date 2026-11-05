@@ -46,6 +46,46 @@ final class Optima_Reviews_Sources {
 		return (array) apply_filters( 'optima_reviews_sources', $sources );
 	}
 
+	/**
+	 * The platforms worth listing for this kind of business (dashboard audit:
+	 * agency directories on a law firm's screen). Read from the business type on
+	 * Details. A platform that already has numbers or links saved always shows,
+	 * so nothing typed is ever hidden.
+	 *
+	 * @return string[] Slugs, in the sources' order.
+	 */
+	public static function for_site(): array {
+		$biz  = get_option( 'optima_business', array() );
+		$type = is_array( $biz ) ? (string) ( $biz['business_type'] ?? '' ) : '';
+		$sets = array(
+			'legal'  => array( 'google', 'facebook', 'avvo', 'yelp', 'bbb' ),
+			'venue'  => array( 'google', 'facebook', 'yelp', 'tripadvisor', 'bbb' ),
+			'agency' => array( 'google', 'facebook', 'clutch', 'upcity', 'designrush', 'bbb' ),
+			'local'  => array( 'google', 'facebook', 'yelp', 'bbb' ),
+		);
+		if ( in_array( $type, array( 'LegalService', 'Attorney' ), true ) ) {
+			$want = $sets['legal'];
+		} elseif ( in_array( $type, array( 'Restaurant', 'FoodEstablishment', 'Campground', 'LodgingBusiness' ), true ) ) {
+			$want = $sets['venue'];
+		} elseif ( in_array( $type, array( 'ProfessionalService', 'Organization' ), true ) ) {
+			$want = $sets['agency'];
+		} else {
+			$want = $sets['local'];
+		}
+		$want = (array) apply_filters( 'optima_reviews_site_sources', $want, $type );
+		$out  = array();
+		foreach ( self::all() as $slug => $info ) {
+			if ( 'direct' === $slug ) {
+				continue;
+			}
+			$p = class_exists( 'Optima_Reviews_Settings' ) ? Optima_Reviews_Settings::profile( $slug ) : array();
+			if ( in_array( $slug, $want, true ) || ! empty( $p['rating'] ) || ! empty( $p['count'] ) || ! empty( $p['url'] ) || ! empty( $p['write_url'] ) ) {
+				$out[] = $slug;
+			}
+		}
+		return $out;
+	}
+
 	public static function get( string $slug ): ?array {
 		$all = self::all();
 		return $all[ $slug ] ?? null;

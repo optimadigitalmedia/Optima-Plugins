@@ -72,9 +72,9 @@
 .sh-ops .sh-label { display: inline; margin: 0 8px 0 0; }
 .sh-inline { display: inline-flex; align-items: center; gap: 8px; margin: 0; }
 
-.sh-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; margin-top: 16px; }
-.sh-grid-2 { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
-.sh-grid-3 { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.sh-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 14px; margin-top: 16px; align-items: start; }
+.sh-grid-2 { grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); }
+.sh-grid-3 { grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); }
 .sh-grid > .sh-box { margin-top: 0; }
 
 .sh-card { background: var(--sh-surface); border: 1px solid var(--sh-border); border-radius: 16px; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
@@ -448,7 +448,7 @@ html:has(.wrap.sh), body.wp-admin:has(.wrap.sh), body:has(.wrap.sh) #wpcontent, 
 
 /* ---- Overview, the glance (release 2) ---- */
 .sh .sh-glance-line .sh-value { font-family: var(--sh-display); font-size: 20px; font-weight: 800; letter-spacing: -.02em; color: var(--sh-navy); }
-.sh .sh-glance-doors { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 10px; }
+.sh .sh-glance-doors { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 10px; }
 .sh .sh-glance-doors .sh-link-card { padding: 14px 16px; }
 .sh .sh-glance-doors .sh-link-card h2 { font-size: 14px; margin: 0 0 2px; }
 .sh .sh-glance-doors .sh-link-card p { margin: 0; font-size: 12.5px; color: var(--sh-text-3); overflow-wrap: anywhere; }
@@ -465,3 +465,139 @@ html:has(.wrap.sh), body.wp-admin:has(.wrap.sh), body:has(.wrap.sh) #wpcontent, 
 .sh .sh-glance-facts a .sh-label { margin: 0; }
 .sh .sh-glance-facts a strong { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
 .sh .sh-glance-facts a:hover strong { color: var(--sh-accent-text); }
+
+/* ---- Release 3 (kit 1.8.0.0): one look on every screen ----------------- */
+
+/* Optima list screens (Profiles, Case results, Reviews, Chat questions,
+   Testimonials, FAQs) wear the kit head; WordPress's own title is hidden and
+   its Add button sits under the tab row. */
+body.sh-list #wpbody-content > .wrap:not(.sh) { max-width: 1200px; }
+body.sh-list #wpbody-content > .wrap:not(.sh) > h1.wp-heading-inline { display: none; }
+body.sh-list #wpbody-content > .wrap:not(.sh) > .page-title-action { margin: 14px 0 4px; top: 0; border-radius: 12px; border: 1px solid #1272C4; background: #1272C4; color: #fff; font-weight: 600; padding: 6px 14px; }
+body.sh-list #wpbody-content > .wrap:not(.sh) > .page-title-action:hover { background: #0D5490; border-color: #0D5490; color: #fff; }
+body.sh-list #wpbody-content > .wrap:not(.sh) .wp-list-table { border: 1px solid #DDE4EE; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 2px rgba(18, 22, 58, .04); }
+body.sh-list #wpbody-content > .wrap:not(.sh) .wp-list-table a { color: #0F63AB; }
+body.sh-list #wpbody-content > .wrap:not(.sh) .subsubsub a { color: #0F63AB; }
+body.sh-list #wpbody-content > .wrap:not(.sh) .subsubsub a .count { color: #4D5768; }
+body.sh-list .wrap.sh.sh-listhead { margin-bottom: 0; }
+html:has(body.sh-list), body.sh-list, body.sh-list #wpcontent, body.sh-list #wpfooter { background: #F6F8FB; }
+
+/* One grid rule: as many columns as there are cards, no empty column. */
+.sh .sh-grid { align-items: start; }
+
+/* Status dots: green is good, gold needs you, grey is off by choice, red is a real failure. */
+.sh .sh-dot.is-off, .sh .is-off > .sh-dot, .sh .sh-check.is-off .sh-dot { background: #8D97AA; }
+.sh .sh-dot.is-needs, .sh .is-needs > .sh-dot, .sh .sh-check.is-needs .sh-dot { background: #B8860B; }
+.sh .sh-pill.is-needs { background: rgba(253, 193, 52, .2); color: #6B4700; }
+.sh .sh-pill.is-ready { background: rgba(18, 114, 196, .1); color: #0F63AB; }
+.sh .sh-pill.is-log { background: #EEF2F7; color: #4D5768; }
+.sh .sh-pill.is-off { background: #EEF2F7; color: #4D5768; }
+
+/* The status line: body size, a state pill, red only for a real failure. */
+.sh .sh-glance-line .sh-value { font-family: var(--sh-body); font-size: 16px; font-weight: 600; letter-spacing: 0; }
+
+/* One focus ring everywhere: 3px azure. */
+.sh a:focus-visible, .sh button:focus-visible, .sh summary:focus-visible, .sh .button:focus-visible, .sh a.sh-link-card:focus-visible, .sh input[type="checkbox"]:focus-visible, .sh input[type="radio"]:focus-visible {
+	outline: 3px solid #1272C4; outline-offset: 2px; box-shadow: none;
+}
+
+/* Brand colour on checkboxes and radios, not WordPress blue; 24px targets. */
+.sh input[type="checkbox"], .sh input[type="radio"] { accent-color: #1272C4; }
+.sh input[type="checkbox"]:checked::before { filter: hue-rotate(-12deg) saturate(.9); }
+.sh label > input[type="checkbox"], .sh label > input[type="radio"] { min-width: 18px; min-height: 18px; }
+.sh .sh-target { display: inline-flex; align-items: center; gap: 8px; min-height: 24px; }
+
+/* One form layout: label left, field right, inside one card; no box inside a box. */
+.sh .sh-box .form-table, .sh .sh-box .sh-box, .sh .sh-sections .sh-box .form-table { border: 0; box-shadow: none; border-radius: 0; padding: 0; margin: 0; background: transparent; }
+.sh .sh-box > .form-table + .submit, .sh .sh-box form > .submit { border-top: 1px solid var(--sh-border); margin-top: 8px; }
+@media (max-width: 600px) {
+	.sh .sh-box { padding: 16px; }
+	.sh > form > .form-table, .sh > .form-table, .sh .sh-sections .form-table { padding: 4px 14px; }
+}
+
+/* The save bar: at the foot of the form, the same everywhere. */
+.sh .submit { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.sh p.submit .button-primary { min-width: 96px; }
+
+/* A fact typed on another tab, shown read-only with a link there (rule 45). */
+.sh .sh-fact { display: grid; grid-template-columns: minmax(120px, 200px) minmax(0, 1fr) auto; align-items: baseline; gap: 4px 16px; padding: 10px 0; border-top: 1px solid var(--sh-border); }
+.sh .sh-fact:first-child { border-top: 0; }
+.sh .sh-fact .sh-label { font-size: 11px; color: var(--sh-text-3); }
+.sh .sh-fact strong { font-weight: 600; color: var(--sh-navy); overflow-wrap: anywhere; }
+.sh .sh-fact strong.sh-fact-empty { font-weight: 500; color: var(--sh-text-3); }
+.sh .sh-fact a { font-size: 13px; font-weight: 600; color: var(--sh-accent-text); text-decoration: none; white-space: nowrap; }
+@media (max-width: 600px) { .sh .sh-fact { grid-template-columns: minmax(0, 1fr); } }
+
+/* "For developers": shortcodes, constants and event names, out of the way. */
+.sh details.sh-dev { margin-top: 16px; background: #fff; border: 1px solid var(--sh-border); border-radius: 16px; }
+.sh details.sh-dev > summary { cursor: pointer; padding: 14px 22px; font-family: var(--sh-mono); font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--sh-text-3); }
+.sh details.sh-dev[open] > summary { border-bottom: 1px solid var(--sh-border); }
+.sh details.sh-dev .sh-dev-body { padding: 6px 22px 18px; }
+.sh details.sh-dev .sh-dev-body .sh-box { border: 0; box-shadow: none; padding: 0; margin-top: 12px; }
+
+/* Tables that are wider than a phone scroll inside their own box, never the page. */
+.sh .sh-scroll { overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+
+/* The tab row on a phone: scrolls sideways, with a fade on the edge that has more. */
+@media (max-width: 782px) {
+	.sh .sh-nav-sub { flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x proximity; }
+	.sh .sh-nav-sub a { scroll-snap-align: start; }
+	.sh .sh-nav-sub.is-more-right { -webkit-mask-image: linear-gradient(to right, #000 82%, transparent); mask-image: linear-gradient(to right, #000 82%, transparent); }
+	.sh .sh-nav-sub.is-more-left { -webkit-mask-image: linear-gradient(to left, #000 82%, transparent); mask-image: linear-gradient(to left, #000 82%, transparent); }
+	.sh .sh-nav-sub.is-more-left.is-more-right { -webkit-mask-image: linear-gradient(to right, transparent, #000 14%, #000 82%, transparent); mask-image: linear-gradient(to right, transparent, #000 14%, #000 82%, transparent); }
+	.sh, .sh.sh-screen-nav { margin-right: 10px; }
+}
+/* No shortcut key on touch screens. */
+@media (hover: none) { .sh .sh-find kbd { display: none; } }
+
+/* Section heads keep their distance from the box above. */
+.sh .sh-box + .sh-section-head, .sh .sh-box + h2, .sh .sh-box + h3 { margin-top: 28px; }
+
+/* The update screen (Build, Updates): one block per step, each with one state. */
+.sh .sh-step-block { border-left-width: 4px; display: grid; gap: 8px; }
+.sh .sh-step-block.is-needs { border-left-color: #EAA916; }
+.sh .sh-step-block.is-ready { border-left-color: #1272C4; }
+.sh .sh-step-block.is-done { border-left-color: #2BA24B; }
+.sh .sh-step-block.is-log { border-left-color: var(--sh-border); }
+.sh .sh-step-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.sh .sh-step-head h2 { margin: 0; font-size: 16px; }
+.sh .sh-step-block p { margin: 0; }
+.sh .sh-step-block .sh-btns { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sh .sh-step-block .sh-waiting { margin-top: 4px; }
+.sh .sh-step-block .sh-waiting li { align-items: center; }
+.sh .sh-step-block details > summary { cursor: pointer; color: var(--sh-accent-text); font-weight: 600; font-size: 13px; }
+
+/* Overview: a dashboard tile not linked yet, and the facts row for a viewer. */
+.sh .sh-link-card.is-off { box-shadow: none; background: #F6F8FB; }
+.sh .sh-link-card.is-off h2 { color: var(--sh-text-3); }
+.sh .sh-glance-facts .sh-fact-item { display: flex; flex-direction: column; gap: 2px; min-width: 0; color: var(--sh-navy); }
+.sh .sh-glance-facts .sh-fact-item strong { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
+
+/* Review inbox and Ask for reviews inside the kit: the dashboard wears the
+   Optima palette (section 4a), so their own variables follow the kit's and
+   pass WCAG AA on the kit canvas. */
+.sh .srk.recon-theme {
+	--recon-bg: var(--sh-bg);
+	--recon-surface-2: #EEF2F7;
+	--recon-text: var(--sh-text);
+	--recon-text-2: var(--sh-text-2);
+	--recon-text-3: var(--sh-text-3);
+	--recon-accent: var(--sh-accent);
+	--recon-accent-ink: var(--sh-accent-ink);
+	--recon-accent-text: var(--sh-accent-text);
+	--recon-border-strong: var(--sh-border-strong);
+	--recon-font: var(--sh-body);
+	--recon-font-mono: var(--sh-mono);
+	max-width: none;
+	margin-right: 0;
+}
+.sh .srk .button-primary { color: #fff; }
+
+/* A switch-like checkbox with a 24px target (WCAG 2.2 target size). */
+.sh .sh-target > input[type="checkbox"], .sh .sh-target > input[type="radio"] { width: 24px; height: 24px; min-width: 24px; margin: 0; }
+.sh .sh-target > input[type="checkbox"]::before { width: 100%; height: 100%; margin: 0; }
+
+/* A section head with an eyebrow over its heading: the eyebrow is a small mono label, not a second heading. */
+.sh .sh-section-head .sh-eyebrow:has(+ h2) { font-family: var(--sh-mono); font-size: 11px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--sh-accent-text); margin: 0 0 2px; }
+.sh .srk-pill.is-ok { color: var(--sh-good); }
+.sh .srk-pill.is-private { color: #6B4700; }

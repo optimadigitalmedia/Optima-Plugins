@@ -16,6 +16,7 @@ final class Optima_Contact_Admin {
 	public static function boot(): void {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ), 30 );
 		add_action( 'admin_init', array( __CLASS__, 'register' ) );
+		add_action( 'admin_init', array( 'Optima_Contact', 'migrate' ), 1 ); // Release 3: the phone moves to Details once.
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
 		add_filter( 'plugin_action_links_' . plugin_basename( OPTIMA_CONTACT_FILE ), array( __CLASS__, 'action_link' ) );
 	}
@@ -62,7 +63,8 @@ final class Optima_Contact_Admin {
 		$photos = array_slice( array_values( array_filter( array_map( 'absint', explode( ',', (string) ( $in['photos'] ?? '' ) ) ) ) ), 0, 3 );
 		$out    = array(
 			'enabled'   => ! empty( $in['enabled'] ) ? 1 : 0,
-			'phone'     => sanitize_text_field( (string) ( $in['phone'] ?? '' ) ),
+			// The phone is typed on Details now; the old saved number is kept as it was.
+			'phone'     => sanitize_text_field( (string) ( ( get_option( Optima_Contact::OPTION, array() )['phone'] ?? '' ) ) ),
 			'text'      => sanitize_text_field( (string) ( $in['text'] ?? '' ) ),
 			'text_off'  => ! empty( $in['text_off'] ) ? 1 : 0,
 			'book_url'  => esc_url_raw( trim( (string) ( $in['book_url'] ?? '' ) ) ),
@@ -79,9 +81,6 @@ final class Optima_Contact_Admin {
 			if ( '' === $out[ $k ] ) {
 				$out[ $k ] = $d[ $k ];
 			}
-		}
-		if ( '' !== $out['phone'] && '' === Optima_Contact::dial( $out['phone'] ) ) {
-			add_settings_error( Optima_Contact::OPTION, 'phone', __( 'That phone number has no digits in it.', 'optima-contact' ) );
 		}
 		return $out;
 	}
@@ -100,6 +99,7 @@ final class Optima_Contact_Admin {
 			__( 'Call buttons', 'optima-contact' )
 		);
 		settings_errors( $o );
+		Optima_Contact::migrate();
 		?>
 		<div class="sh-grid sh-grid-3">
 			<section class="sh-box sh-check is-<?php echo ( $s['enabled'] && $n ) ? 'good' : 'warn'; ?>">
@@ -107,15 +107,21 @@ final class Optima_Contact_Admin {
 				<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php echo esc_html( ( $s['enabled'] && $n ) ? __( 'Showing', 'optima-contact' ) : __( 'Off', 'optima-contact' ) ); ?></p>
 				<p class="sh-note"><?php echo esc_html( $n ? sprintf( /* translators: %d: number of options */ _n( '%d option in the sheet.', '%d options in the sheet.', $n, 'optima-contact' ), $n ) : __( 'Add a phone number or a booking link below.', 'optima-contact' ) ); ?></p>
 			</section>
-			<section class="sh-box sh-check is-good">
+			<section class="sh-box sh-check is-off">
 				<p class="sh-label"><?php esc_html_e( 'On computers', 'optima-contact' ); ?></p>
 				<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php esc_html_e( 'Hidden', 'optima-contact' ); ?></p>
 				<p class="sh-note"><?php esc_html_e( 'Wide screens already show the phone number and booking button in the header.', 'optima-contact' ); ?></p>
 			</section>
-			<section class="sh-box sh-check is-good">
+			<section class="sh-box sh-check is-<?php echo class_exists( 'Optima_Analytics' ) ? 'good' : 'off'; ?>">
 				<p class="sh-label"><?php esc_html_e( 'Taps', 'optima-contact' ); ?></p>
 				<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php echo esc_html( class_exists( 'Optima_Analytics' ) ? __( 'Counted', 'optima-contact' ) : __( 'Not counted', 'optima-contact' ) ); ?></p>
-				<p class="sh-note"><?php esc_html_e( 'With Optima Analytics on, each tap is sent as contact_call, contact_text, contact_book or contact_open.', 'optima-contact' ); ?></p>
+				<p class="sh-note">
+					<?php if ( class_exists( 'Optima_Analytics' ) ) : ?>
+						<?php esc_html_e( 'Taps are counted in Analytics.', 'optima-contact' ); ?> <a href="<?php echo esc_url( admin_url( 'admin.php?page=optima-analytics' ) ); ?>"><?php esc_html_e( 'Analytics', 'optima-contact' ); ?> &rsaquo;</a>
+					<?php else : ?>
+						<?php esc_html_e( 'Turn on Analytics to count each tap.', 'optima-contact' ); ?>
+					<?php endif; ?>
+				</p>
 			</section>
 		</div>
 
@@ -128,9 +134,8 @@ final class Optima_Contact_Admin {
 					<td><label><input type="checkbox" name="<?php echo esc_attr( $o ); ?>[enabled]" value="1" <?php checked( $s['enabled'] ); ?>> <?php esc_html_e( 'Show the call bar on phones', 'optima-contact' ); ?></label></td>
 				</tr>
 				<tr>
-					<th scope="row"><label for="odc-phone"><?php esc_html_e( 'Phone number', 'optima-contact' ); ?></label></th>
-					<td><input id="odc-phone" type="text" class="regular-text" name="<?php echo esc_attr( $o ); ?>[phone]" value="<?php echo esc_attr( $s['phone'] ); ?>" placeholder="(919) 555-0100">
-						<p class="description"><?php esc_html_e( 'Shown in the sheet exactly as typed. Use the same format as the rest of the site.', 'optima-contact' ); ?></p></td>
+					<th scope="row"><?php esc_html_e( 'Phone number', 'optima-contact' ); ?></th>
+					<td><?php Optima_Admin_UI::fact( __( 'From Details', 'optima-contact' ), Optima_Contact::business_phone() ); ?></td>
 				</tr>
 				<tr>
 					<th scope="row"><label for="odc-text"><?php esc_html_e( 'Texting number', 'optima-contact' ); ?></label></th>
@@ -186,7 +191,7 @@ final class Optima_Contact_Admin {
 					</td>
 				</tr>
 			</table>
-			<?php submit_button(); ?>
+			<?php submit_button( __( 'Save', 'optima-contact' ) ); ?>
 		</form>
 		<?php
 		Optima_Admin_UI::close();

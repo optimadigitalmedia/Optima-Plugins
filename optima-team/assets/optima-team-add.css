@@ -32,3 +32,6 @@
 @media (max-width: 782px) {
 	.sh .st-add-steps-4 { grid-template-columns: 1fr; }
 }
+
+/* Steps not reached yet are flat: they are not buttons. */
+.sh .st-add-steps li:not(.is-current):not(.is-done) { background: transparent; border-color: transparent; }

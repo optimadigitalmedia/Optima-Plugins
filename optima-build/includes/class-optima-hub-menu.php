@@ -31,17 +31,21 @@ final class Optima_Hub_Menu {
 		'optima-team',
 		'edit.php?post_type=optima_team',
 		'optima-cards',
-		// Your business.
+		// Your business: Details, Hours, Call buttons, Case results, Reviews, Chat.
 		'optima',
 		'optima&tab=business',
-		'optima-contact',
 		'optima-hours',
+		'optima-contact',
 		'optima-results',
 		'edit.php?post_type=optima_result',
-		'edit.php?post_type=optima_review',
 		'optima-reviews-settings',
+		'edit.php?post_type=optima_review',
+		'optima-reviews-ask',
 		'optima-chat',
 		// Content.
+		'optima-pages',
+		'edit.php?post_type=testimonial',
+		'edit.php?post_type=faq',
 		'optima&tab=sync',
 		'optima-redirects',
 		'optima-optimize',
@@ -51,6 +55,7 @@ final class Optima_Hub_Menu {
 		'optima-analytics',
 		'optima-accessibility',
 		'optima&tab=protect',
+		'optima-forms-guard',
 		// Site health.
 		'{hub}&tab=health',
 		'optima&tab=dashboard',
@@ -59,7 +64,6 @@ final class Optima_Hub_Menu {
 		'{hub}&tab=requests',
 		'edit.php?post_type=optima_chat_q',
 		'optima-reviews-inbox',
-		'optima-reviews-ask',
 		// Build: the update queue first.
 		'{hub}&tab=updates',
 		'{hub}',
@@ -83,6 +87,8 @@ final class Optima_Hub_Menu {
 		add_action( 'admin_head', array( __CLASS__, 'drop_build' ), 999 );
 		// The admin footer's help link: Request a change, never a personal address.
 		add_filter( 'optima_admin_help_url', static fn() => Optima_Hub_Admin::url( 'requests' ) );
+		// The sign-off is for the people the agency builds for; operators are the agency.
+		add_filter( 'optima_admin_show_foot', static fn( $show ) => $show && ! Optima_Hub_Access::is_operator() );
 	}
 
 	/** Is this menu entry one of Build's screens? */

@@ -38,7 +38,7 @@
 .shh-radios label { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; }
 .sh .shh-radios input[type="radio"] { margin: 0; }
 .shh-save { margin: 16px 0 0; }
-.sh .shh-save .button-primary { min-height: 44px; padding: 8px 28px; font-size: 15px; }
+.sh .shh-save .button-primary { min-width: 96px; }
 
 /* Closures */
 .shh-closures { list-style: none; margin: 4px 0 0; padding: 0; }

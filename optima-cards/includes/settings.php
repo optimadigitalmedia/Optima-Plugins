@@ -18,9 +18,14 @@ final class Optima_Cards_Settings {
 	const MAX_PEOPLE  = 6;
 	const MAX_LINKS   = 10;
 
-	/** The business identity from Optima Core, or blanks when Optima Core is not active. */
+	/**
+	 * The business facts from Your business, Details (the optima_business option,
+	 * Optima Core's or Optima Build's form). Read straight from the option so it
+	 * works whichever of the two owns the form.
+	 */
 	public static function identity() {
-		$id = class_exists( 'Optima_Core_Business' ) ? Optima_Core_Business::get() : array();
+		$id = get_option( 'optima_business', array() );
+		$id = is_array( $id ) ? $id : array();
 		return wp_parse_args(
 			(array) $id,
 			array( 'name' => '', 'phone' => '', 'email' => '', 'city' => '', 'region' => '', 'postal' => '', 'country' => '', 'same_as' => '' )
@@ -67,12 +72,23 @@ final class Optima_Cards_Settings {
 		);
 	}
 
-	/** Saved settings over the defaults; blanks fall back. */
+	/** The business facts the card shows, typed once on Details (rule 45): card key => Details key. */
+	const FACTS = array(
+		'name'    => 'name',
+		'phone'   => 'phone',
+		'email'   => 'email',
+		'city'    => 'city',
+		'region'  => 'region',
+		'postal'  => 'postal',
+		'socials' => 'same_as',
+	);
+
+	/** Saved settings over the defaults; blanks fall back. Business facts come from Details first. */
 	public static function get() {
 		$d = self::defaults();
 		$s = get_option( self::OPTION );
 		if ( ! is_array( $s ) ) {
-			return $d;
+			return self::design( $d );
 		}
 		foreach ( $s as $k => $v ) {
 			if ( in_array( $k, array( 'people', 'links' ), true ) ) {
@@ -89,7 +105,111 @@ final class Optima_Cards_Settings {
 				$d[ $k ] = $v;
 			}
 		}
+		// A fact Details has wins; the value Cards saved before release 3 is used
+		// only while Details is blank, so nothing typed here is ever lost.
+		$id = self::identity();
+		foreach ( self::FACTS as $card => $biz ) {
+			if ( '' !== trim( (string) ( $id[ $biz ] ?? '' ) ) ) {
+				$d[ $card ] = (string) $id[ $biz ];
+			}
+		}
+		return self::design( $d );
+	}
+
+	/**
+	 * The card dresses from the theme's DESIGN.md (rule 7): accent and body font
+	 * from Optima Build's design tokens. A color or font Cards saved before
+	 * release 3 is used only on a site without Optima Build.
+	 */
+	private static function design( array $d ) {
+		if ( class_exists( 'Optima_Hub_Design' ) ) {
+			$t      = Optima_Hub_Design::tokens();
+			$accent = sanitize_hex_color( (string) ( $t['color']['accent'] ?? '' ) );
+			$body   = trim( (string) ( $t['font']['body'] ?? '' ) );
+			if ( $accent ) {
+				$d['accent'] = $accent;
+			}
+			$d['font'] = '' !== $body ? '"' . str_replace( '"', '', $body ) . '", sans-serif' : '';
+		}
 		return $d;
+	}
+
+	/** Is People (Optima Team) running, so cards read from profiles (rule 47)? */
+	public static function people_on() {
+		return class_exists( 'Optima_Team' ) && post_type_exists( 'optima_team' );
+	}
+
+	/**
+	 * Once (release 3): business facts typed on Cards and missing from Details
+	 * move to Details, and each person slot is linked to the People profile with
+	 * the same name or email. Slots with no profile stay as they were (and keep
+	 * their card) until a profile exists. Nothing is deleted.
+	 */
+	public static function migrate() {
+		if ( get_option( 'optima_cards_r3' ) ) {
+			return;
+		}
+		$saved = get_option( self::OPTION );
+		if ( is_array( $saved ) ) {
+			$biz     = get_option( 'optima_business', array() );
+			$biz     = is_array( $biz ) ? $biz : array();
+			$changed = false;
+			foreach ( self::FACTS as $card => $key ) {
+				$old = trim( (string) ( $saved[ $card ] ?? '' ) );
+				if ( '' !== $old && '' === trim( (string) ( $biz[ $key ] ?? '' ) ) ) {
+					$biz[ $key ] = $old;
+					$changed     = true;
+				}
+			}
+			if ( $changed ) {
+				update_option( 'optima_business', $biz );
+			}
+			if ( self::people_on() && ! empty( $saved['people'] ) && is_array( $saved['people'] ) ) {
+				foreach ( $saved['people'] as $i => $p ) {
+					if ( ! empty( $p['profile'] ) ) {
+						continue;
+					}
+					$id = self::match_profile( (string) ( $p['name'] ?? '' ), (string) ( $p['email'] ?? '' ) );
+					if ( $id ) {
+						$saved['people'][ $i ]['profile'] = $id;
+					}
+				}
+				update_option( self::OPTION, $saved, false );
+			}
+		}
+		if ( self::people_on() || ! is_array( $saved ) || empty( $saved['people'] ) ) {
+			update_option( 'optima_cards_r3', time(), false );
+		}
+	}
+
+	/** The People profile with this name or email, or 0. */
+	public static function match_profile( $name, $email ) {
+		foreach ( get_posts( array( 'post_type' => 'optima_team', 'post_status' => array( 'publish', 'draft', 'private' ), 'posts_per_page' => 200 ) ) as $post ) {
+			$prof = (array) get_post_meta( $post->ID, '_optima_team', true );
+			if ( ( '' !== $name && 0 === strcasecmp( trim( $name ), trim( $post->post_title ) ) ) || ( '' !== $email && 0 === strcasecmp( $email, (string) ( $prof['email'] ?? '' ) ) ) ) {
+				return (int) $post->ID;
+			}
+		}
+		return 0;
+	}
+
+	/** One card's person facts from their People profile: name, title, email, photo. */
+	public static function from_profile( $id, array $entry, array $s ) {
+		$post = get_post( (int) $id );
+		if ( ! $post || 'optima_team' !== $post->post_type || 'trash' === $post->post_status ) {
+			return null;
+		}
+		$prof = (array) get_post_meta( $post->ID, '_optima_team', true );
+		return array_merge(
+			$entry,
+			array(
+				'name'     => $post->post_title,
+				'title'    => (string) ( $prof['role'] ?? '' ),
+				'email'    => ! empty( $prof['email'] ) ? (string) $prof['email'] : '',
+				'photo_id' => (int) get_post_thumbnail_id( $post->ID ),
+				'slug'     => ! empty( $entry['slug'] ) ? $entry['slug'] : $post->post_name,
+			)
+		);
 	}
 
 	public static function phone_e164( $phone ) {
@@ -148,6 +268,13 @@ final class Optima_Cards_Settings {
 			),
 		);
 		foreach ( (array) $s['people'] as $p ) {
+			// A card linked to a People profile takes its name, title, email and photo from it (rule 47).
+			if ( ! empty( $p['profile'] ) && self::people_on() ) {
+				$p = self::from_profile( (int) $p['profile'], (array) $p, $s );
+				if ( ! $p ) {
+					continue;
+				}
+			}
 			$slug = sanitize_title( $p['slug'] ?? '' );
 			if ( '' === $slug || in_array( $slug, array( 'save', 'share', 'team' ), true ) || empty( $p['name'] ) ) {
 				continue;

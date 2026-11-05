@@ -380,29 +380,31 @@ final class Optima_Redirects_Admin {
 		$post_url = admin_url( 'admin-post.php' );
 
 		Optima_Admin_UI::open(
-			__( 'Old pages, forwarded to new ones', 'optima-redirects' ),
-			__( 'When a page moves or goes away, a redirect sends visitors and search engines to the right place. This screen also lists the missing pages people ask for, so each one can become a redirect in one click.', 'optima-redirects' ),
-			__( 'Redirects', 'optima-redirects' )
+			__( 'Redirects', 'optima-redirects' ),
+			__( 'Old pages, forwarded to new ones. When a page moves or goes away, a redirect sends visitors and search engines to the right place; the missing pages people ask for are listed too, so each one becomes a redirect in one click.', 'optima-redirects' )
 		);
 		self::messages();
 		?>
-		<div class="sh-grid sh-grid-3 sr-stats">
-			<section class="sh-box sr-stat">
-				<p class="sr-stat-label"><span class="sr-dot" aria-hidden="true"></span><?php esc_html_e( 'Redirects live', 'optima-redirects' ); ?></p>
-				<p class="sr-stat-num"><?php echo esc_html( number_format_i18n( $total ) ); ?></p>
-				<p class="sh-note"><?php esc_html_e( 'Old addresses that forward to a new page.', 'optima-redirects' ); ?></p>
-			</section>
-			<section class="sh-box sr-stat">
-				<p class="sr-stat-label"><?php esc_html_e( 'Missing pages hit', 'optima-redirects' ); ?></p>
-				<p class="sr-stat-num"><?php echo esc_html( number_format_i18n( $missing7 ) ); ?></p>
-				<p class="sh-note"><?php esc_html_e( 'Different missing addresses visitors tried in the last 7 days.', 'optima-redirects' ); ?></p>
-			</section>
-			<section class="sh-box sr-stat">
-				<p class="sr-stat-label"><?php esc_html_e( 'Broken links on site', 'optima-redirects' ); ?></p>
-				<p class="sr-stat-num"><?php echo esc_html( number_format_i18n( $broken ) ); ?></p>
-				<p class="sh-note"><?php esc_html_e( 'Missing pages that a link on one of your own pages leads to.', 'optima-redirects' ); ?></p>
-			</section>
-		</div>
+		<?php
+		// One status line, not a row of big numbers (no number bars).
+		$parts = array(
+			$total
+				/* translators: %s: number */
+				? sprintf( _n( '%s redirect live.', '%s redirects live.', $total, 'optima-redirects' ), number_format_i18n( $total ) )
+				: __( 'No redirects yet.', 'optima-redirects' ),
+			$missing7
+				/* translators: %s: number */
+				? sprintf( _n( '%s missing address tried in the last 7 days.', '%s missing addresses tried in the last 7 days.', $missing7, 'optima-redirects' ), number_format_i18n( $missing7 ) )
+				: __( 'Nothing missing in the last 7 days.', 'optima-redirects' ),
+		);
+		if ( $broken ) {
+			/* translators: %s: number */
+			$parts[] = sprintf( _n( '%s link on the site leads to a missing page.', '%s links on the site lead to a missing page.', $broken, 'optima-redirects' ), number_format_i18n( $broken ) );
+		}
+		?>
+		<section class="sh-box">
+			<div class="sh-status <?php echo ( $missing7 || $broken ) ? 'is-warn' : ''; ?>"><span class="sh-dot" aria-hidden="true"></span><p class="sh-value"><?php echo esc_html( implode( ' ', $parts ) ); ?></p></div>
+		</section>
 
 		<div class="sr-layout">
 			<section class="sh-box sr-main" id="optima-list">
