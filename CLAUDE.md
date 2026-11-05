@@ -10,8 +10,9 @@ The plugin suite behind every Optima client site. Before changing any plugin, re
   table and `catalog.json`, then get a theme fallback only if needed.
 - **Plugins dress from the theme's `DESIGN.md`.** CSS uses only `--optima-*` variables;
   no hard-coded colors, fonts or radii; plugins never load fonts.
-- **Same everywhere.** One Optima menu with seven items (Overview, Your business, Content, Search and AI,
-  Site health, Inbox, Build); each feature's settings on its tab inside one of them; blocks render through `optima_slot()` in fixed spots.
+- **Same everywhere.** One Optima menu with eight items (Overview, People, Your business, Content,
+  Search and AI, Site health, Inbox, Build), for operators only; each feature's settings on its tab
+  inside one of them; the sidebar is the only group nav; blocks render through `optima_slot()` in fixed spots.
 - **Prove it.** `tools/uniform-check.sh` passes, head-and-schema diff for every move,
   staging first, version bump and changelog line every release (`RELEASING.md`).
 - **Load, update and build the same way.** Same `functions.php` skeleton and asset handles in

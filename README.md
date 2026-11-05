@@ -33,9 +33,9 @@ a theme never orphans content.
 ## Install
 
 1. Upload and activate `optima-build` (the hub). It installs and updates the rest.
-2. Open **Optima → Features**, set the site's plan, turn on what the site needs.
-3. Fill the business details once in **Optima → Business info**. Every plugin
-   reads them from there.
+2. Open **Optima → Build → Features**, set the site's plan, turn on what the site needs.
+3. Fill the business details once in **Optima → Your business → Business info**.
+   Every plugin reads them from there.
 
 Plugins update themselves from this repo's releases. Each release goes to the
 agency's own staging site first (the test channel) and to every other site once
