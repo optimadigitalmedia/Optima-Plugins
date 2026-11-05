@@ -141,7 +141,11 @@ final class Optima_Hub_Features {
 	 */
 	public static function ensure_fresh(): int {
 		$at = self::last_checked();
-		if ( ( $at && time() - $at < self::STALE_AFTER ) || get_transient( 'optima_hub_refreshing' ) || ! current_user_can( Optima_Hub_Lock::VIEW ) ) {
+		// WordPress drops its update list whenever a plugin is turned on or off; with
+		// no list, every feature would read "up to date". That counts as stale too.
+		$list  = get_site_transient( 'update_plugins' );
+		$fresh = $at && time() - $at < self::STALE_AFTER && is_object( $list ) && ! empty( $list->last_checked );
+		if ( $fresh || get_transient( 'optima_hub_refreshing' ) || ! current_user_can( Optima_Hub_Lock::VIEW ) ) {
 			return $at;
 		}
 		set_transient( 'optima_hub_refreshing', 1, 2 * MINUTE_IN_SECONDS );
