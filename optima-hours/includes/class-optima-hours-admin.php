@@ -25,6 +25,7 @@ final class Optima_Hours_Admin {
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
 		add_action( 'admin_notices', array( __CLASS__, 'reminders' ) );
 		add_action( 'admin_post_optima_hours_save', array( __CLASS__, 'save' ) );
+		add_action( 'admin_post_optima_hours_old_seen', array( __CLASS__, 'old_seen' ) );
 		add_action( 'admin_post_optima_hours_add', array( __CLASS__, 'add' ) );
 		add_action( 'admin_post_optima_hours_delete', array( __CLASS__, 'delete' ) );
 		add_action( 'admin_post_optima_hours_dismiss', array( __CLASS__, 'dismiss' ) );
@@ -252,6 +253,17 @@ final class Optima_Hours_Admin {
 		}
 	}
 
+	/** The old hours text from Details has been checked: stop showing it (the text itself stays). */
+	public static function old_seen(): void {
+		check_admin_referer( 'optima_hours_old_seen' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'optima-hours' ), 403 );
+		}
+		update_option( 'optima_hours_old_text_seen', time(), false );
+		wp_safe_redirect( admin_url( 'admin.php?page=optima-hours' ) );
+		exit;
+	}
+
 	public static function render(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
@@ -262,11 +274,21 @@ final class Optima_Hours_Admin {
 		$route     = Optima_Hours_Schema::route();
 
 		Optima_Admin_UI::open(
-			__( 'When you’re open', 'optima-hours' ),
-			__( 'Set your weekly hours and holiday closures once. The site shows them, keeps the "Open now" line current, and adds them to the schema Google reads.', 'optima-hours' ),
+			__( 'Hours', 'optima-hours' ),
+			__( 'When you’re open: weekly hours and holiday closures, typed once here. The site shows them, keeps the "Open now" line current, and adds them to the schema Google reads.', 'optima-hours' ),
 			__( 'Hours', 'optima-hours' )
 		);
 		self::message();
+		// Hours typed in the old box on Details before release 3: shown once for checking (rule 45).
+		$old = (string) ( Optima_Admin_UI::business()['hours'] ?? '' );
+		if ( '' !== trim( $old ) && ! get_option( 'optima_hours_old_text_seen' ) ) {
+			echo '<section class="sh-box"><h2 class="sh-title">' . esc_html__( 'Hours from the old box on Details', 'optima-hours' ) . '</h2>';
+			echo '<p class="sh-note">' . esc_html__( 'Hours are typed only here now. This is what the old box on Details held; check the weekly hours below match it. It is kept, not deleted.', 'optima-hours' ) . '</p>';
+			echo '<pre style="white-space:pre-wrap;margin:8px 0 0;font:inherit">' . esc_html( $old ) . '</pre>';
+			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="margin-top:10px"><input type="hidden" name="action" value="optima_hours_old_seen">';
+			wp_nonce_field( 'optima_hours_old_seen' );
+			echo '<button type="submit" class="button">' . esc_html__( 'Checked, hide this', 'optima-hours' ) . '</button></form></section>';
+		}
 		?>
 		<div class="shh-layout">
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="shh-main">
@@ -318,7 +340,7 @@ final class Optima_Hours_Admin {
 					</fieldset>
 				</section>
 
-				<p class="shh-save"><button type="submit" class="button button-primary button-hero"><?php esc_html_e( 'Save hours', 'optima-hours' ); ?></button></p>
+				<p class="shh-save"><button type="submit" class="button button-primary"><?php esc_html_e( 'Save', 'optima-hours' ); ?></button></p>
 			</form>
 
 			<div class="shh-side">
@@ -425,7 +447,8 @@ final class Optima_Hours_Admin {
 							$state = ! $confirmed ? 'is-pending' : ( $row[0] ? 'is-on' : 'is-off' );
 							?>
 							<li class="<?php echo esc_attr( $state ); ?>">
-								<span class="shh-tick" aria-hidden="true"></span>
+								<?php // Until the hours are confirmed nothing goes out: a neutral dot, never a tick. ?>
+								<span class="<?php echo 'is-on' === $state ? 'shh-tick' : 'sh-dot is-off'; ?>" aria-hidden="true"></span>
 								<div>
 									<p class="shh-where-name"><?php echo esc_html( $row[1] ); ?></p>
 									<p class="sh-note"><?php echo esc_html( $row[2] ); ?></p>
@@ -435,6 +458,7 @@ final class Optima_Hours_Admin {
 					</ul>
 				</section>
 
+				<?php Optima_Admin_UI::dev_open(); ?>
 				<section class="sh-box">
 					<h2 class="sh-title"><?php esc_html_e( 'Showing the hours', 'optima-hours' ); ?></h2>
 					<table class="sh-table">
@@ -444,6 +468,7 @@ final class Optima_Hours_Admin {
 						<tr><td>optima_hours_html()</td><td><?php esc_html_e( 'The same from a theme template, with the same options.', 'optima-hours' ); ?></td></tr>
 					</table>
 				</section>
+				<?php Optima_Admin_UI::dev_close(); ?>
 			</div>
 		</div>
 		<?php
