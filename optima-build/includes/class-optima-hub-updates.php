@@ -234,7 +234,10 @@ final class Optima_Hub_Updates {
 			return;
 		}
 		$done     = (array) get_option( Optima_Hub_Setup::DONE, array() );
-		$sections = array_keys( array_filter( $data, static fn( $v, $k ) => is_array( $v ) && in_array( $k, array( 'team', 'reviews', 'chat', 'hours', 'analytics', 'cards', 'contact', 'seo' ), true ), ARRAY_FILTER_USE_BOTH ) );
+		// A section counts only when the feature that reads it is on (seo is read by Optima Core).
+		$owner    = array( 'team' => 'optima-team', 'reviews' => 'optima-reviews', 'chat' => 'optima-chat', 'hours' => 'optima-hours', 'analytics' => 'optima-analytics', 'cards' => 'optima-cards', 'contact' => 'optima-contact', 'seo' => 'optima-core' );
+		$active   = (array) get_option( 'active_plugins', array() );
+		$sections = array_keys( array_filter( $data, static fn( $v, $k ) => is_array( $v ) && isset( $owner[ $k ] ) && in_array( $owner[ $k ] . '/' . $owner[ $k ] . '.php', $active, true ), ARRAY_FILTER_USE_BOTH ) );
 		$left     = array_values( array_diff( $sections, array_keys( $done ) ) );
 		$state    = $left ? 'ready' : 'done';
 		self::open_block( __( 'Fill from theme again', 'optima-build' ), $state, 'sh-up-fill' );

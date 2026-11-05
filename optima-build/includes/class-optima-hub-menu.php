@@ -99,15 +99,21 @@ final class Optima_Hub_Menu {
 	/** Remove Build's screens from the menu list for anyone who is not an operator. */
 	public static function drop_build(): void {
 		global $submenu;
-		if ( Optima_Hub_Access::is_operator() ) {
-			return;
-		}
 		$parent = Optima_Hub_Admin::parent();
 		if ( empty( $submenu[ $parent ] ) || ! is_array( $submenu[ $parent ] ) ) {
 			return;
 		}
+		$operator = Optima_Hub_Access::is_operator();
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- reading the screen address only.
+		$page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
 		foreach ( $submenu[ $parent ] as $i => $item ) {
-			if ( self::is_build( (string) ( $item[2] ?? '' ) ) ) {
+			$slug = (string) ( $item[2] ?? '' );
+			// Site setup and Content updates are blocks on Updates; their tab shows only while one is open.
+			if ( $operator && in_array( $slug, array( 'optima-build', 'optima-content-updates' ), true ) && $slug !== $page ) {
+				unset( $submenu[ $parent ][ $i ] ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- hiding our own items after the access check.
+				continue;
+			}
+			if ( ! $operator && self::is_build( $slug ) ) {
 				unset( $submenu[ $parent ][ $i ] ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- hiding our own items after the access check.
 			}
 		}
