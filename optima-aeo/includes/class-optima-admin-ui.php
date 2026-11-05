@@ -44,7 +44,7 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 
 	final class Optima_Admin_UI {
 
-		const VERSION = '1.7.0.0';
+		const VERSION = '1.8.0.0';
 
 		/** Show the Optima mark and sign-off. */
 		public static function branded(): bool {
@@ -73,10 +73,49 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 				wp_enqueue_style( 'wp-commands' );
 			}
 			add_action( 'admin_print_footer_scripts', array( __CLASS__, 'find_script' ), 20 );
+			add_action( 'admin_print_footer_scripts', array( __CLASS__, 'nav_script' ), 20 );
+		}
+
+		/** @var bool The tab-row script already printed. */
+		private static $nav_js = false;
+
+		/**
+		 * The tab row on a narrow screen scrolls sideways; this marks a row that has
+		 * more tabs out of view (the CSS fades that edge) and brings the open tab
+		 * into view.
+		 */
+		public static function nav_script(): void {
+			if ( self::$nav_js ) {
+				return;
+			}
+			self::$nav_js = true;
+			?>
+			<script>
+			( function () {
+				document.querySelectorAll( '.sh-nav-sub' ).forEach( function ( row ) {
+					var mark = function () {
+						var more = row.scrollWidth > row.clientWidth + 2;
+						row.classList.toggle( 'is-more-right', more && row.scrollLeft + row.clientWidth < row.scrollWidth - 2 );
+						row.classList.toggle( 'is-more-left', more && row.scrollLeft > 2 );
+					};
+					var on = row.querySelector( '.is-active' );
+					if ( on && row.scrollWidth > row.clientWidth ) { row.scrollLeft = Math.max( 0, on.offsetLeft - 24 ); }
+					row.addEventListener( 'scroll', mark, { passive: true } );
+					window.addEventListener( 'resize', mark );
+					mark();
+				} );
+			} )();
+			</script>
+			<?php
 		}
 
 		/** The few lines behind the Find box, printed once. */
 		public static function find_script(): void {
+			static $done = false;
+			if ( $done ) {
+				return;
+			}
+			$done = true;
 			?>
 			<script>
 			( function () {
@@ -84,6 +123,8 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 				if ( ! box ) { return; }
 				var open = window.wp && wp.data && wp.data.dispatch && wp.data.select && wp.data.select( 'core/commands' ) ? function () { wp.data.dispatch( 'core/commands' ).open(); } : null;
 				if ( ! open ) { box.hidden = true; return; }
+				var kbd = box.querySelector( 'kbd' );
+				if ( kbd && ! /Mac|iPhone|iPad/.test( navigator.platform || navigator.userAgent ) ) { kbd.textContent = 'Ctrl K'; }
 				box.addEventListener( 'click', open );
 				document.addEventListener( 'keydown', function ( e ) {
 					if ( ( e.metaKey || e.ctrlKey ) && 'k' === e.key.toLowerCase() && ! e.defaultPrevented ) { e.preventDefault(); open(); }
@@ -118,7 +159,12 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 			}
 			echo '</div>';
 			echo '<header class="sh-head"><div>';
-			echo '<p class="sh-eyebrow">' . esc_html( $brand . ' · ' . ( '' !== $section ? $section : $title ) ) . '</p>';
+			// A group's home screen (Overview, People, Site health, Inbox) has the group's
+			// own name as its title, so an eyebrow there would only repeat it.
+			$eyebrow = '' !== $section ? $section : $title;
+			if ( 0 !== strcasecmp( $eyebrow, $title ) ) {
+				echo '<p class="sh-eyebrow">' . esc_html( $brand . ' · ' . $eyebrow ) . '</p>';
+			}
 			echo '<h1>' . esc_html( $title ) . '</h1>';
 			if ( '' !== $lede ) {
 				echo '<p class="sh-lede">' . esc_html( $lede ) . '</p>';
@@ -188,16 +234,25 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 			'business' => array(
 				'optima',
 				'optima&tab=business',
-				'optima-contact',
 				'optima-hours',
+				'optima-contact',
 				'optima-results',
 				'edit.php?post_type=optima_result',
-				'edit.php?post_type=optima_review',
 				'optima-reviews-settings',
+				'edit.php?post_type=optima_review',
+				'optima-reviews-ask',
 				'optima-chat',
 			),
-			'content'  => array( 'optima&tab=sync', 'optima-redirects', 'optima-optimize', 'optima-optimize-sweep' ),
-			'search'   => array( 'optima&tab=seo', 'optima-ai-search', 'optima-analytics', 'optima-accessibility', 'optima&tab=protect' ),
+			'content'  => array(
+				'optima-pages',
+				'edit.php?post_type=testimonial',
+				'edit.php?post_type=faq',
+				'optima&tab=sync',
+				'optima-redirects',
+				'optima-optimize',
+				'optima-optimize-sweep',
+			),
+			'search'   => array( 'optima&tab=seo', 'optima-ai-search', 'optima-analytics', 'optima-accessibility', 'optima&tab=protect', 'optima-forms-guard' ),
 			'health'   => array( 'site-build-features&tab=health', 'site-build&tab=health', 'optima&tab=dashboard', 'site-build-robots' ),
 			'inbox'    => array(
 				'optima-inbox',
@@ -205,7 +260,6 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 				'site-build&tab=requests',
 				'edit.php?post_type=optima_chat_q',
 				'optima-reviews-inbox',
-				'optima-reviews-ask',
 			),
 			'build'    => array(
 				'site-build-features&tab=updates',
@@ -224,6 +278,31 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 			),
 			// Settings tabs a theme adds to Optima Core (companion settings groups) are the client's facts.
 			'_more'    => array( 'business' => 'optima&tab=*' ),
+		);
+
+		/**
+		 * Screens that are part of another tab (dashboard release 3): one feature, one
+		 * tab. Each keeps its address and opens as before, but it has no tab of its
+		 * own; the tab row lights the tab it belongs to.
+		 */
+		const ALIASES = array(
+			'edit.php?post_type=optima_result' => 'optima-results',
+			'edit.php?post_type=optima_review' => 'optima-reviews-settings',
+			'optima-reviews-ask'               => 'optima-reviews-settings',
+		);
+
+		/**
+		 * WordPress list screens that get the kit's head (top bar, title, lede, tab
+		 * row) instead of WordPress's own title: title => lede. The title is the
+		 * screen's tab name (rule 44).
+		 */
+		const LISTS = array(
+			'edit.php?post_type=optima_team'   => array( 'Profiles', 'One profile per person. Each one feeds the team page, the bio page, bylines, case results and the digital card.' ),
+			'edit.php?post_type=optima_result' => array( 'Case results', 'Every result, one row each, with its amount and year. The disclaimer and the display settings are on Case results.' ),
+			'edit.php?post_type=optima_review' => array( 'Reviews', 'Every review on the site and every one kept back. Platforms, Ask for reviews and the display settings are on Reviews.' ),
+			'edit.php?post_type=optima_chat_q' => array( 'Chat questions', 'Questions the chat could not answer, newest first. Answer one and the chat knows it next time.' ),
+			'edit.php?post_type=testimonial'   => array( 'Testimonials', 'Quotes from clients, shown where the theme places them.' ),
+			'edit.php?post_type=faq'           => array( 'FAQs', 'Questions and answers. They feed the FAQ blocks and the FAQ schema.' ),
 		);
 
 		/** Optima sidebar menus the kit tidies. */
@@ -278,7 +357,7 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 					$label = self::clean( $raw );
 					$group = self::group( $slug, $label );
 					self::$labels[ $slug ] = $label;
-					$leads = ! isset( $lead[ $group ] ) && current_user_can( (string) ( $item[1] ?? 'manage_options' ) );
+					$leads = ! isset( $lead[ $group ] ) && ! isset( self::ALIASES[ $slug ] ) && current_user_can( (string) ( $item[1] ?? 'manage_options' ) );
 					if ( ( $leads || ! isset( $bubble[ $group ] ) ) && preg_match( '#<span[^>]*class="[^"]*(update-plugins|awaiting-mod|count)[^"]*"[^>]*>.*?</span>(\s*</span>)?#s', $raw, $m ) ) {
 						$bubble[ $group ] = ' ' . $m[0];
 					}
@@ -319,6 +398,10 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 					return self::$leaders[ $slug ];
 				}
 			}
+			$type = self::type_screen();
+			if ( '' !== $type && isset( self::$leaders[ $type ] ) ) {
+				return self::$leaders[ $type ];
+			}
 			$link = self::loose_link( $page );
 			return $link ? $link[1] : $file;
 		}
@@ -343,11 +426,38 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 			return null;
 		}
 
-		/** Keep the Optima menu open on a screen opened from a button. */
+		/** Keep the Optima menu open on a screen opened from a button, or on an Optima list or edit screen. */
 		public static function current_menu( $file ) {
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- reading the screen address only.
 			$link = self::loose_link( isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '' );
-			return $link ? $link[0] : $file;
+			if ( $link ) {
+				return $link[0];
+			}
+			$type = self::type_screen();
+			if ( '' !== $type ) {
+				global $submenu;
+				foreach ( self::MENUS as $parent ) {
+					foreach ( (array) ( $submenu[ $parent ] ?? array() ) as $item ) {
+						if ( ( $item[2] ?? '' ) === $type ) {
+							return $parent;
+						}
+					}
+				}
+			}
+			return $file;
+		}
+
+		/**
+		 * The list address of the post type being listed or edited, when it is an
+		 * Optima screen (edit.php?post_type=faq for a FAQ being edited), else ''.
+		 */
+		private static function type_screen(): string {
+			global $typenow, $pagenow;
+			if ( ! $typenow || ! in_array( $pagenow, array( 'edit.php', 'post.php', 'post-new.php' ), true ) ) {
+				return '';
+			}
+			$list = 'edit.php?post_type=' . $typenow;
+			return '' !== self::listed( $list ) ? $list : '';
 		}
 
 		/** Hide the grouped screens' sidebar links. */
@@ -394,6 +504,14 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 				return;
 			}
 			self::$screen_slug = $slug;
+			add_action( 'admin_print_footer_scripts', array( __CLASS__, 'nav_script' ), 20 );
+			if ( self::is_list() ) {
+				add_action( 'admin_print_footer_scripts', array( __CLASS__, 'find_script' ), 20 );
+				if ( wp_script_is( 'wp-commands', 'registered' ) ) {
+					wp_enqueue_script( 'wp-commands' );
+					wp_enqueue_style( 'wp-commands' );
+				}
+			}
 			$own = dirname( __DIR__ ) . '/assets/optima-admin.css';
 			if ( is_readable( $own ) && defined( 'WP_PLUGIN_DIR' ) && 0 === strpos( wp_normalize_path( $own ), wp_normalize_path( WP_PLUGIN_DIR ) ) ) {
 				wp_enqueue_style( 'optima-admin-kit', plugins_url( 'assets/optima-admin.css', __DIR__ ), array(), self::VERSION );
@@ -405,9 +523,44 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 			if ( '' === self::$screen_slug || self::$nav_printed ) {
 				return;
 			}
+			if ( self::is_list() ) {
+				// An Optima list screen wears the kit: top bar, title, lede, tab row.
+				// WordPress's own title is hidden by the kit CSS; its Add button stays.
+				$head  = self::LISTS[ self::$screen_slug ];
+				$group = self::group( self::$screen_slug, '' );
+				echo '<div class="wrap sh sh-listhead">';
+				echo '<div class="sh-top">';
+				self::lockup();
+				self::finder();
+				if ( self::branded() ) {
+					echo '<p class="sh-brand"><span class="sh-mark" aria-hidden="true"></span>Optima</p>';
+				}
+				echo '</div>';
+				echo '<header class="sh-head"><div>';
+				if ( 0 !== strcasecmp( self::GROUPS[ $group ], $head[0] ) ) {
+					echo '<p class="sh-eyebrow">' . esc_html( ( self::branded() ? 'Optima' : 'Site Build' ) . ' · ' . self::GROUPS[ $group ] ) . '</p>';
+				}
+				echo '<h1>' . esc_html( $head[0] ) . '</h1>';
+				echo '<p class="sh-lede">' . esc_html( $head[1] ) . '</p>';
+				echo '</div></header>';
+				self::nav( self::$screen_slug );
+				echo '</div>';
+				return;
+			}
 			echo '<div class="sh sh-screen-nav">';
 			self::nav( self::$screen_slug );
 			echo '</div>';
+		}
+
+		/** Is the screen being viewed an Optima list screen that wears the kit head? */
+		private static function is_list(): bool {
+			global $pagenow;
+			return 'edit.php' === $pagenow && isset( self::LISTS[ self::$screen_slug ] );
+		}
+
+		/** Body class for an Optima list screen, so the kit CSS hides WordPress's own title. */
+		public static function body_class( $classes ) {
+			return ( '' !== self::$screen_slug && self::is_list() ) ? $classes . ' sh-list' : $classes;
 		}
 
 		/**
@@ -520,9 +673,12 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 			if ( count( $items ) < 2 ) {
 				return;
 			}
+			// A screen that is part of another tab lights that tab, and has none of its own.
+			$items = array_values( array_filter( $items, static fn( $item ) => ! isset( self::ALIASES[ (string) $item[2] ] ) ) );
 			// The entry that matches the address best: same page and tab, else the page's plain entry.
 			$active = '';
 			$target = '' !== $current ? $current : $page . ( '' !== $tab ? '&tab=' . $tab : '' );
+			$target = self::ALIASES[ $target ] ?? $target;
 			foreach ( $items as $item ) {
 				if ( $item[2] === $target ) {
 					$active = $item[2];
@@ -582,9 +738,53 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 			echo '</nav>';
 		}
 
+		/**
+		 * The business facts (rule 45): name, phone, email, address, typed once on
+		 * Your business, Details, and stored in one option. Every other screen reads
+		 * them from here and shows them read-only with a link to Details.
+		 *
+		 * @return array<string,string>
+		 */
+		public static function business(): array {
+			$b = get_option( 'optima_business', array() );
+			return is_array( $b ) ? array_map( 'strval', array_filter( $b, 'is_scalar' ) ) : array();
+		}
+
+		/** Where the business facts are typed: Your business, Details. */
+		public static function details_url(): string {
+			return admin_url( 'admin.php?page=optima' );
+		}
+
+		/**
+		 * One fact shown read-only, with a link to the one tab where it is typed.
+		 *
+		 * @param string $label Fact name, e.g. "Phone".
+		 * @param string $value The fact; '' shows "Not set yet".
+		 * @param string $url   The tab that owns it (defaults to Details).
+		 * @param string $tab   That tab's name, for the link.
+		 */
+		public static function fact( string $label, string $value, string $url = '', string $tab = 'Details' ): void {
+			$url = '' !== $url ? $url : self::details_url();
+			echo '<div class="sh-fact"><span class="sh-label">' . esc_html( $label ) . '</span>';
+			echo '' !== trim( $value ) ? '<strong>' . esc_html( $value ) . '</strong>' : '<strong class="sh-fact-empty">Not set yet</strong>';
+			/* translators: %s: the tab that owns the fact */
+			echo '<a href="' . esc_url( $url ) . '">' . esc_html( sprintf( 'Change in %s', $tab ) ) . ' &rsaquo;</a></div>';
+		}
+
+		/** Open the collapsed "For developers" box (shortcodes, constants, event names). */
+		public static function dev_open( string $summary = 'For developers' ): void {
+			echo '<details class="sh-dev"><summary>' . esc_html( $summary ) . '</summary><div class="sh-dev-body">';
+		}
+
+		/** Close the "For developers" box. */
+		public static function dev_close(): void {
+			echo '</div></details>';
+		}
+
 		/** Close a screen with the Optima sign-off. */
 		public static function close(): void {
-			if ( self::branded() ) {
+			// Optima Build hides the sign-off from operators (it is the agency's own work).
+			if ( self::branded() && apply_filters( 'optima_admin_show_foot', true ) ) {
 				// No personal address on client screens: questions go through Request a change.
 				$help = (string) apply_filters( 'optima_admin_help_url', '' );
 				echo '<footer class="sh-foot"><span class="sh-mark" aria-hidden="true"></span><p>Built and looked after by Optima Digital.'
@@ -602,5 +802,6 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 	add_action( 'admin_enqueue_scripts', array( 'Optima_Admin_UI', 'screen_nav_prepare' ), 99 );
 	add_action( 'all_admin_notices', array( 'Optima_Admin_UI', 'screen_nav' ), 1 );
 	add_action( 'current_screen', array( 'Optima_Admin_UI', 'hidden_title' ) );
+	add_filter( 'admin_body_class', array( 'Optima_Admin_UI', 'body_class' ) );
 
 endif;
