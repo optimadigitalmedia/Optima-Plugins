@@ -49,32 +49,22 @@
 
 .sh-tabs a:focus-visible { outline: 2px solid var(--sh-accent-text); outline-offset: 2px; }
 
-/* Section nav: a short row of groups, then the open group's screens as tabs. */
+/* One nav. The WordPress sidebar carries the groups (plugin-first rule 49);
+   a screen shows only the open group's screens as one row of tabs. */
 .sh-screen-nav { margin: 14px 20px 6px 2px; }
 .sh-screen-nav .sh-nav { margin-top: 0; }
 .sh-nav { margin: 14px 0 4px; max-width: 100%; }
-.sh-nav-groups { display: flex; gap: 4px; padding: 5px; background: var(--sh-surface); border: 1px solid var(--sh-border); border-radius: 980px; width: fit-content; max-width: 100%; box-sizing: border-box; overflow-x: auto; scrollbar-width: none; }
-.sh-nav-groups::-webkit-scrollbar, .sh-nav-sub::-webkit-scrollbar { display: none; }
-.sh .sh-nav-groups a { flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 7px 16px; border-radius: 980px; color: var(--sh-text-2); font-size: 13px; font-weight: 500; text-decoration: none; white-space: nowrap; transition: background .15s ease, color .15s ease; }
-.sh .sh-nav-groups a:hover { background: var(--sh-surface-2); color: var(--sh-text); }
-.sh .sh-nav-groups a.is-active { background: var(--sh-accent); color: #fff; box-shadow: 0 2px 10px rgba(18, 114, 196, .28); }
+.sh-nav-sub::-webkit-scrollbar { display: none; }
 .sh-nav-sub { display: flex; gap: 22px; margin-top: 10px; padding: 0 4px; border-bottom: 1px solid var(--sh-border); overflow-x: auto; scrollbar-width: none; }
 .sh .sh-nav-sub a { flex: none; display: inline-flex; align-items: center; gap: 7px; padding: 9px 0 10px; margin-bottom: -1px; border-bottom: 2px solid transparent; color: var(--sh-text-2); font-size: 13px; font-weight: 500; text-decoration: none; white-space: nowrap; }
 .sh .sh-nav-sub a:hover { color: var(--sh-text); }
 .sh .sh-nav-sub a.is-active { color: var(--sh-text); border-bottom-color: var(--sh-accent); }
 .sh .sh-nav a:focus-visible { outline: 2px solid var(--sh-accent-text); outline-offset: 2px; box-shadow: none; }
 .sh-nav-hint { font-family: var(--sh-mono); font-size: 10px; letter-spacing: .6px; text-transform: uppercase; padding: 2px 7px; border-radius: 980px; background: var(--sh-surface-2); color: var(--sh-text-3); }
-.sh .sh-nav-groups a.is-active .sh-nav-hint { background: rgba(255, 255, 255, .2); color: #fff; }
 @media (max-width: 782px) {
-	.sh-nav-groups { width: 100%; }
-	.sh-nav-groups { gap: 2px; padding: 4px; }
-	.sh .sh-nav-groups a { flex: 1 1 auto; justify-content: center; min-width: 0; padding: 7px 6px; font-size: 12px; }
 	.sh-nav-sub { flex-wrap: wrap; gap: 0 18px; }
 	.sh .sh-head h1 { font-size: 22px; }
-	.sh-head .sh-brand, .sh-lockup-x { display: none; }
 	.sh-head { align-items: center; }
-	.sh-lockup { order: -1; width: 100%; }
-	.sh-client img { height: 44px; }
 }
 
 .sh-box { background: var(--sh-surface); border: 1px solid var(--sh-border); border-radius: 16px; padding: 20px 22px; margin-top: 16px; min-width: 0; }
@@ -234,8 +224,9 @@ a.sh-link-card h2 { color: var(--sh-accent-text); }
    band with the gold arrow, white cards on a cool page, Montserrat display,
    IBM Plex Sans body, IBM Plex Mono for numbers. Design source: the "Optima
    Dashboard Redesign" canvas. Skin source:
-   scripts/plugins-port/optima-admin-skin.css (internal). The hero wrapper
-   (.sh-hero) comes from optima_patches.py KIT_PATCHES. */
+   scripts/plugins-port/optima-admin-skin.css (internal). Release 2 (kit
+   1.7.0.0): no hero band and no group row; the sidebar is the only group
+   nav, a screen is a slim top bar, the title and one tab row. */
 .sh {
 	--sh-display: "Montserrat", -apple-system, "Segoe UI", Roboto, sans-serif;
 	--sh-body: "IBM Plex Sans", system-ui, sans-serif;
@@ -253,7 +244,6 @@ a.sh-link-card h2 { color: var(--sh-accent-text); }
 	--sh-accent-ink: #0D5490;
 	--sh-accent-text: #0F63AB;
 	--sh-gold: #FDC134;
-	--sh-hero: linear-gradient(150deg, #1B2150 0%, #2A2E7A 55%, #1272C4 100%);
 	--sh-shadow: 0 1px 2px rgba(18, 22, 58, .04), 0 8px 24px rgba(18, 22, 58, .05);
 	--sh-shadow-up: 0 2px 4px rgba(18, 22, 58, .05), 0 14px 32px rgba(18, 22, 58, .09);
 	--sh-mark-path: polygon(30% 0, 100% 0, 100% 70%, 78% 48%, 22% 100%, 0 78%, 52% 22%);
@@ -267,41 +257,33 @@ html:has(.wrap.sh), body.wp-admin:has(.wrap.sh), body:has(.wrap.sh) #wpcontent, 
 /* The Optima arrow, up and to the right. */
 .sh .sh-mark { width: 12px; height: 12px; background: var(--sh-gold); clip-path: var(--sh-mark-path); }
 
-/* ---- Hero band ---- */
-.sh .sh-hero { position: relative; margin: 16px 0 6px; padding: 28px 32px 26px; color: #fff; isolation: isolate; }
-.sh .sh-hero::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: 18px; background: var(--sh-hero); box-shadow: 0 18px 40px -18px rgba(18, 22, 58, .55); }
-/* The screens of the open group sit as tabs just under the band, on the page. */
-.sh .sh-hero:has(.sh-nav-sub) { padding-bottom: 0; }
-.sh .sh-hero:has(.sh-nav-sub)::before { bottom: 66px; }
-.sh .sh-hero .sh-head { margin: 0; align-items: flex-start; gap: 18px; }
-.sh .sh-hero .sh-head > div:first-child { flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
-.sh .sh-hero .sh-eyebrow { display: inline-flex; align-items: center; gap: 10px; font-family: var(--sh-mono); font-size: 12px; font-weight: 500; letter-spacing: 1.4px; color: var(--sh-gold); }
-.sh .sh-hero .sh-eyebrow::before { content: ""; width: 12px; height: 12px; flex: none; background: var(--sh-gold); clip-path: var(--sh-mark-path); }
-.sh .sh-hero .sh-head h1 { margin: 0; color: #fff; font-family: var(--sh-display); font-weight: 800; font-size: 38px; line-height: 1.06; letter-spacing: -.02em; }
-.sh .sh-hero .sh-lede { margin: 2px 0 0; max-width: 60ch; color: #C9D1E4; font-size: 16px; line-height: 1.55; }
+/* ---- Top bar: whose site, find anything, the Optima mark. One slim row. ---- */
+.sh .sh-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 16px 0 0; padding: 0 0 14px; border-bottom: 1px solid var(--sh-border); }
+.sh .sh-top .sh-lockup { gap: 12px; flex-wrap: nowrap; }
+.sh .sh-top .sh-client { gap: 10px; color: var(--sh-navy); }
+.sh .sh-top .sh-client img { height: 36px; width: 36px; object-fit: contain; background: #fff; border-radius: 10px; padding: 3px; border: 1px solid var(--sh-border); }
+.sh .sh-top .sh-client-name { font-family: var(--sh-display); font-size: 15px; font-weight: 700; letter-spacing: -.01em; color: var(--sh-navy); }
+.sh .sh-top .sh-lockup-x { display: none; }
+.sh .sh-top .sh-brand { gap: 8px; margin: 0; font-family: var(--sh-display); font-size: 13px; font-weight: 700; letter-spacing: 0; color: var(--sh-navy); }
+.sh .sh-top .sh-brand .sh-mark { background: var(--sh-accent); }
+.sh .sh-find { display: inline-flex; align-items: center; gap: 8px; flex: 1 1 240px; max-width: 380px; min-height: 40px; padding: 8px 12px; border: 1px solid var(--sh-border-strong); border-radius: 12px; background: #fff; color: var(--sh-text-3); font-family: var(--sh-body); font-size: 14px; text-align: left; cursor: pointer; }
+.sh .sh-find:hover { border-color: var(--sh-accent); color: var(--sh-navy); }
+.sh .sh-find:focus-visible { outline: 2px solid var(--sh-accent-text); outline-offset: 2px; }
+.sh .sh-find svg { flex: none; }
+.sh .sh-find span { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sh .sh-find kbd { font-family: var(--sh-mono); font-size: 11px; padding: 2px 6px; border-radius: 6px; background: var(--sh-surface-2); color: var(--sh-text-3); }
+.sh .sh-find[hidden] { display: none; }
 
-/* Whose site it is, as two quiet chips on the band. */
-.sh .sh-hero .sh-lockup { flex: none; gap: 8px; flex-wrap: nowrap; }
-.sh .sh-hero .sh-client { gap: 10px; padding: 5px 14px 5px 5px; border-radius: 980px; background: rgba(255, 255, 255, .10); border: 1px solid rgba(255, 255, 255, .16); color: #fff; }
-.sh .sh-hero .sh-client:hover, .sh .sh-hero .sh-client:focus { background: rgba(255, 255, 255, .16); color: #fff; }
-.sh .sh-hero .sh-client img { height: 30px; width: 30px; object-fit: contain; background: #fff; border-radius: 980px; padding: 3px; }
-.sh .sh-hero .sh-client-name { font-family: var(--sh-display); font-size: 13px; font-weight: 700; letter-spacing: 0; color: #fff; }
-.sh .sh-hero .sh-lockup-x { display: none; }
-.sh .sh-hero .sh-brand { gap: 8px; padding: 8px 14px; border-radius: 980px; background: rgba(255, 255, 255, .10); border: 1px solid rgba(255, 255, 255, .16); font-family: var(--sh-display); font-size: 13px; font-weight: 700; letter-spacing: 0; color: #fff; }
+/* Title row: eyebrow (brand and group), title, lede. No band behind it. */
+.sh .sh-head { margin: 18px 0 0; align-items: flex-start; gap: 18px; }
+.sh .sh-head > div:first-child { flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.sh .sh-eyebrow { display: inline-flex; align-items: center; gap: 10px; font-family: var(--sh-mono); font-size: 11px; font-weight: 500; letter-spacing: 1.4px; color: var(--sh-accent-text); }
+.sh .sh-head h1 { margin: 0; color: var(--sh-navy); font-family: var(--sh-display); font-weight: 800; font-size: 30px; line-height: 1.1; letter-spacing: -.03em; }
+.sh .sh-lede { margin: 2px 0 0; max-width: 64ch; color: var(--sh-text-2); font-size: 15px; line-height: 1.55; }
 
-/* Section switcher: a translucent segmented control with a white active pill. */
-.sh .sh-hero .sh-nav { margin: 22px 0 0; }
-.sh .sh-hero .sh-nav-groups { padding: 4px; gap: 4px; border: 0; border-radius: 12px; background: rgba(255, 255, 255, .10); }
-.sh .sh-hero .sh-nav-groups a { min-height: 40px; padding: 8px 18px; border-radius: 9px; font-family: var(--sh-display); font-size: 14px; font-weight: 600; color: #fff; }
-.sh .sh-hero .sh-nav-groups a:hover { background: rgba(255, 255, 255, .12); color: #fff; }
-.sh .sh-hero .sh-nav-groups a.is-active { background: #fff; color: var(--sh-navy); font-weight: 700; box-shadow: 0 2px 8px rgba(18, 22, 58, .25); }
-.sh .sh-hero .sh-nav-groups .sh-nav-hint { background: rgba(255, 255, 255, .16); color: #fff; }
-.sh .sh-hero .sh-nav-groups a.is-active .sh-nav-hint { background: rgba(18, 114, 196, .12); color: var(--sh-accent-text); }
-.sh .sh-hero .sh-nav a:focus-visible { outline: 2px solid var(--sh-gold); outline-offset: 2px; }
 
-/* Tabs under the band: underline tabs on the page. */
-.sh .sh-nav-sub { gap: 28px; margin-top: 0; padding: 0 4px; height: 46px; align-items: flex-end; border-bottom: 1px solid var(--sh-border); }
-.sh .sh-hero .sh-nav-sub { margin: 20px -32px 0; padding: 0 36px; }
+/* The one tab row, under the title. */
+.sh .sh-nav-sub { gap: 28px; margin-top: 14px; padding: 0 4px; height: 46px; align-items: flex-end; border-bottom: 1px solid var(--sh-border); }
 .sh .sh-nav-sub a { padding: 12px 0 11px; font-family: var(--sh-display); font-size: 14px; font-weight: 600; color: var(--sh-text-3); }
 .sh .sh-nav-sub a:hover { color: var(--sh-navy); }
 .sh .sh-nav-sub a.is-active { color: var(--sh-navy); font-weight: 700; border-bottom-color: var(--sh-accent); }
@@ -425,39 +407,26 @@ html:has(.wrap.sh), body.wp-admin:has(.wrap.sh), body:has(.wrap.sh) #wpcontent, 
 .sh .sh-card[data-feature="optima-partners"] .sh-cardhead::before { -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M12 3l9 5-9 5-9-5z%22/%3E%3Cpath d=%22M3 13l9 5 9-5%22/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M12 3l9 5-9 5-9-5z%22/%3E%3Cpath d=%22M3 13l9 5 9-5%22/%3E%3C/svg%3E"); }
 .sh .sh-card[data-feature="optima-crm"] .sh-cardhead::before { -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M8 6h13%22/%3E%3Cpath d=%22M8 12h13%22/%3E%3Cpath d=%22M8 18h13%22/%3E%3Ccircle cx=%224%22 cy=%226%22 r=%221%22/%3E%3Ccircle cx=%224%22 cy=%2212%22 r=%221%22/%3E%3Ccircle cx=%224%22 cy=%2218%22 r=%221%22/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M8 6h13%22/%3E%3Cpath d=%22M8 12h13%22/%3E%3Cpath d=%22M8 18h13%22/%3E%3Ccircle cx=%224%22 cy=%226%22 r=%221%22/%3E%3Ccircle cx=%224%22 cy=%2212%22 r=%221%22/%3E%3Ccircle cx=%224%22 cy=%2218%22 r=%221%22/%3E%3C/svg%3E"); }
 
-/* ---- The section nav on plain WordPress screens (no hero band there) ---- */
+/* ---- The tab row on plain WordPress screens (a post list, an edit screen) ---- */
 .sh.sh-screen-nav { max-width: 1200px; margin: 16px 20px 8px 2px; }
 .sh.sh-screen-nav .sh-nav { margin: 0; }
-.sh.sh-screen-nav .sh-nav-groups { padding: 4px; gap: 4px; border: 0; border-radius: 12px; background: var(--sh-hero); box-shadow: 0 10px 24px -14px rgba(18, 22, 58, .55); }
-.sh.sh-screen-nav .sh-nav-groups a { min-height: 40px; padding: 8px 18px; border-radius: 9px; font-family: var(--sh-display); font-size: 14px; font-weight: 600; color: #fff; }
-.sh.sh-screen-nav .sh-nav-groups a:hover { background: rgba(255, 255, 255, .14); color: #fff; }
-.sh.sh-screen-nav .sh-nav-groups a.is-active { background: #fff; color: var(--sh-navy); font-weight: 700; box-shadow: 0 2px 8px rgba(18, 22, 58, .25); }
-.sh.sh-screen-nav .sh-nav-groups .sh-nav-hint { background: rgba(255, 255, 255, .16); color: #fff; }
-.sh.sh-screen-nav .sh-nav-groups a.is-active .sh-nav-hint { background: rgba(18, 114, 196, .12); color: var(--sh-accent-text); }
-.sh.sh-screen-nav .sh-nav-groups a:focus-visible { outline: 2px solid var(--sh-accent-text); outline-offset: 2px; }
-.sh.sh-screen-nav .sh-nav-sub { margin-top: 14px; }
+.sh.sh-screen-nav .sh-nav-sub { margin-top: 0; }
 @media (max-width: 782px) {
 	.sh.sh-screen-nav { margin: 12px 10px 6px 0; }
-	.sh.sh-screen-nav .sh-nav-groups { width: 100%; }
-	.sh.sh-screen-nav .sh-nav-groups a { flex: 1 1 auto; justify-content: center; padding: 8px 6px; font-size: 13px; }
 }
 
-/* Phones: the band tightens and the tabs scroll sideways instead of wrapping. */
+
+/* Phones: the top bar stacks and the tabs scroll sideways instead of wrapping. */
 @media (max-width: 782px) {
-	.sh .sh-hero { padding: 22px 18px 20px; }
-	.sh .sh-hero:has(.sh-nav-sub) { padding-bottom: 0; }
-	.sh .sh-hero .sh-head h1 { font-size: 28px; }
-	.sh .sh-hero .sh-lede { font-size: 15px; }
-	.sh .sh-hero .sh-lockup { order: 0; width: auto; flex-wrap: wrap; }
+	.sh .sh-top { margin-top: 12px; }
+	.sh .sh-find { flex-basis: 100%; max-width: none; }
+	.sh .sh-head h1 { font-size: 26px; }
 	.sh .sh-overview .sh-stat { padding: 16px; }
 	.sh .sh-stat .sh-num { font-size: 28px; }
 	.sh .sh-stat .sh-num-text { font-size: 18px; }
-	.sh .sh-hero .sh-brand { display: inline-flex; }
-	.sh .sh-hero .sh-nav-groups { width: 100%; }
-	.sh .sh-hero .sh-nav-groups a { padding: 8px 6px; font-size: 13px; }
 	.sh .sh-nav-sub { flex-wrap: nowrap; gap: 22px; overflow-x: auto; }
-	.sh .sh-hero .sh-nav-sub { margin: 18px -18px 0; padding: 0 20px; }
 }
+
 @media (prefers-reduced-motion: reduce) {
 	.sh .sh-card, .sh .button { transition: none; }
 	.sh .sh-card:hover { transform: none; }

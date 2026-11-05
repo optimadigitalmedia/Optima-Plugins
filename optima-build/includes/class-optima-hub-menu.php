@@ -3,8 +3,8 @@
  * One menu, the same on every site (plugin-first rules 9, 10 and 44).
  *
  * Every Optima plugin adds its screen under the Optima menu. This class runs
- * last and tidies that menu: one fixed order that follows the seven groups
- * (Overview, Your business, Content, Search and AI, Site health, Inbox, Build),
+ * last and tidies that menu: one fixed order that follows the eight groups
+ * (Overview, People, Your business, Content, Search and AI, Site health, Inbox, Build),
  * plain names ("Team", not "Team settings"), and Build only for operators.
  * The shared admin kit then shows one sidebar link per group. Every screen
  * keeps its own address; no plugin has to change for this.
@@ -27,18 +27,19 @@ final class Optima_Hub_Menu {
 	const ORDER = array(
 		// Overview.
 		'optima-overview',
+		// People.
+		'optima-team',
+		'edit.php?post_type=optima_team',
+		'optima-cards',
 		// Your business.
 		'optima',
 		'optima&tab=business',
 		'optima-contact',
 		'optima-hours',
-		'optima-team',
-		'edit.php?post_type=optima_team',
 		'optima-results',
 		'edit.php?post_type=optima_result',
 		'edit.php?post_type=optima_review',
 		'optima-reviews-settings',
-		'optima-cards',
 		'optima-chat',
 		// Content.
 		'optima&tab=sync',
