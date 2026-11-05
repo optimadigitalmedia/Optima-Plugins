@@ -9,32 +9,32 @@ a theme never orphans content.
 
 | Plugin | Version |
 |---|---|
-| `optima-accessibility` | 0.1.12.9 |
-| `optima-aeo` | 0.2.4.8 |
-| `optima-analytics` | 0.1.15.8 |
-| `optima-build` | 0.7.10.0 |
-| `optima-cards` | 1.0.21.9 |
-| `optima-chat` | 0.2.4.9 |
-| `optima-contact` | 0.1.11.9 |
-| `optima-core` | 1.6.0.11 |
+| `optima-accessibility` | 0.1.12.10 |
+| `optima-aeo` | 0.2.4.9 |
+| `optima-analytics` | 0.1.15.9 |
+| `optima-build` | 0.7.11.0 |
+| `optima-cards` | 1.0.21.10 |
+| `optima-chat` | 0.2.4.10 |
+| `optima-contact` | 0.1.11.10 |
+| `optima-core` | 1.6.0.12 |
 | `optima-crm` | 0.1.1.5 |
-| `optima-events` | 0.14.3.9 |
-| `optima-forms-guard` | 0.3.2.5 |
-| `optima-hours` | 0.1.8.10 |
-| `optima-members` | 0.3.3.9 |
-| `optima-optimize` | 0.9.3.8 |
-| `optima-partners` | 0.1.2.9 |
-| `optima-redirects` | 0.1.9.8 |
-| `optima-results` | 0.1.10.0 |
-| `optima-reviews` | 0.5.5.9 |
-| `optima-sitecheck` | 0.2.4.9 |
-| `optima-team` | 0.1.11.0 |
+| `optima-events` | 0.14.3.10 |
+| `optima-forms-guard` | 0.3.2.6 |
+| `optima-hours` | 0.1.8.11 |
+| `optima-members` | 0.3.3.10 |
+| `optima-optimize` | 0.9.3.9 |
+| `optima-partners` | 0.1.2.10 |
+| `optima-redirects` | 0.1.9.9 |
+| `optima-results` | 0.1.10.1 |
+| `optima-reviews` | 0.5.5.10 |
+| `optima-sitecheck` | 0.2.4.10 |
+| `optima-team` | 0.1.11.1 |
 
 ## Install
 
 1. Upload and activate `optima-build` (the hub). It installs and updates the rest.
 2. Open **Optima → Build → Features**, set the site's plan, turn on what the site needs.
-3. Fill the business details once in **Optima → Your business → Business info**.
+3. Fill the business details once in **Optima → Your business → Details**.
    Every plugin reads them from there.
 
 Plugins update themselves from this repo's releases. Each release goes to the

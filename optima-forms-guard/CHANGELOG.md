@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.2.6 (2026-11-05)
+
+- Now carries the Optima admin kit 1.8.0.0. Search and AI, Spam protection on a site without Optima Core shows the guard's status and what it blocked; with Core the address opens Core's Spam protection tab. Listed as Spam protection for forms in the catalog.
+
 ## 0.3.2.5 (2026-11-04)
 
 - Shared updater: release channels. A site on the stable channel (the default) sees only normal releases, exactly as before. A site on the test channel (Optima Build, Build, Updates, Release channel, or `OPTIMA_HUB_CHANNEL` in wp-config) also sees test releases (GitHub pre-releases) and takes the newest version from either. Without Optima Build a site is always on stable. This release goes out as a normal release so every site gets the channel-aware updater; test releases start with a later release.

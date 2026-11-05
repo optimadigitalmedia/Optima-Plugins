@@ -32,8 +32,9 @@ this: each theme still updates from its own repo.
    `version-list` branch). `optima-core` always ships first; other plugins
    call it.
 4. **Check it on the agency's own staging site.** Open Build → Updates and
-   press Check for new versions; the update is labeled "Test release". Update,
-   then look at the pages and screens the release touches and at Site health.
+   press Check for new versions; the update is labeled "Test release". Press
+   its Update now (it updates in place and comes back to Updates), then look at
+   the pages and screens the release touches and at the Site health block.
    Client sites do not see it.
 5. **Promote it.** Actions tab → Promote → Run workflow. Leave "Plugins" empty
    to promote the newest test release of every plugin, or name plugins

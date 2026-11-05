@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.14.3.10 (2026-11-05)
+
+- Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).
+
 ## 0.14.3.9 (2026-11-05)
 
 - Labels (rule 44): every screen's title is its sidebar word (Overview, Sign-ups, Volunteers, Import, Settings, Topics).

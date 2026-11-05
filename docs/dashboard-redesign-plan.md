@@ -14,7 +14,7 @@ offboarding. Rules 9, 10, 46 and section 4a amended, rules 47 to 49 added.
 
 **The target:** one Optima menu with eight items, the same words in the sidebar and
 on the screen, one home an operator reads in a glance, one page where the operator
-does every update, one profile per person. Every existing screen keeps its address;
+does every update (release 3), one profile per person. Every existing screen keeps its address;
 only the sidebar, the home and the words change.
 
 ## Release 1: the menu, Overview, Inbox, Build (Optima Build + shared admin kit)
@@ -126,7 +126,61 @@ before merge.
 **Rollback:** "Go back to vX" on each plugin. Release 2 adds fields to team posts
 and never removes any, so going back loses nothing.
 
-## Release 3: every site at a glance
+## Release 3: one Update screen, and the release 2 audit fixed
+
+**Status: built** (2026-11-05, from the Stage 0 audit of release 2: 110 findings, 15
+Blocker, 58 Fix, 37 Polish). Versions: Optima Build 0.7.11.0, admin kit 1.8.0.0, every
+plugin whose files changed one revision up (all kit plugins, plus Optima Forms Guard,
+which now carries the kit).
+
+| Where | Change |
+|---|---|
+| Build → Updates (`class-optima-hub-updates.php`, new) | One screen, ten blocks in update order: site status (Copy for Claude, Check again), plugin updates (each Update now posts to `Optima_Hub_Features::handle()`, `do=update`, updates in place and returns here), theme (`do=theme`, key form), fill from theme again, approved copy (applies the safe rows and returns), release channel, email (send a test, returns), what Site health flags, site lock, last update. Each block: Needs you, Ready or Done. |
+| Freshness | `Optima_Hub_Features::ensure_fresh()`: Overview, Updates and Features ask GitHub again when the last check is over an hour old or WordPress's update list is gone, and say "Last checked ..." |
+| One count | Change requests leave the Inbox count (`Optima_Hub_Inbox::requests()`, own list on Overview and the Request a change tab). Reviews: `Optima_Reviews_Inbox::counts()` feeds the sidebar, Overview, Inbox, the Reviews notice and the Dashboard box. |
+| Rule 45 | Details (Core's form, or Optima Build's `Optima_Hub_Business` where Core is off, same option and address) owns name, phone, email, address; Hours owns hours when Optima Hours is on. Call buttons, Cards, Accessibility and Ask for reviews show them read-only with Change in Details. |
+| Rule 47 | Cards lists People profiles with a card switch; name, title, email and photo read from the profile. Credentials on a profile are read-only. |
+| Rule 44 | Hours, Redirects, Profiles, Review inbox, Ask for reviews, Details, Reviews: title equals tab. |
+| Kit 1.8.0.0 | auto-fit grids; `LISTS` (kit head on list screens); `ALIASES` (one feature, one tab); `business()`, `fact()`, `old_facts_box()`, `dev_open()`; phone tab rows scroll with a fade; one focus ring; dot colors; 24px switch targets. |
+| Content | Pages and posts (new, read-only list with dates), Testimonials and FAQs moved from top-level menus. |
+
+**Migration (release 2 to 3), once per site, on the first dashboard load:** a fact
+typed on Call buttons, Cards or Accessibility and missing from Details moves to
+Details, in that order (`optima_contact_r3_phone`, `optima_cards_r3`,
+`optima_a11y_r3_phone` mark it done). Card slots link to the People profile with the
+same name or email and keep their link name, so every card address stays. Nothing is
+deleted: each old value stays in its option under its old key, is used only while
+Details (or the profile) is blank, and Details lists any old value that differs for an
+operator to check. The old hours text on Details shows once on Hours for checking.
+
+**Where the build differs from the audit's fix lines:**
+
+- Business info is now Details (the plan's word), and Contact buttons stays Call
+  buttons (the catalog's word): one name each, everywhere.
+- The profile screen is not rebuilt with its seven tabs; the plain editor marks
+  credentials as setup-file facts and shows them read-only (the audit's interim fix).
+- The publishing threshold on Case results labels each result; it does not hide
+  results on the site (front end unchanged this release).
+- Ask for reviews opens as its own screen under the Reviews tab (it is too large to
+  inline), linked from a section on Reviews.
+
+**Polish not done this release:** Grid columns stays in People settings (not moved to
+Design); the admin fonts still load from Google Fonts (open question below); the active
+sidebar item keeps WordPress's blue; Request a change and the facts row stay visible to
+non-operators (clients never sign in); the SEO checks are on SEO only, not on each Search
+and AI tab.
+
+**Tests:** local WordPress, both setups (agency site without Optima Core; full client
+site): every screen 200 with the kit head, no PHP notice from our code, no sideways
+scroll at 390 px, axe clean on every Optima screen, Update now updates in place and
+returns, every release 2 address opens (the two hub addresses redirect to each other),
+a release 2 database with facts in the old places migrates as above.
+
+**Rollback:** "Go back to vX" on each plugin. Release 3 adds options and moves no data
+out of its old place, so going back loses nothing; release 2 code reads its old options,
+which still hold their values.
+
+## Release 4: every site at a glance
 
 One item, **Every site**, on the agency's own site: one row per site (status,
 updates waiting, Inbox, requests, signed cases from the site's cached Recon
