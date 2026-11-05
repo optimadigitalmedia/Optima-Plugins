@@ -131,7 +131,32 @@ final class Optima_Results {
 		return array(
 			'state'      => isset( $s['state'], self::states()[ $s['state'] ] ) ? $s['state'] : 'nc',
 			'disclaimer' => (string) ( $s['disclaimer'] ?? '' ),
+			// The firm's publishing line in dollars (Optima rule: default $1 million; 0 means every result may show).
+			'threshold'  => isset( $s['threshold'] ) ? max( 0, (int) $s['threshold'] ) : 1000000,
 		);
+	}
+
+	/** A result's amount in whole dollars, read from what was typed ("$1.25 million", "1250000"); 0 when none. */
+	public static function dollars( string $amount ): int {
+		$t = strtolower( str_replace( ',', '', $amount ) );
+		if ( ! preg_match( '/(\d+(?:\.\d+)?)/', $t, $m ) ) {
+			return 0;
+		}
+		$n = (float) $m[1];
+		if ( false !== strpos( $t, 'billion' ) ) {
+			$n *= 1e9;
+		} elseif ( false !== strpos( $t, 'million' ) || preg_match( '/\d\s*m\b/', $t ) ) {
+			$n *= 1e6;
+		} elseif ( preg_match( '/\d\s*k\b/', $t ) ) {
+			$n *= 1e3;
+		}
+		return (int) round( $n );
+	}
+
+	/** Is this result at or above the firm's threshold? */
+	public static function above_threshold( string $amount ): bool {
+		$line = self::settings()['threshold'];
+		return 0 === $line || self::dollars( $amount ) >= $line;
 	}
 
 	/** The disclaimer printed next to every result. Never empty. */
