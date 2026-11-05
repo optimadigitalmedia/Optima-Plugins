@@ -572,3 +572,23 @@ html:has(body.sh-list), body.sh-list, body.sh-list #wpcontent, body.sh-list #wpf
 .sh .sh-link-card.is-off h2 { color: var(--sh-text-3); }
 .sh .sh-glance-facts .sh-fact-item { display: flex; flex-direction: column; gap: 2px; min-width: 0; color: var(--sh-navy); }
 .sh .sh-glance-facts .sh-fact-item strong { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
+
+/* Review inbox and Ask for reviews inside the kit: the dashboard wears the
+   Optima palette (section 4a), so their own variables follow the kit's and
+   pass WCAG AA on the kit canvas. */
+.sh .srk.recon-theme {
+	--recon-bg: var(--sh-bg);
+	--recon-surface-2: #EEF2F7;
+	--recon-text: var(--sh-text);
+	--recon-text-2: var(--sh-text-2);
+	--recon-text-3: var(--sh-text-3);
+	--recon-accent: var(--sh-accent);
+	--recon-accent-ink: var(--sh-accent-ink);
+	--recon-accent-text: var(--sh-accent-text);
+	--recon-border-strong: var(--sh-border-strong);
+	--recon-font: var(--sh-body);
+	--recon-font-mono: var(--sh-mono);
+	max-width: none;
+	margin-right: 0;
+}
+.sh .srk .button-primary { color: #fff; }
