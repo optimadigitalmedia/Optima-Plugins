@@ -90,6 +90,11 @@ final class Optima_Team_Admin {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
+		// The Add a person walkthrough is a tab of this screen (no sidebar address of its own).
+		if ( Optima_Team_Add::is_open() ) {
+			Optima_Team_Add::render();
+			return;
+		}
 		$s      = Optima_Team::settings();
 		$o      = Optima_Team::OPTION;
 		$people = get_posts(
@@ -184,7 +189,8 @@ final class Optima_Team_Admin {
 				</table>
 			<?php endif; ?>
 			<p class="sh-actions" style="margin-top:14px">
-				<a class="button button-primary" href="<?php echo esc_url( $add_url ); ?>"><?php esc_html_e( 'Add a team member', 'optima-team' ); ?></a>
+				<a class="button button-primary" href="<?php echo esc_url( Optima_Team_Add::url() ); ?>"><?php esc_html_e( 'Add a person', 'optima-team' ); ?></a>
+				<a class="button sh-quiet" href="<?php echo esc_url( $add_url ); ?>"><?php esc_html_e( 'Blank profile', 'optima-team' ); ?></a>
 				<?php if ( $people && $archive ) : ?>
 					<a class="button sh-quiet" href="<?php echo esc_url( $archive ); ?>"><?php esc_html_e( 'View the team page', 'optima-team' ); ?></a>
 				<?php endif; ?>
