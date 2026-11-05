@@ -20,6 +20,7 @@ final class Optima_Cards_Admin {
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
 		add_action( 'admin_post_optima_cards_save', array( __CLASS__, 'save' ) );
 		add_action( 'admin_post_optima_cards_reset', array( __CLASS__, 'reset' ) );
+		add_action( 'admin_init', array( 'Optima_Cards_Settings', 'migrate' ) ); // Release 3: facts to Details, slots to People.
 		add_filter( 'plugin_action_links_' . plugin_basename( OPTIMA_CARDS_FILE ), array( __CLASS__, 'action_link' ) );
 	}
 
@@ -133,9 +134,6 @@ final class Optima_Cards_Admin {
 				echo '<div class="notice notice-warning"><p>A WordPress Page already uses <code>/' . esc_html( $slug ) . '/</code>. Optima Cards will show at that address instead of the Page. Change the address below, or rename that Page.</p></div>';
 			}
 		}
-		if ( ! class_exists( 'Optima_Core_Business' ) ) {
-			echo '<div class="notice notice-info"><p>Optima Core is not active, so fill in the business details below. With Optima Core, they come from its Business screen automatically.</p></div>';
-		}
 
 		echo '<p>Your digital business cards and your social "link in bio" page. ';
 		echo '<a class="button" href="' . esc_url( Optima_Cards_Settings::card_url() ) . '" target="_blank">View card</a> ';
@@ -153,23 +151,23 @@ final class Optima_Cards_Admin {
 
 		echo '<h2>Look</h2><table class="form-table" role="presentation">';
 		echo '<tr><th scope="row">Mode</th><td><label><input type="radio" name="' . esc_attr( $n ) . '[mode]" value="dark"' . checked( $s['mode'], 'dark', false ) . '> Dark</label> &nbsp; <label><input type="radio" name="' . esc_attr( $n ) . '[mode]" value="light"' . checked( $s['mode'], 'light', false ) . '> Light</label></td></tr>';
-		echo '<tr><th scope="row"><label for="odc-accent">Accent color</label></th><td><input type="color" id="odc-accent" name="' . esc_attr( $n ) . '[accent]" value="' . esc_attr( $s['accent'] ) . '"><p class="description">The brand color for buttons, links, and tags.</p></td></tr>';
-		self::field( "{$n}[font]", $s['font'], 'Font (optional)', 'text', 'Leave blank to use the site\'s own font. Or a CSS font list, e.g. "IBM Plex Sans", sans-serif.' );
+		echo '<tr><th scope="row">Color and font</th><td><p class="description" style="margin:0">From the theme\'s design, the same as every feature on the site' . ( class_exists( 'Optima_Hub_Design' ) ? ': <a href="' . esc_url( admin_url( 'admin.php?page=optima-design' ) ) . '">Build, Design</a>' : '' ) . '.</p></td></tr>';
 		self::photo( "{$n}[share_card_id]", (int) $s['share_card_id'], 'Share picture: card', 'Shows when someone texts or posts the card link. 1200 by 630 pixels.' );
 		self::photo( "{$n}[share_links_id]", (int) $s['share_links_id'], 'Share picture: links page', 'Shows when the links page is shared. Blank uses the card\'s.' );
 		echo '</table>';
 
-		echo '<h2>Business details</h2><table class="form-table" role="presentation">';
-		self::field( "{$n}[name]", $s['name'], 'Business name' );
-		self::field( "{$n}[phone]", $s['phone'], 'Phone', 'text', 'Used for Call, Text, and the saved contact.' );
-		self::field( "{$n}[email]", $s['email'], 'Main email', 'email' );
-		self::field( "{$n}[city]", $s['city'], 'City' );
-		self::field( "{$n}[region]", $s['region'], 'State' );
-		self::field( "{$n}[postal]", $s['postal'], 'ZIP' );
-		self::field( "{$n}[socials]", $s['socials'], 'Social profiles', 'textarea', 'One URL per line. Facebook, Instagram, LinkedIn, X, Threads, YouTube, TikTok, and Pinterest show as icons.' );
+		// The business facts are typed once, on Your business, Details (rule 45).
+		$id = Optima_Cards_Settings::identity();
+		echo '<h2>Business details</h2><div class="sh-box">';
+		Optima_Admin_UI::fact( 'Business name', (string) $id['name'] );
+		Optima_Admin_UI::fact( 'Phone', (string) $id['phone'] );
+		Optima_Admin_UI::fact( 'Main email', (string) $id['email'] );
+		Optima_Admin_UI::fact( 'City, state, ZIP', trim( $id['city'] . ( $id['region'] ? ', ' . $id['region'] : '' ) . ( $id['postal'] ? ' ' . $id['postal'] : '' ) ) );
+		Optima_Admin_UI::fact( 'Social profiles', str_replace( array( "\r\n", "\n" ), ', ', (string) $id['same_as'] ) );
+		echo '</div><table class="form-table" role="presentation">';
 		self::field( "{$n}[footer]", $s['footer'], 'Footer line', 'text', 'Shown at the bottom of every card and the links page.' );
 		self::field( "{$n}[note]", $s['note'], 'Contact note', 'textarea', 'Saved in the Notes field of the phone contact.' );
-		echo '</table><p class="description">Blank fields use the details from Optima -> Business.</p>';
+		echo '</table>';
 
 		echo '<h2>Main card</h2><table class="form-table" role="presentation">';
 		self::field( "{$n}[team_intro]", $s['team_intro'], 'Intro', 'textarea' );
@@ -179,35 +177,65 @@ final class Optima_Cards_Admin {
 		self::spot_fields( $n, $s );
 		echo '</table>';
 
-		echo '<h2>People</h2><p>Each person gets their own card, and shows on the main card. Leave the name blank to hide a slot.</p>';
-		for ( $i = 0; $i < Optima_Cards_Settings::MAX_PEOPLE; $i++ ) {
-			$p = $s['people'][ $i ] ?? array( 'slug' => '', 'name' => '', 'title' => '', 'email' => '', 'intro' => '', 'pick' => '', 'tags' => '', 'photo_id' => 0 );
-			echo '<details' . ( $p['name'] || 0 === $i ? ' open' : '' ) . '><summary style="cursor:pointer;font-weight:600;margin:10px 0">Person ' . ( $i + 1 ) . ( $p['name'] ? ': ' . esc_html( $p['name'] ) : '' ) . '</summary><table class="form-table" role="presentation">';
-			self::field( "{$n}[people][$i][name]", $p['name'], 'Full name' );
-			self::field( "{$n}[people][$i][slug]", $p['slug'], 'Link name', 'text', 'Lowercase, no spaces. "alex" makes /' . $s['card_base'] . '/alex/. Blank uses the first name.' );
-			self::field( "{$n}[people][$i][title]", $p['title'], 'Title' );
-			self::field( "{$n}[people][$i][email]", $p['email'], 'Email', 'email' );
-			self::field( "{$n}[people][$i][intro]", $p['intro'], 'Intro (on their card, in their voice)', 'textarea' );
-			self::field( "{$n}[people][$i][pick]", $p['pick'], 'Why talk to them (on the main card)', 'textarea' );
-			self::field( "{$n}[people][$i][tags]", $p['tags'], 'Tags', 'text', 'Comma separated, two to four short topics.' );
-			self::photo( "{$n}[people][$i][photo_id]", (int) $p['photo_id'], 'Photo', 'A square headshot works best.' );
-			self::photo( "{$n}[people][$i][share_id]", (int) ( $p['share_id'] ?? 0 ), 'Share picture', 'Optional. Shows when this person\'s card link is texted or posted. 1200 by 630 pixels.' );
-			self::spot_fields( "{$n}[people][$i]", $p );
-			echo '</table></details>';
+		echo '<h2>People</h2>';
+		if ( Optima_Cards_Settings::people_on() ) {
+			echo '<p>Each person\'s card reads their name, title, email and photo from their profile in People. Tick a profile to give them a card; the words below are the card\'s own.</p>';
+			$linked = array();
+			$legacy = array();
+			foreach ( (array) $s['people'] as $p ) {
+				if ( ! empty( $p['profile'] ) ) {
+					$linked[ (int) $p['profile'] ] = $p;
+				} elseif ( ! empty( $p['name'] ) ) {
+					$legacy[] = $p;
+				}
+			}
+			$profiles = get_posts( array( 'post_type' => 'optima_team', 'post_status' => 'publish', 'posts_per_page' => 100, 'orderby' => 'menu_order title', 'order' => 'ASC' ) );
+			if ( ! $profiles ) {
+				echo '<p class="description">No profiles yet. <a href="' . esc_url( admin_url( 'admin.php?page=optima-team&tab=add' ) ) . '">Add a person</a> in People first.</p>';
+			}
+			foreach ( $profiles as $i => $post ) {
+				$p    = $linked[ $post->ID ] ?? array();
+				$on   = isset( $linked[ $post->ID ] );
+				$prof = (array) get_post_meta( $post->ID, '_optima_team', true );
+				$base = "{$n}[profiles][{$post->ID}]";
+				echo '<details class="sh-box"' . ( $on ? ' open' : '' ) . '><summary style="cursor:pointer;font-weight:600">' . esc_html( $post->post_title ) . ( $on ? ' · card on' : '' ) . '</summary>';
+				echo '<p><label class="sh-target"><input type="checkbox" name="' . esc_attr( $base . '[on]' ) . '" value="1"' . checked( $on, true, false ) . '> Give ' . esc_html( $post->post_title ) . ' a card</label></p>';
+				Optima_Admin_UI::fact( 'Title', (string) ( $prof['role'] ?? '' ), (string) get_edit_post_link( $post->ID ), 'the profile' );
+				Optima_Admin_UI::fact( 'Email', (string) ( $prof['email'] ?? '' ), (string) get_edit_post_link( $post->ID ), 'the profile' );
+				Optima_Admin_UI::fact( 'Photo', has_post_thumbnail( $post->ID ) ? 'Set' : '', (string) get_edit_post_link( $post->ID ), 'the profile' );
+				echo '<table class="form-table" role="presentation">';
+				self::field( "{$base}[slug]", (string) ( $p['slug'] ?? $post->post_name ), 'Link name', 'text', 'Lowercase, no spaces. "alex" makes /' . $s['card_base'] . '/alex/.' );
+				self::field( "{$base}[intro]", (string) ( $p['intro'] ?? '' ), 'Intro (on their card, in their voice)', 'textarea' );
+				self::field( "{$base}[pick]", (string) ( $p['pick'] ?? '' ), 'Why talk to them (on the main card)', 'textarea' );
+				self::field( "{$base}[tags]", (string) ( $p['tags'] ?? '' ), 'Tags', 'text', 'Comma separated, two to four short topics.' );
+				self::photo( "{$base}[share_id]", (int) ( $p['share_id'] ?? 0 ), 'Share picture', 'Optional. Shows when this person\'s card link is texted or posted. 1200 by 630 pixels.' );
+				self::spot_fields( $base, $p );
+				echo '</table></details>';
+			}
+			if ( $legacy ) {
+				echo '<div class="sh-box"><p class="sh-label">Cards not linked to a profile yet</p><p class="sh-note">These cards were set up before People. They keep working; add a profile with the same name and the card links to it by itself.</p><ul class="sh-list">';
+				foreach ( $legacy as $p ) {
+					echo '<li>' . esc_html( (string) $p['name'] ) . ' · /' . esc_html( $s['card_base'] . '/' . ( $p['slug'] ?? '' ) ) . '/ · <a href="' . esc_url( admin_url( 'admin.php?page=optima-team&tab=add' ) ) . '">Add a person</a></li>';
+				}
+				echo '</ul></div>';
+			}
+		} else {
+			echo '<p class="description">Turn on People (Team credentials) on Build, Features to give each person a card from their profile. Cards set up before stay as they are.</p>';
 		}
 
 		echo '<h2>Links page</h2><table class="form-table" role="presentation">';
 		self::field( "{$n}[links_intro]", $s['links_intro'], 'Intro', 'textarea' );
 		echo '<tr><th scope="row">Newest blog post</th><td><label><input type="hidden" name="' . esc_attr( $n ) . '[links_latest]" value="0"><input type="checkbox" name="' . esc_attr( $n ) . '[links_latest]" value="1"' . checked( $s['links_latest'], 1, false ) . '> Show the newest post first (updates by itself)</label></td></tr>';
-		echo '</table><table class="widefat striped" style="max-width:1100px"><thead><tr><th>Button text</th><th>Small line under it</th><th>Link (start with / for a page on this site)</th><th>New tab</th></tr></thead><tbody>';
+		echo '</table><div class="sh-scroll"><table class="widefat striped" style="max-width:1100px"><thead><tr><th>Button text</th><th>Small line under it</th><th>Link (start with / for a page on this site)</th><th>New tab</th></tr></thead><tbody>';
 		for ( $i = 0; $i < Optima_Cards_Settings::MAX_LINKS; $i++ ) {
 			$l = $s['links'][ $i ] ?? array( 'label' => '', 'sub' => '', 'url' => '', 'external' => 0 );
-			echo '<tr><td><input class="widefat" name="' . esc_attr( "{$n}[links][$i][label]" ) . '" value="' . esc_attr( $l['label'] ) . '"></td>'
-				. '<td><input class="widefat" name="' . esc_attr( "{$n}[links][$i][sub]" ) . '" value="' . esc_attr( $l['sub'] ) . '"></td>'
-				. '<td><input class="widefat" name="' . esc_attr( "{$n}[links][$i][url]" ) . '" value="' . esc_attr( $l['url'] ) . '" placeholder="/contact/ or https://..."></td>'
-				. '<td><input type="checkbox" name="' . esc_attr( "{$n}[links][$i][external]" ) . '" value="1"' . checked( ! empty( $l['external'] ), true, false ) . '></td></tr>';
+			$row = $i + 1;
+			echo '<tr><td><input class="widefat" aria-label="' . esc_attr( "Button text, row $row" ) . '" name="' . esc_attr( "{$n}[links][$i][label]" ) . '" value="' . esc_attr( $l['label'] ) . '"></td>'
+				. '<td><input class="widefat" aria-label="' . esc_attr( "Small line, row $row" ) . '" name="' . esc_attr( "{$n}[links][$i][sub]" ) . '" value="' . esc_attr( $l['sub'] ) . '"></td>'
+				. '<td><input class="widefat" aria-label="' . esc_attr( "Link, row $row" ) . '" name="' . esc_attr( "{$n}[links][$i][url]" ) . '" value="' . esc_attr( $l['url'] ) . '" placeholder="/contact/ or https://..."></td>'
+				. '<td><input type="checkbox" aria-label="' . esc_attr( "Open in a new tab, row $row" ) . '" name="' . esc_attr( "{$n}[links][$i][external]" ) . '" value="1"' . checked( ! empty( $l['external'] ), true, false ) . '></td></tr>';
 		}
-		echo '</tbody></table><p class="description">Blank rows are skipped. Rows show in this order.</p>';
+		echo '</tbody></table></div><p class="description">Blank rows are skipped. Rows show in this order.</p>';
 
 		echo '<h2>Addresses</h2><table class="form-table" role="presentation">';
 		echo '<tr><th scope="row">Turn on</th><td><label><input type="hidden" name="' . esc_attr( $n ) . '[enable_cards]" value="0"><input type="checkbox" name="' . esc_attr( $n ) . '[enable_cards]" value="1"' . checked( $s['enable_cards'], 1, false ) . '> Business cards</label> &nbsp; <label><input type="hidden" name="' . esc_attr( $n ) . '[enable_links]" value="0"><input type="checkbox" name="' . esc_attr( $n ) . '[enable_links]" value="1"' . checked( $s['enable_links'], 1, false ) . '> Links page</label></td></tr>';
@@ -215,11 +243,13 @@ final class Optima_Cards_Admin {
 		self::field( "{$n}[links_base]", $s['links_base'], 'Links address', 'text', 'Default: links.' );
 		echo '</table>';
 
-		submit_button( 'Save cards and links' );
+		submit_button( 'Save' );
 		echo '</form>';
-		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" onsubmit="return confirm(\'Reset every field to the defaults?\');">';
+		// Rare and destructive: last on the screen, closed, behind a confirm step.
+		echo '<details class="sh-dev"><summary>Start over</summary><div class="sh-dev-body"><p class="sh-note">Puts every Cards setting back to the defaults. Business facts on Details and People profiles are not touched.</p>';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" onsubmit="return confirm(\'Reset every Cards setting to the defaults?\');">';
 		wp_nonce_field( 'optima_cards_reset' );
-		echo '<input type="hidden" name="action" value="optima_cards_reset"><button class="button-link-delete">Reset to defaults</button></form>';
+		echo '<input type="hidden" name="action" value="optima_cards_reset"><button class="button-link-delete">Reset Cards to defaults</button></form></div></details>';
 		?>
 		<script>
 		jQuery(function($){
@@ -246,16 +276,23 @@ final class Optima_Cards_Admin {
 		$area = function ( $v ) {
 			return sanitize_textarea_field( (string) $v );
 		};
+		$old  = get_option( Optima_Cards_Settings::OPTION );
+		$old  = is_array( $old ) ? $old : array();
 		$out  = array();
-		foreach ( array( 'name', 'phone', 'city', 'region', 'postal', 'footer', 'font', 'pick_heading' ) as $k ) {
+		// Facts (rule 45) and the old look settings (rule 7) are no longer on this form:
+		// what was saved before stays saved, untouched.
+		foreach ( array( 'name', 'phone', 'email', 'city', 'region', 'postal', 'socials', 'accent', 'font' ) as $k ) {
+			if ( isset( $old[ $k ] ) ) {
+				$out[ $k ] = $old[ $k ];
+			}
+		}
+		foreach ( array( 'footer', 'pick_heading' ) as $k ) {
 			$out[ $k ] = $txt( $in[ $k ] ?? '' );
 		}
-		foreach ( array( 'note', 'team_intro', 'links_intro', 'socials' ) as $k ) {
+		foreach ( array( 'note', 'team_intro', 'links_intro' ) as $k ) {
 			$out[ $k ] = $area( $in[ $k ] ?? '' );
 		}
-		$out['email']        = sanitize_email( $in['email'] ?? '' );
 		$out['mode']         = 'light' === ( $in['mode'] ?? '' ) ? 'light' : 'dark';
-		$out['accent']       = sanitize_hex_color( $in['accent'] ?? '' ) ? sanitize_hex_color( $in['accent'] ) : '#1272C4';
 		$out['photo_id']     = absint( $in['photo_id'] ?? 0 );
 		$out['logo_id']        = absint( $in['logo_id'] ?? 0 );
 		$out['share_card_id']  = absint( $in['share_card_id'] ?? 0 );
@@ -267,22 +304,36 @@ final class Optima_Cards_Admin {
 		$out['card_base']    = sanitize_title( $in['card_base'] ?? '' ) ? sanitize_title( $in['card_base'] ) : 'card';
 		$out['links_base']   = sanitize_title( $in['links_base'] ?? '' ) ? sanitize_title( $in['links_base'] ) : 'links';
 		$out['people']       = array();
-		foreach ( (array) ( $in['people'] ?? array() ) as $p ) {
-			if ( '' === trim( (string) ( $p['name'] ?? '' ) ) ) {
-				continue;
+		if ( Optima_Cards_Settings::people_on() ) {
+			$prev = array();
+			foreach ( (array) ( $old['people'] ?? array() ) as $p ) {
+				if ( ! empty( $p['profile'] ) ) {
+					$prev[ (int) $p['profile'] ] = $p;
+				} elseif ( ! empty( $p['name'] ) ) {
+					$out['people'][] = $p; // Not linked to a profile yet: kept exactly as it was.
+				}
 			}
-			$first           = preg_split( '/\s+/', trim( $p['name'] ) )[0];
-			$out['people'][] = array(
-				'name'     => $txt( $p['name'] ),
-				'slug'     => sanitize_title( ! empty( $p['slug'] ) ? $p['slug'] : $first ),
-				'title'    => $txt( $p['title'] ?? '' ),
-				'email'    => sanitize_email( $p['email'] ?? '' ),
-				'intro'    => $area( $p['intro'] ?? '' ),
-				'pick'     => $area( $p['pick'] ?? '' ),
-				'tags'     => $txt( $p['tags'] ?? '' ),
-				'photo_id' => absint( $p['photo_id'] ?? 0 ),
-				'share_id' => absint( $p['share_id'] ?? 0 ),
-			) + self::clean_spot( $p );
+			foreach ( (array) ( $in['profiles'] ?? array() ) as $pid => $p ) {
+				$pid = absint( $pid );
+				if ( ! $pid || empty( $p['on'] ) || 'optima_team' !== get_post_type( $pid ) ) {
+					continue;
+				}
+				$out['people'][] = array_merge(
+					$prev[ $pid ] ?? array(),
+					array(
+						'profile'  => $pid,
+						'slug'     => sanitize_title( ! empty( $p['slug'] ) ? $p['slug'] : get_post_field( 'post_name', $pid ) ),
+						'intro'    => $area( $p['intro'] ?? '' ),
+						'pick'     => $area( $p['pick'] ?? '' ),
+						'tags'     => $txt( $p['tags'] ?? '' ),
+						'share_id' => absint( $p['share_id'] ?? 0 ),
+					),
+					self::clean_spot( $p )
+				);
+			}
+		}
+		foreach ( Optima_Cards_Settings::people_on() ? array() : (array) ( $old['people'] ?? array() ) as $p ) {
+			$out['people'][] = $p; // Without People the slots stay as they were.
 		}
 		$out['links'] = array();
 		foreach ( (array) ( $in['links'] ?? array() ) as $l ) {
