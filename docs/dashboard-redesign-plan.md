@@ -68,12 +68,29 @@ Nothing is migrated in release 1, so going back loses nothing.
 
 ## Release 2: operators only, the glance, one nav, People, offboarding
 
-**Status: planned** (Stage 1, 2026-11-05). Nothing below is built. Order of work: the
-admin kit and Overview first (one release, kit 1.7.0.0), then People (optima-team,
-with optima-cards and optima-results reading from it), then offboarding (Optima
-Build). Each is its own test release on the agency's staging site before Promote
-(`RELEASING.md`). The one-fact-one-tab items from the old release 2 fold into the
-Your business work below.
+**Status: built** (2026-11-05, same day as the plan; the site owner chose to test
+on the agency's staging site rather than locally, since no Optima plugin is live
+anywhere yet). Versions: Optima Build 0.7.10.0, admin kit 1.7.0.0, Optima Team
+0.1.11.0, Optima Case Results 0.1.10.0, every other kit plugin one revision up.
+Where the build differs from the table below:
+
+- Offboarding lives in Optima Team, not Optima Build: every record it touches is
+  Team's and the hub needed no new screen. The archive is a bundle on the server
+  with a zip download; the copy to the site repo and to Drive is the operator's
+  step (the plugin holds no repo or Drive credential), and the Knowledge Hub row
+  is moved by hand. A failed write still stops the flow.
+- The profile editor's fields are unchanged this release; the read-only,
+  Hub-sourced view of facts (rule 47) is the next Team release. Add a person
+  already reads the setup file and retypes nothing.
+- The Find box opens WordPress's own Command Palette (6.3+); no search of our own.
+- Optima Case Results and Optima Team link through a profile ID on the result;
+  Optima Cards is matched by name or email at offboarding and otherwise untouched.
+- The one-fact-one-tab items (Your business, Details; Hours merged) are not in
+  this release.
+
+Order of work as built: labels (rule 44), the admin kit and Overview, People
+(optima-team with optima-results reading from it), offboarding. Each commit on the
+branch is one of those.
 
 **What release 1 got wrong (the audit):** three navigations on every screen (the
 sidebar, the group pill row inside the hero band, the tab row); a hero band that
