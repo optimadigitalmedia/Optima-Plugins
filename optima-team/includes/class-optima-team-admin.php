@@ -38,14 +38,14 @@ final class Optima_Team_Admin {
 	}
 
 	public static function menu(): void {
-		add_submenu_page( self::parent(), __( 'Team settings', 'optima-team' ), __( 'Team settings', 'optima-team' ), 'manage_options', self::SLUG, array( __CLASS__, 'render' ) );
+		add_submenu_page( self::parent(), __( 'People', 'optima-team' ), __( 'People', 'optima-team' ), 'manage_options', self::SLUG, array( __CLASS__, 'render' ) );
 		// The list sits in the Build menu too, so the sidebar keeps one Optima section.
 		if ( 'options-general.php' !== self::parent() ) {
 			$list = 'edit.php?post_type=' . Optima_Team::POST_TYPE;
 			global $submenu;
 			remove_menu_page( $list );
 			unset( $submenu[ $list ] ); // Its leftover sub-list would otherwise claim the screen.
-			add_submenu_page( self::parent(), __( 'Team members', 'optima-team' ), __( 'Team members', 'optima-team' ), 'edit_posts', $list );
+			add_submenu_page( self::parent(), __( 'Profiles', 'optima-team' ), __( 'Profiles', 'optima-team' ), 'edit_posts', $list );
 		}
 	}
 
@@ -121,9 +121,9 @@ final class Optima_Team_Admin {
 		$add_url = admin_url( 'post-new.php?post_type=' . Optima_Team::POST_TYPE );
 
 		Optima_Admin_UI::open(
-			__( 'Team', 'optima-team' ),
-			__( 'A profile page for each person, with their credentials, plus a grid for the About page. Real people with real credentials are what visitors and search engines look for first.', 'optima-team' ),
-			__( 'Team', 'optima-team' )
+			__( 'People', 'optima-team' ),
+			__( 'One profile per person. It feeds the team page, the profile page, bylines and the Person schema, so a name, title or photo changes in one place. Real people with real credentials are what visitors and search engines look for first.', 'optima-team' ),
+			__( 'People', 'optima-team' )
 		);
 		settings_errors( $o );
 		?>

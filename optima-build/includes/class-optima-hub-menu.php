@@ -71,13 +71,8 @@ final class Optima_Hub_Menu {
 		'optima-content-updates',
 	);
 
-	/** Old name => plain name. */
-	const RENAME = array(
-		'Team settings'         => 'Team',
-		'Case results settings' => 'Case results',
-		'Chat settings'         => 'Chat',
-		'Site check settings'   => 'Site check',
-	);
+	/** Old name => plain name. Empty since every plugin names its screen the way the sidebar does (rule 44). */
+	const RENAME = array();
 
 	public static function boot(): void {
 		add_action( 'admin_menu', array( __CLASS__, 'tidy' ), 999 ); // Before the admin kit picks each group's link (1000).
@@ -155,7 +150,7 @@ final class Optima_Hub_Menu {
 	public static function content_screen(): array {
 		if ( function_exists( 'optima_owns' ) && optima_owns( 'content-sync' ) ) {
 			return array(
-				'label' => __( 'Site Sync', 'optima-build' ),
+				'label' => __( 'Approved copy', 'optima-build' ),
 				'url'   => admin_url( 'admin.php?page=optima&tab=sync' ),
 				'by'    => __( 'Optima Core', 'optima-build' ),
 			);

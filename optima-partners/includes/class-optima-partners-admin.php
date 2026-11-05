@@ -45,10 +45,10 @@ final class Optima_Partners_Admin {
 	public static function menu(): void {
 		$list = 'edit.php?post_type=' . Optima_Partners::TYPE;
 		add_menu_page( __( 'Optima Partners', 'optima-partners' ), __( 'Partners', 'optima-partners' ), self::CAP, self::SLUG, array( __CLASS__, 'render' ), self::icon(), '3.3' );
-		add_submenu_page( self::SLUG, __( 'Optima Partners', 'optima-partners' ), __( 'Overview', 'optima-partners' ), self::CAP, self::SLUG, array( __CLASS__, 'render' ) );
+		add_submenu_page( self::SLUG, __( 'Overview', 'optima-partners' ), __( 'Overview', 'optima-partners' ), self::CAP, self::SLUG, array( __CLASS__, 'render' ) );
 		add_submenu_page( self::SLUG, __( 'All partners', 'optima-partners' ), __( 'All partners', 'optima-partners' ), self::CAP, $list );
 		add_submenu_page( self::SLUG, __( 'Add partner', 'optima-partners' ), __( 'Add partner', 'optima-partners' ), self::CAP, 'post-new.php?post_type=' . Optima_Partners::TYPE );
-		add_submenu_page( self::SLUG, __( 'Partner settings', 'optima-partners' ), __( 'Settings', 'optima-partners' ), 'manage_options', self::SLUG . '-settings', array( __CLASS__, 'render_settings' ) );
+		add_submenu_page( self::SLUG, __( 'Settings', 'optima-partners' ), __( 'Settings', 'optima-partners' ), 'manage_options', self::SLUG . '-settings', array( __CLASS__, 'render_settings' ) );
 	}
 
 	/** Partner list and edit screens light up the Partners menu. */
@@ -184,7 +184,7 @@ final class Optima_Partners_Admin {
 			return;
 		}
 		Optima_Admin_UI::open(
-			__( 'Your partners', 'optima-partners' ),
+			__( 'Overview', 'optima-partners' ),
 			__( 'Who is running, at what level and where, what ends soon, and how many people clicked through to each one.', 'optima-partners' ),
 			__( 'Partners', 'optima-partners' )
 		);
@@ -281,7 +281,7 @@ final class Optima_Partners_Admin {
 			return;
 		}
 		$s = Optima_Partners::settings();
-		Optima_Admin_UI::open( __( 'Partner settings', 'optima-partners' ), __( 'Your levels and the places partners can appear.', 'optima-partners' ), __( 'Partners', 'optima-partners' ) );
+		Optima_Admin_UI::open( __( 'Settings', 'optima-partners' ), __( 'Your levels and the places partners can appear.', 'optima-partners' ), __( 'Partners', 'optima-partners' ) );
 		if ( isset( $_GET['saved'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display only.
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Settings saved.', 'optima-partners' ) . '</p></div>';
 		}

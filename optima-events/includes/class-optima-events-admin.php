@@ -77,7 +77,7 @@ final class Optima_Events_Admin {
 
 	public static function menu(): void {
 		add_menu_page( __( 'Optima Events', 'optima-events' ), __( 'Events', 'optima-events' ), 'edit_posts', self::SLUG, array( __CLASS__, 'render' ), self::icon(), '3.1' );
-		add_submenu_page( self::SLUG, __( 'Optima Events', 'optima-events' ), __( 'Overview', 'optima-events' ), 'edit_posts', self::SLUG, array( __CLASS__, 'render' ) );
+		add_submenu_page( self::SLUG, __( 'Overview', 'optima-events' ), __( 'Overview', 'optima-events' ), 'edit_posts', self::SLUG, array( __CLASS__, 'render' ) );
 		global $submenu;
 		$lists = array(
 			Optima_Events::EVENT   => __( 'All events', 'optima-events' ),
@@ -91,10 +91,10 @@ final class Optima_Events_Admin {
 			unset( $submenu[ $list ] ); // Its leftover sub-list would otherwise claim the screen.
 			add_submenu_page( self::SLUG, $label, $label, 'edit_posts', $list );
 		}
-		add_submenu_page( self::SLUG, __( 'Sign-ups and check-in', 'optima-events' ), __( 'Sign-ups', 'optima-events' ), 'edit_posts', self::SLUG . '-signups', array( __CLASS__, 'render_signups' ) );
-		add_submenu_page( self::SLUG, __( 'Volunteer shifts', 'optima-events' ), __( 'Volunteers', 'optima-events' ), 'edit_posts', self::SLUG . '-volunteers', array( __CLASS__, 'render_volunteers' ) );
-		add_submenu_page( self::SLUG, __( 'Bring in a spreadsheet', 'optima-events' ), __( 'Import', 'optima-events' ), 'edit_posts', self::SLUG . '-import', array( __CLASS__, 'render_import' ) );
-		add_submenu_page( self::SLUG, __( 'Showing events and settings', 'optima-events' ), __( 'Settings', 'optima-events' ), 'edit_posts', self::SLUG . '-settings', array( __CLASS__, 'render_settings' ) );
+		add_submenu_page( self::SLUG, __( 'Sign-ups', 'optima-events' ), __( 'Sign-ups', 'optima-events' ), 'edit_posts', self::SLUG . '-signups', array( __CLASS__, 'render_signups' ) );
+		add_submenu_page( self::SLUG, __( 'Volunteers', 'optima-events' ), __( 'Volunteers', 'optima-events' ), 'edit_posts', self::SLUG . '-volunteers', array( __CLASS__, 'render_volunteers' ) );
+		add_submenu_page( self::SLUG, __( 'Import', 'optima-events' ), __( 'Import', 'optima-events' ), 'edit_posts', self::SLUG . '-import', array( __CLASS__, 'render_import' ) );
+		add_submenu_page( self::SLUG, __( 'Settings', 'optima-events' ), __( 'Settings', 'optima-events' ), 'edit_posts', self::SLUG . '-settings', array( __CLASS__, 'render_settings' ) );
 		// Tickets, members and applications add their screens here, before Import.
 		do_action( 'optima_events_menu', self::SLUG );
 	}
@@ -424,8 +424,15 @@ final class Optima_Events_Admin {
 		}
 		$view = in_array( $view, array( 'overview', 'import', 'settings', 'signups', 'volunteers' ), true ) ? $view : 'overview';
 
+		$titles = array(
+			'overview'   => __( 'Overview', 'optima-events' ),
+			'signups'    => __( 'Sign-ups', 'optima-events' ),
+			'volunteers' => __( 'Volunteers', 'optima-events' ),
+			'import'     => __( 'Import', 'optima-events' ),
+			'settings'   => __( 'Settings', 'optima-events' ),
+		);
 		Optima_Admin_UI::open(
-			__( 'Your events', 'optima-events' ),
+			$titles[ $view ],
 			__( 'Everything about your events in one place: what is coming up, what needs you, and every event, session and speaker. Change something here and the site follows.', 'optima-events' ),
 			__( 'Events', 'optima-events' )
 		);

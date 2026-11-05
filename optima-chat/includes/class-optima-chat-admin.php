@@ -60,7 +60,7 @@ final class Optima_Chat_Admin {
 		$n      = self::unanswered();
 		$bubble = $n ? ' <span class="awaiting-mod">' . (int) $n . '</span>' : '';
 		add_submenu_page( $parent, __( 'Chat questions', 'optima-chat' ), __( 'Chat questions', 'optima-chat' ) . $bubble, 'edit_posts', 'edit.php?post_type=' . Optima_Chat::CPT );
-		add_submenu_page( $parent, __( 'Chat settings', 'optima-chat' ), __( 'Chat settings', 'optima-chat' ), 'manage_options', self::SLUG, array( __CLASS__, 'render' ) );
+		add_submenu_page( $parent, __( 'Chat', 'optima-chat' ), __( 'Chat', 'optima-chat' ), 'manage_options', self::SLUG, array( __CLASS__, 'render' ) );
 	}
 
 	/** Keep the Build section open while reading a question. */
@@ -209,7 +209,7 @@ final class Optima_Chat_Admin {
 		$o  = Optima_Chat::OPTION;
 		$ai = Optima_Chat::ai_connected();
 		$n  = self::unanswered();
-		Optima_Admin_UI::open( __( 'Chat assistant', 'optima-chat' ), __( 'A chat in the corner of the site. It answers the common questions, books calls and takes change requests, and saves every visitor question to Chat questions.', 'optima-chat' ), __( 'Chat', 'optima-chat' ) );
+		Optima_Admin_UI::open( __( 'Chat', 'optima-chat' ), __( 'A chat in the corner of the site. It answers the common questions, books calls and takes change requests, and saves every visitor question to Chat questions.', 'optima-chat' ), __( 'Chat', 'optima-chat' ) );
 		settings_errors( $o );
 		?>
 		<div class="sh-grid sh-grid-3">

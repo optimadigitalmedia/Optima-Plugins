@@ -68,7 +68,7 @@ final class Optima_Core_Admin {
 			add_submenu_page( $parent, 'Business info', 'Business info', 'manage_options', 'optima&tab=business', array( __CLASS__, 'render' ) );
 		}
 		add_submenu_page( $parent, 'SEO', 'SEO', 'manage_options', 'optima&tab=seo', array( __CLASS__, 'render' ) );
-		add_submenu_page( $parent, 'Site Sync', 'Site Sync', 'manage_options', 'optima&tab=sync', array( __CLASS__, 'render' ) );
+		add_submenu_page( $parent, 'Approved copy', 'Approved copy', 'manage_options', 'optima&tab=sync', array( __CLASS__, 'render' ) );
 		add_submenu_page( $parent, 'Spam protection', 'Spam protection', 'manage_options', 'optima&tab=protect', array( __CLASS__, 'render' ) );
 		foreach ( self::groups() as $slug => $group ) {
 			add_submenu_page( $parent, $group['label'], $group['label'], 'manage_options', 'optima&tab=' . $slug, array( __CLASS__, 'render' ) );
@@ -85,7 +85,7 @@ final class Optima_Core_Admin {
 		$tabs = self::hub()
 			? array( 'business' => 'Business info', 'seo' => 'SEO' )
 			: array( 'dashboard' => 'Search health', 'business' => 'Business info', 'seo' => 'SEO' );
-		$tabs['sync']    = 'Site Sync';
+		$tabs['sync']    = 'Approved copy';
 		$tabs['protect'] = 'Spam protection';
 		foreach ( self::groups() as $slug => $group ) {
 			$tabs[ $slug ] = $group['label'];
