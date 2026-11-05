@@ -161,7 +161,8 @@ final class Optima_AEO_Admin {
 
 	public static function meta_box(): void {
 		foreach ( get_post_types( array( 'public' => true ), 'names' ) as $type ) {
-			if ( 'attachment' === $type ) {
+			// A person's profile (People) is not a page that answers questions.
+			if ( 'attachment' === $type || 'optima_team' === $type ) {
 				continue;
 			}
 			add_meta_box( 'optima-aeo-faq', __( 'Questions this page answers', 'optima-aeo' ), array( __CLASS__, 'render_box' ), $type, 'normal', 'default' );

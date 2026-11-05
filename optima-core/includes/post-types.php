@@ -44,6 +44,8 @@ final class Optima_Core_Post_Types {
 					'public'       => (bool) $type['public'],
 					'show_in_rest' => true, // Required for the block editor and Block Bindings.
 					'menu_icon'    => $type['menu_icon'],
+					// Testimonials and FAQs list under Optima, Content (added by Optima_Core_Admin::menu), not as top-level menus.
+					'show_in_menu' => in_array( $slug, array( 'testimonial', 'faq' ), true ) ? false : true,
 					'has_archive'  => $type['has_archive'],
 					'rewrite'      => $type['rewrite'],
 					'supports'     => $type['supports'],

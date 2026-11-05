@@ -28,6 +28,8 @@ final class Optima_SEO_Box {
 	private static function post_types() {
 		$types = get_post_types( array( 'public' => true ), 'names' );
 		unset( $types['attachment'] );
+		// A person's profile has its own Schema tab in People; no SEO box there.
+		unset( $types['optima_team'] );
 		return (array) apply_filters( 'optima_seo_post_types', array_values( $types ) );
 	}
 

@@ -35,6 +35,13 @@ add_action(
 require_once __DIR__ . '/includes/class-optima-forms-guard-uploads.php';
 Optima_Forms_Guard_Uploads::boot();
 
+define( 'OPTIMA_FORMS_GUARD_FILE', __FILE__ );
+if ( is_admin() ) {
+	require_once __DIR__ . '/includes/class-optima-admin-ui.php';
+	require_once __DIR__ . '/includes/class-optima-forms-guard-admin.php';
+	Optima_Forms_Guard_Admin::boot();
+}
+
 final class Optima_Forms_Guard {
 
 	const HP  = 'optima_hp';   // Honeypot field.

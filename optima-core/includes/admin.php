@@ -61,11 +61,18 @@ final class Optima_Core_Admin {
 			add_menu_page( $label, $label, 'manage_options', 'optima', array( __CLASS__, 'render' ), $icon, 3 );
 		}
 		if ( self::hub() ) {
-			// The hub's Site health carries these checks, so this screen opens on Business info.
-			add_submenu_page( $parent, 'Business info', 'Business info', 'manage_options', 'optima', array( __CLASS__, 'render' ) );
+			// The hub's Site health carries these checks, so this screen opens on Details.
+			add_submenu_page( $parent, 'Details', 'Details', 'manage_options', 'optima', array( __CLASS__, 'render' ) );
 		} else {
 			add_submenu_page( $parent, 'Search health', 'Search health', 'manage_options', 'optima', array( __CLASS__, 'render' ) );
-			add_submenu_page( $parent, 'Business info', 'Business info', 'manage_options', 'optima&tab=business', array( __CLASS__, 'render' ) );
+			add_submenu_page( $parent, 'Details', 'Details', 'manage_options', 'optima&tab=business', array( __CLASS__, 'render' ) );
+		}
+		// Testimonials and FAQs are content: their lists sit under Optima, Content (rules 9 and 10).
+		if ( post_type_exists( 'testimonial' ) ) {
+			add_submenu_page( $parent, 'Testimonials', 'Testimonials', 'edit_posts', 'edit.php?post_type=testimonial' );
+		}
+		if ( post_type_exists( 'faq' ) ) {
+			add_submenu_page( $parent, 'FAQs', 'FAQs', 'edit_posts', 'edit.php?post_type=faq' );
 		}
 		add_submenu_page( $parent, 'SEO', 'SEO', 'manage_options', 'optima&tab=seo', array( __CLASS__, 'render' ) );
 		add_submenu_page( $parent, 'Approved copy', 'Approved copy', 'manage_options', 'optima&tab=sync', array( __CLASS__, 'render' ) );
@@ -83,8 +90,8 @@ final class Optima_Core_Admin {
 	/** @return array<string,string> tab => label */
 	private static function tabs() {
 		$tabs = self::hub()
-			? array( 'business' => 'Business info', 'seo' => 'SEO' )
-			: array( 'dashboard' => 'Search health', 'business' => 'Business info', 'seo' => 'SEO' );
+			? array( 'business' => 'Details', 'seo' => 'SEO' )
+			: array( 'dashboard' => 'Search health', 'business' => 'Details', 'seo' => 'SEO' );
 		$tabs['sync']    = 'Approved copy';
 		$tabs['protect'] = 'Spam protection';
 		foreach ( self::groups() as $slug => $group ) {
@@ -107,10 +114,10 @@ final class Optima_Core_Admin {
 		$tabs  = self::tabs();
 		$ledes = array(
 			'dashboard' => 'A quick check that search engines and AI tools can find the business and read it correctly.',
-			'business'  => 'Your name, address, phone and profiles, entered once. They feed your search listing and every page that shows them. Keep them identical to your Google Business Profile.',
+			'business'  => 'The business name, phone, address and profiles, typed once here. Every other screen shows them read-only with a link back. Keep them identical to the Google Business Profile.',
 			'sync'      => 'Keeps each page in step with the copy the theme ships. Pages nobody has edited update on their own after a theme update; anything changed in WordPress waits for you.',
-			'protect'   => 'Two switches that keep spam away from the business. Both are on unless you turn them off.',
-			'seo'       => 'Site-wide search settings. Each page can set its own title and description in its SEO box, and your sitemap is built automatically at /wp-sitemap.xml.',
+			'protect'   => 'What keeps spam away from the business: the form guard and two switches. Both switches are on unless you turn them off.',
+			'seo'       => 'How the site shows in search results: the checks first, then the site-wide settings. Each page sets its own title and description in its SEO box; the sitemap is built at /wp-sitemap.xml.',
 		);
 		self::styles();
 		Optima_Admin_UI::open( $tabs[ $tab ], $ledes[ $tab ] ?? '', $tabs[ $tab ] );
@@ -123,6 +130,7 @@ final class Optima_Core_Admin {
 		} elseif ( 'sync' === $tab ) {
 			Optima_Sync_Admin::render();
 		} elseif ( 'protect' === $tab ) {
+			self::forms_guard_status();
 			Optima_Core_Protection::render_tab();
 		} elseif ( array_key_exists( $tab, self::groups() ) ) {
 			Optima_Core_Settings_Groups::render_tab( $tab );
@@ -318,46 +326,117 @@ final class Optima_Core_Admin {
 
 	public static function tab_business() {
 		$values = Optima_Core_Business::get();
-		echo '<form method="post" action="options.php">';
+		$groups = array(
+			'Name'           => array( 'fields' => array( 'name', 'legal_name' ), 'shows' => 'Shows on: the header and footer, digital cards, the review page, email and the search listing.' ),
+			'Contact'        => array( 'fields' => array( 'phone', 'email' ), 'shows' => 'Shows on: the footer, the contact page, call buttons, digital cards and the search listing.' ),
+			'Address'        => array( 'fields' => array( 'street', 'city', 'region', 'postal', 'country' ), 'shows' => 'Shows on: the footer, the contact page, digital cards and the search listing.' ),
+			'Search listing' => array( 'fields' => array( 'business_type', 'price_range', 'latitude', 'longitude', 'same_as' ), 'shows' => 'Read by search engines and AI tools (schema). Latitude and longitude are optional: they pin the map exactly.' ),
+		);
+		if ( Optima_Core_Business::hours_elsewhere() ) {
+			$hours = admin_url( 'admin.php?page=optima-hours' );
+		} else {
+			$groups['Hours'] = array( 'fields' => array( 'hours' ), 'shows' => 'Shows where the theme places it. Turn on Hours for structured hours, holiday closures and the schema.' );
+		}
+		$labels = Optima_Core_Business::fields();
+		echo '<form method="post" action="options.php" class="sh-box">';
 		settings_fields( 'optima_business_group' );
 		echo '<table class="form-table" role="presentation"><tbody>';
-		foreach ( Optima_Core_Business::fields() as $key => $label ) {
-			$id   = 'optima-' . $key;
-			$name = Optima_Core_Business::OPTION . '[' . $key . ']';
-			echo '<tr><th scope="row"><label for="' . esc_attr( $id ) . '">' . esc_html( $label ) . '</label></th><td>';
-			if ( in_array( $key, array( 'hours', 'same_as' ), true ) ) {
-				printf( '<textarea id="%s" name="%s" rows="5" class="large-text">%s</textarea>', esc_attr( $id ), esc_attr( $name ), esc_textarea( $values[ $key ] ) );
-			} else {
-				printf( '<input type="text" id="%s" name="%s" value="%s" class="regular-text" />', esc_attr( $id ), esc_attr( $name ), esc_attr( $values[ $key ] ) );
+		foreach ( $groups as $group => $g ) {
+			echo '<tr><th colspan="2" scope="rowgroup"><span class="sh-label">' . esc_html( $group ) . '</span><p class="sh-note" style="font-weight:400;font-family:inherit;margin:4px 0 0">' . esc_html( $g['shows'] ) . '</p></th></tr>';
+			foreach ( $g['fields'] as $key ) {
+				$id   = 'optima-' . $key;
+				$name = Optima_Core_Business::OPTION . '[' . $key . ']';
+				echo '<tr><th scope="row"><label for="' . esc_attr( $id ) . '">' . esc_html( $labels[ $key ] ) . '</label></th><td>';
+				if ( 'business_type' === $key ) {
+					$types = Optima_Core_Business::types();
+					echo '<select id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '"><option value="">Not set</option>';
+					if ( '' !== $values[ $key ] && ! isset( $types[ $values[ $key ] ] ) ) {
+						echo '<option value="' . esc_attr( $values[ $key ] ) . '" selected>' . esc_html( $values[ $key ] ) . '</option>';
+					}
+					foreach ( $types as $type => $label ) {
+						echo '<option value="' . esc_attr( $type ) . '"' . selected( $values[ $key ], $type, false ) . '>' . esc_html( $label ) . '</option>';
+					}
+					echo '</select>';
+				} elseif ( in_array( $key, array( 'hours', 'same_as' ), true ) ) {
+					printf( '<textarea id="%s" name="%s" rows="4" class="large-text">%s</textarea>', esc_attr( $id ), esc_attr( $name ), esc_textarea( $values[ $key ] ) );
+				} else {
+					$kind = 'email' === $key ? 'email' : ( 'phone' === $key ? 'tel' : 'text' );
+					printf( '<input type="%s" id="%s" name="%s" value="%s" class="regular-text" />', esc_attr( $kind ), esc_attr( $id ), esc_attr( $name ), esc_attr( $values[ $key ] ) );
+				}
+				echo '</td></tr>';
 			}
-			echo '</td></tr>';
 		}
 		echo '</tbody></table>';
-		submit_button();
+		if ( isset( $hours ) ) {
+			echo '<p class="sh-note">Hours are typed on <a href="' . esc_url( $hours ) . '">Your business, Hours</a>.</p>';
+		}
+		submit_button( 'Save' );
 		echo '</form>';
+	}
+
+	/**
+	 * Spam protection carries the form guard's status on every site (dashboard
+	 * audit: one name, one place). Optima Forms Guard has no settings of its own.
+	 */
+	private static function forms_guard_status() {
+		echo '<section class="sh-box"><h2>Form guard</h2>';
+		if ( class_exists( 'Optima_Forms_Guard' ) ) {
+			$month = method_exists( 'Optima_Forms_Guard', 'blocked' ) ? (int) Optima_Forms_Guard::blocked() : 0;
+			echo '<div class="sh-status"><span class="sh-dot" aria-hidden="true"></span><p class="sh-value">On. Every form checks each message invisibly, with no puzzle for real visitors.</p></div>';
+			echo '<p class="sh-note">' . esc_html( $month ? sprintf( _n( '%d spam submission blocked this month.', '%d spam submissions blocked this month.', $month, 'optima-core' ), $month ) : 'Nothing blocked yet this month.' ) . '</p>';
+		} else {
+			echo '<div class="sh-status is-off"><span class="sh-dot" aria-hidden="true"></span><p class="sh-value">Off. Turn on Spam protection for forms on Build, Features.</p></div>';
+		}
+		echo '</section>';
 	}
 
 	/* ---------- SEO tab ---------- */
 
 	public static function tab_seo() {
+		// This tab's own checks first (section 4a: each Search and AI tab shows its checks).
+		$checks = array_values( array_filter( self::checks(), static function ( $c ) {
+			return in_array( $c['label'], array( 'Page descriptions', 'Visible to Google', 'Social sharing', 'Search listing (schema)' ), true );
+		} ) );
+		if ( $checks ) {
+			self::render_checks( $checks );
+		}
 		$values = Optima_Core_SEO_Settings::get();
-		echo '<form method="post" action="options.php">';
+		wp_enqueue_media();
+		echo '<form method="post" action="options.php" class="sh-box">';
 		settings_fields( 'optima_seo_group' );
 		echo '<table class="form-table" role="presentation"><tbody>';
 		foreach ( Optima_Core_SEO_Settings::fields() as $key => $label ) {
 			$id   = 'optima-seo-' . $key;
 			$name = Optima_Core_SEO_Settings::OPTION . '[' . $key . ']';
-			echo '<tr><th scope="row"><label for="' . esc_attr( $id ) . '">' . esc_html( $label ) . '</label></th><td>';
+			echo '<tr><th scope="row"><label for="' . esc_attr( $id ) . '">' . esc_html( 'default_image' === $key ? 'Default share image' : $label ) . '</label></th><td>';
 			if ( 'home_description' === $key ) {
 				printf( '<textarea id="%s" name="%s" rows="3" class="large-text">%s</textarea>', esc_attr( $id ), esc_attr( $name ), esc_textarea( $values[ $key ] ) );
 			} else {
-				printf( '<input type="url" id="%s" name="%s" value="%s" class="regular-text" placeholder="https://" />', esc_attr( $id ), esc_attr( $name ), esc_attr( $values[ $key ] ) );
+				$url = (string) $values[ $key ];
+				echo '<div class="optima-media">';
+				echo '<img class="optima-media-preview" alt="" src="' . esc_url( $url ) . '"' . ( '' === $url ? ' hidden' : '' ) . ' style="display:block;max-width:240px;height:auto;border-radius:10px;border:1px solid #DDE4EE;margin:0 0 8px">';
+				printf( '<input type="url" id="%s" name="%s" value="%s" class="regular-text" placeholder="https://" />', esc_attr( $id ), esc_attr( $name ), esc_attr( $url ) );
+				echo ' <button type="button" class="button optima-media-pick" data-target="' . esc_attr( $id ) . '">Choose image</button>';
+				echo '<p class="description">Used when a page has no image of its own. 1200 by 630 pixels works everywhere.</p></div>';
 			}
 			echo '</td></tr>';
 		}
 		echo '</tbody></table>';
-		submit_button();
+		submit_button( 'Save' );
 		echo '</form>';
+		?>
+		<script>
+		document.querySelectorAll( '.optima-media-pick' ).forEach( function ( b ) {
+			b.addEventListener( 'click', function () {
+				if ( ! window.wp || ! wp.media ) { return; }
+				var input = document.getElementById( b.dataset.target ), img = b.parentNode.querySelector( '.optima-media-preview' );
+				var frame = wp.media( { title: 'Default share image', library: { type: 'image' }, multiple: false } );
+				frame.on( 'select', function () { var a = frame.state().get( 'selection' ).first().toJSON(); input.value = a.url; img.src = a.url; img.hidden = false; } );
+				frame.open();
+			} );
+		} );
+		</script>
+		<?php
 	}
 
 	/* ---------- Branded, scoped admin styles ---------- */

@@ -23,19 +23,19 @@ final class Optima_Core_Business {
 		return array(
 			'name'          => 'Business name',
 			'legal_name'    => 'Legal name',
-			'business_type' => 'Schema type (e.g. LocalBusiness, Campground, LegalService)',
+			'business_type' => 'Business type in search',
 			'phone'         => 'Phone',
 			'email'         => 'Email',
 			'street'        => 'Street address',
 			'city'          => 'City',
 			'region'        => 'State / region',
 			'postal'        => 'Postal code',
-			'country'       => 'Country code (e.g. US)',
+			'country'       => 'Country code',
 			'price_range'   => 'Price range (e.g. $$)',
 			'latitude'      => 'Latitude',
 			'longitude'     => 'Longitude',
 			'hours'         => 'Hours (one line per day)',
-			'same_as'       => 'Profile URLs (one per line: Google, Facebook, Yelp...)',
+			'same_as'       => 'Profile addresses (one per line: Google, Facebook, Yelp)',
 		);
 	}
 
@@ -57,11 +57,48 @@ final class Optima_Core_Business {
 		);
 	}
 
+	/**
+	 * Schema types to pick from (Details shows a list, not a typed name). A value
+	 * saved before release 3 that is not in the list stays and shows as its own choice.
+	 *
+	 * @return array<string,string> type => plain label
+	 */
+	public static function types() {
+		return (array) apply_filters(
+			'optima_core_business_types',
+			array(
+				'LegalService'       => 'Law firm (LegalService)',
+				'Attorney'           => 'Attorney (Attorney)',
+				'LocalBusiness'      => 'Local business (LocalBusiness)',
+				'ProfessionalService' => 'Professional service (ProfessionalService)',
+				'MedicalBusiness'    => 'Medical practice (MedicalBusiness)',
+				'Restaurant'         => 'Restaurant (Restaurant)',
+				'FoodEstablishment'  => 'Food and catering (FoodEstablishment)',
+				'Campground'         => 'Campground or RV park (Campground)',
+				'HomeAndConstructionBusiness' => 'Home and construction (HomeAndConstructionBusiness)',
+				'Store'              => 'Shop (Store)',
+				'Organization'       => 'Organization (Organization)',
+			)
+		);
+	}
+
+	/** Is the hours box owned by Optima Hours (rule 45: hours typed on one tab only)? */
+	public static function hours_elsewhere() {
+		return class_exists( 'Optima_Hours' );
+	}
+
 	public static function sanitize( $input ) {
 		$input = (array) $input;
 		$clean = array();
+		// A field the form did not show (hours while Optima Hours owns them, keys a
+		// newer form adds) keeps its saved value: a save never blanks what it did not show.
+		$saved = self::get();
 		foreach ( self::fields() as $key => $label ) {
-			$value = isset( $input[ $key ] ) ? $input[ $key ] : '';
+			if ( ! array_key_exists( $key, $input ) ) {
+				$clean[ $key ] = (string) $saved[ $key ];
+				continue;
+			}
+			$value = $input[ $key ];
 			if ( in_array( $key, array( 'hours', 'same_as' ), true ) ) {
 				$clean[ $key ] = sanitize_textarea_field( $value );
 			} elseif ( 'email' === $key ) {
