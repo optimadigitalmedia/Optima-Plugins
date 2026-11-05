@@ -167,7 +167,8 @@ final class Optima_Core_Admin {
 			echo '<p class="sh-label">' . esc_html( $c['label'] ) . '</p>';
 			echo '<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span>' . esc_html( 'good' === $state ? 'All set' : 'Needs a look' ) . '</p>';
 			echo '<p class="sh-note">' . esc_html( $c['message'] ) . '</p>';
-			if ( ! empty( $c['items'] ) ) {
+			// Only links the viewer can open (Site health is also shown to people the site lock holds back).
+			if ( ! empty( $c['items'] ) && current_user_can( 'edit_pages' ) ) {
 				echo '<ul class="sh-list">';
 				foreach ( $c['items'] as $item_id ) {
 					$title = get_the_title( $item_id );
@@ -179,7 +180,7 @@ final class Optima_Core_Admin {
 				}
 				echo '</ul>';
 			}
-			if ( ! empty( $c['action'] ) && ! empty( $c['action_label'] ) ) {
+			if ( ! empty( $c['action'] ) && ! empty( $c['action_label'] ) && current_user_can( 'manage_options' ) ) {
 				printf( '<p class="sh-note"><a href="%s">%s &rsaquo;</a></p>', esc_url( $c['action'] ), esc_html( $c['action_label'] ) );
 			}
 			echo '</section>';

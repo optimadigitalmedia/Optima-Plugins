@@ -61,7 +61,8 @@ final class Optima_Hub_Overview {
 	 */
 	public static function login_redirect( $to, $requested, $user ) {
 		// Everyone who can open Overview lands there, not on Profile or the WordPress Dashboard.
-		if ( ! $user instanceof WP_User || ! user_can( $user, 'edit_posts' ) ) {
+		// The site lock holds back edit_posts but keeps the view right, so ask for that.
+		if ( ! $user instanceof WP_User || ! user_can( $user, Optima_Hub_Lock::VIEW ) ) {
 			return $to;
 		}
 		$req   = untrailingslashit( (string) $requested );

@@ -70,7 +70,9 @@ final class Optima_Hub_Dashboard {
 				echo ' &middot; <strong>' . esc_html( sprintf( _n( '%d new review', '%d new reviews', $new, 'optima-build' ), $new ) ) . '</strong>';
 			}
 			?>
-			&middot; <a href="<?php echo esc_url( $list ); ?>"><?php esc_html_e( 'See reviews', 'optima-build' ); ?></a>
+			<?php if ( current_user_can( 'edit_posts' ) ) : // No link a viewer cannot open. ?>
+				&middot; <a href="<?php echo esc_url( $list ); ?>"><?php esc_html_e( 'See reviews', 'optima-build' ); ?></a>
+			<?php endif; ?>
 		</p>
 		<?php
 	}
