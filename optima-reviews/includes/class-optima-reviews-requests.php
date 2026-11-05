@@ -70,10 +70,17 @@ final class Optima_Reviews_Requests {
 	public static function get(): array {
 		$saved = get_option( self::OPTION, array() );
 		$s     = array_merge( self::defaults(), is_array( $saved ) ? $saved : array() );
+		// The business name is typed once, on Your business, Details (rule 45). The
+		// name this screen saved before release 3 is used only while Details has none.
+		$biz = get_option( 'optima_business', array() );
+		$biz = is_array( $biz ) ? trim( (string) ( $biz['name'] ?? '' ) ) : '';
+		if ( '' !== $biz ) {
+			$s['business'] = self::short_name( $biz );
+		}
 		if ( '' === trim( $s['business'] ) ) {
 			$s['business'] = self::short_name( wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES ) );
 		}
-		return $s;
+		return Optima_Reviews_Brand::from_design( $s );
 	}
 
 	/**
@@ -108,6 +115,19 @@ final class Optima_Reviews_Requests {
 			$value = sanitize_text_field( (string) ( $input[ $key ] ?? '' ) );
 			return '' !== $value ? $value : $d[ $key ];
 		};
+		// The name and the look are no longer on this form when Details and the
+		// theme's design own them: keep what was saved before, untouched.
+		$old = get_option( self::OPTION, array() );
+		$old = is_array( $old ) ? $old : array();
+		foreach ( array( 'business', 'accent', 'background', 'text_color', 'heading_font', 'body_font', 'label_font' ) as $kept ) {
+			if ( ! array_key_exists( $kept, $input ) && array_key_exists( $kept, $old ) ) {
+				$input[ $kept ] = $old[ $kept ];
+				if ( 'text_color' === $kept && '' === (string) $old[ $kept ] ) {
+					$input['text_auto'] = 1;
+				}
+			}
+		}
+		$color = sanitize_hex_color( (string) ( $input['accent'] ?? '' ) );
 
 		return array(
 			'enabled'       => ! empty( $input['enabled'] ),
@@ -284,7 +304,8 @@ final class Optima_Reviews_Requests {
 			return;
 		}
 		// Plex comes from the shared Optima admin kit; plugins load no fonts of their own.
-		wp_enqueue_style( 'optima-reviews-ask', OPTIMA_REVIEWS_URL . 'assets/ask.css', array(), OPTIMA_REVIEWS_VERSION );
+		Optima_Admin_UI::enqueue( OPTIMA_REVIEWS_URL . 'assets/optima-admin.css' );
+		wp_enqueue_style( 'optima-reviews-ask', OPTIMA_REVIEWS_URL . 'assets/ask.css', array( 'optima-admin-kit' ), OPTIMA_REVIEWS_VERSION );
 		$brand = Optima_Reviews_Brand::fonts_url( self::get() );
 		if ( '' !== $brand ) {
 			wp_enqueue_style( 'optima-reviews-brand-fonts', $brand, array(), null ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion
@@ -349,9 +370,9 @@ final class Optima_Reviews_Requests {
 		$settings_url = Optima_Reviews_Menu::url( Optima_Reviews_Settings::PAGE );
 		$test    = '<a class="button" href="' . esc_url( self::link() ) . '" target="_blank" rel="noopener">' . esc_html__( 'Open the review page', 'optima-reviews' ) . '</a>';
 		?>
-		<div class="wrap srk recon-theme" data-theme="light" style="<?php echo esc_attr( Optima_Reviews_Brand::card_vars( $s ) ); ?>">
-			<?php self::header( __( 'Ask for reviews', 'optima-reviews' ), __( 'Ask every client the same way', 'optima-reviews' ), $test ); ?>
-			<p class="srk-lede"><?php esc_html_e( 'One link for every review request. Share it by text, by email, or on a printed card with a QR code. If your review link ever changes, update it in Settings and every card and message keeps working.', 'optima-reviews' ); ?></p>
+		<?php Optima_Admin_UI::open( __( 'Ask for reviews', 'optima-reviews' ), __( 'Ask every client the same way: one link for every review request, by text, by email, or on a printed card with a QR code. If the review link changes, update it on Reviews and every card and message keeps working.', 'optima-reviews' ), '', Optima_Reviews_Settings::PAGE ); ?>
+		<p class="sh-note"><a href="<?php echo esc_url( $settings_url ); ?>">&lsaquo; <?php esc_html_e( 'Back to Reviews', 'optima-reviews' ); ?></a> &nbsp; <?php echo $test; // phpcs:ignore WordPress.Security.EscapeOutput -- built from escaped parts above. ?></p>
+		<div class="srk recon-theme" data-theme="light" style="<?php echo esc_attr( Optima_Reviews_Brand::card_vars( $s ) ); ?>">
 
 			<?php if ( ! $s['enabled'] ) : ?>
 				<div class="notice notice-warning inline"><p><?php esc_html_e( 'The review page is turned off. Turn it on under Page settings below.', 'optima-reviews' ); ?></p></div>
@@ -539,8 +560,8 @@ final class Optima_Reviews_Requests {
 							<p class="description"><?php esc_html_e( 'Leave empty to use the site\'s admin email.', 'optima-reviews' ); ?></p></td>
 						</tr>
 						<tr>
-							<th scope="row"><label for="srk-business"><?php esc_html_e( 'Business name', 'optima-reviews' ); ?></label></th>
-							<td><input id="srk-business" type="text" class="regular-text" name="<?php echo esc_attr( $name . '[business]' ); ?>" value="<?php echo esc_attr( $s['business'] ); ?>" /></td>
+							<th scope="row"><?php esc_html_e( 'Business name', 'optima-reviews' ); ?></th>
+							<td><?php Optima_Admin_UI::fact( __( 'From Details', 'optima-reviews' ), $s['business'] ); ?></td>
 						</tr>
 						<tr>
 							<th scope="row"><label for="srk-headline"><?php esc_html_e( 'Page headline', 'optima-reviews' ); ?></label></th>
@@ -560,6 +581,12 @@ final class Optima_Reviews_Requests {
 							<th scope="row"><label for="srk-card-headline"><?php esc_html_e( 'Card headline', 'optima-reviews' ); ?></label></th>
 							<td><input id="srk-card-headline" type="text" class="regular-text" placeholder="<?php echo esc_attr( self::card_headline( array( 'card_headline' => '' ) ) ); ?>" name="<?php echo esc_attr( $name . '[card_headline]' ); ?>" value="<?php echo esc_attr( $s['card_headline'] ); ?>" /></td>
 						</tr>
+						<?php if ( Optima_Reviews_Brand::designed() ) : ?>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Colors and fonts', 'optima-reviews' ); ?></th>
+							<td><p class="description" style="margin:0"><?php esc_html_e( 'From the theme\'s design, the same as every feature on the site:', 'optima-reviews' ); ?> <a href="<?php echo esc_url( admin_url( 'admin.php?page=optima-design' ) ); ?>"><?php esc_html_e( 'Build, Design', 'optima-reviews' ); ?></a>.</p></td>
+						</tr>
+						<?php else : ?>
 						<tr>
 							<th scope="row"><label for="srk-accent"><?php esc_html_e( 'Brand color', 'optima-reviews' ); ?></label></th>
 							<td><input id="srk-accent" type="color" name="<?php echo esc_attr( $name . '[accent]' ); ?>" value="<?php echo esc_attr( $s['accent'] ); ?>" />
@@ -600,11 +627,13 @@ final class Optima_Reviews_Requests {
 							<?php endif; ?></td>
 						</tr>
 						<?php endforeach; ?>
+						<?php endif; ?>
 					</table>
-					<?php submit_button(); ?>
+					<?php submit_button( __( 'Save', 'optima-reviews' ) ); ?>
 				</form>
 			</section>
 		</div>
 		<?php
+		Optima_Admin_UI::close();
 	}
 }

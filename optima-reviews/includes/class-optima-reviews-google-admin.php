@@ -36,7 +36,7 @@ final class Optima_Reviews_Google_Admin {
 		$g        = Optima_Reviews_Google::get();
 		$settings = Optima_Reviews_Menu::url( Optima_Reviews_Settings::PAGE );
 		?>
-		<div class="card" style="max-width:1100px;padding:16px 20px;margin:16px 0 24px;">
+		<section class="sh-box">
 			<h2 style="margin-top:0;"><?php esc_html_e( 'Google reviews sync', 'optima-reviews' ); ?></h2>
 
 			<?php if ( ! Optima_Reviews_Google::has_credentials() ) : ?>
@@ -55,7 +55,9 @@ final class Optima_Reviews_Google_Admin {
 							<td><input type="password" id="optima-g-secret" class="regular-text" name="client_secret" autocomplete="new-password" /></td>
 						</tr>
 					</table>
+					<?php Optima_Admin_UI::dev_open(); ?>
 					<p class="description"><?php esc_html_e( 'More secure option: put OPTIMA_REVIEWS_GOOGLE_CLIENT_ID and OPTIMA_REVIEWS_GOOGLE_CLIENT_SECRET in wp-config.php instead, and this form disappears.', 'optima-reviews' ); ?></p>
+					<?php Optima_Admin_UI::dev_close(); ?>
 					<?php submit_button( __( 'Save credentials', 'optima-reviews' ), 'secondary' ); ?>
 				</form>
 
@@ -105,7 +107,7 @@ final class Optima_Reviews_Google_Admin {
 			<?php if ( $g['last_error'] && ! Optima_Reviews_Google::is_ready() ) : ?>
 				<div class="notice notice-error inline"><p><?php echo esc_html( $g['last_error'] ); ?></p></div>
 			<?php endif; ?>
-		</div>
+		</section>
 		<?php
 	}
 
@@ -293,15 +295,24 @@ final class Optima_Reviews_Google_Admin {
 		if ( ! $screen || ! current_user_can( 'edit_posts' ) || ! in_array( $screen->id, array( 'dashboard', 'edit-' . Optima_Reviews_Post_Type::TYPE ), true ) ) {
 			return;
 		}
-		$new = Optima_Reviews_Google_Sync::new_count();
-		if ( $new ) {
-			$link = Optima_Reviews_Inbox::url();
+		// The same count the Review inbox, Inbox and Overview show.
+		$c = Optima_Reviews_Inbox::counts();
+		if ( $c['all'] ) {
+			$parts = array();
+			if ( $c['reviews'] ) {
+				/* translators: %d: number of new reviews. */
+				$parts[] = sprintf( _n( '%d new review', '%d new reviews', $c['reviews'], 'optima-reviews' ), $c['reviews'] );
+			}
+			if ( $c['notes'] ) {
+				/* translators: %d: number of notes. */
+				$parts[] = sprintf( _n( '%d note from the review page', '%d notes from the review page', $c['notes'], 'optima-reviews' ), $c['notes'] );
+			}
 			printf(
 				'<div class="notice notice-info"><p>%s <a href="%s">%s</a></p></div>',
-				/* translators: %d: number of new reviews. */
-				esc_html( sprintf( _n( '%d new Google review is waiting for a look.', '%d new Google reviews are waiting for a look.', $new, 'optima-reviews' ), $new ) ),
-				esc_url( $link ),
-				esc_html__( 'Open the inbox', 'optima-reviews' )
+				/* translators: %s: what is waiting */
+				esc_html( sprintf( __( 'Waiting in the Review inbox: %s.', 'optima-reviews' ), implode( __( ' and ', 'optima-reviews' ), $parts ) ) ),
+				esc_url( Optima_Reviews_Inbox::url() ),
+				esc_html__( 'Open the Review inbox', 'optima-reviews' )
 			);
 		}
 	}
@@ -311,7 +322,7 @@ final class Optima_Reviews_Google_Admin {
 	 */
 	public static function menu_bubble(): void {
 		global $menu;
-		$new = Optima_Reviews_Google_Sync::new_count();
+		$new = Optima_Reviews_Inbox::counts()['all'];
 		if ( ! $new || ! is_array( $menu ) ) {
 			return;
 		}

@@ -71,8 +71,8 @@ final class Optima_Reviews_Settings {
 	public static function menu(): void {
 		add_submenu_page(
 			Optima_Reviews_Menu::parent(),
-			__( 'Review settings', 'optima-reviews' ),
-			'' !== Optima_Reviews_Menu::build() ? __( 'Review settings', 'optima-reviews' ) : __( 'Settings', 'optima-reviews' ),
+			__( 'Reviews', 'optima-reviews' ),
+			'' !== Optima_Reviews_Menu::build() ? __( 'Reviews', 'optima-reviews' ) : __( 'Settings', 'optima-reviews' ),
 			'manage_options',
 			self::PAGE,
 			array( __CLASS__, 'page' )
@@ -136,6 +136,29 @@ final class Optima_Reviews_Settings {
 		return $out;
 	}
 
+	/** The reviews themselves, first on the one Reviews tab: counts, the newest five, and the way to all of them. */
+	private static function list_box(): void {
+		$type   = Optima_Reviews_Post_Type::TYPE;
+		$counts = wp_count_posts( $type );
+		$live   = (int) ( $counts->publish ?? 0 );
+		$wait   = Optima_Reviews_Inbox::counts()['all'];
+		$latest = get_posts( array( 'post_type' => $type, 'post_status' => 'publish', 'posts_per_page' => 5 ) );
+		echo '<section class="sh-box" id="reviews-list"><h2>' . esc_html__( 'Reviews', 'optima-reviews' ) . '</h2>';
+		/* translators: 1: reviews on the site, 2: waiting in the Review inbox */
+		echo '<p>' . esc_html( sprintf( __( '%1$d on the site. %2$d waiting in the Review inbox.', 'optima-reviews' ), $live, $wait ) ) . '</p>';
+		if ( $latest ) {
+			echo '<ul class="sh-waiting">';
+			foreach ( $latest as $post ) {
+				$src = (string) get_post_meta( $post->ID, '_optima_review_source', true );
+				echo '<li><a href="' . esc_url( (string) get_edit_post_link( $post->ID ) ) . '">' . esc_html( get_the_title( $post ) ) . '</a><span class="sh-note">' . esc_html( Optima_Reviews_Sources::label( $src ) ) . '</span></li>';
+			}
+			echo '</ul>';
+		}
+		echo '<p class="sh-actions" style="margin-top:12px"><a class="button" href="' . esc_url( admin_url( 'edit.php?post_type=' . $type ) ) . '">' . esc_html__( 'All reviews', 'optima-reviews' ) . '</a> ';
+		echo '<a class="button" href="' . esc_url( admin_url( 'post-new.php?post_type=' . $type ) ) . '">' . esc_html__( 'Add a review', 'optima-reviews' ) . '</a> ';
+		echo '<a class="button' . ( $wait ? ' button-primary' : '' ) . '" href="' . esc_url( Optima_Reviews_Inbox::url() ) . '">' . esc_html__( 'Review inbox', 'optima-reviews' ) . '</a></p></section>';
+	}
+
 	public static function page(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
@@ -143,19 +166,23 @@ final class Optima_Reviews_Settings {
 		$settings = self::get();
 		$name     = self::OPTION;
 		?>
-		<?php Optima_Admin_UI::open( __( 'Review settings', 'optima-reviews' ), __( 'Your profile on each review platform, how reviews look on the site, and where to put them.', 'optima-reviews' ) ); ?>
+		<?php Optima_Admin_UI::open( __( 'Reviews', 'optima-reviews' ), __( 'The reviews on the site, the business\'s profile on each platform, asking clients for reviews, and how reviews look.', 'optima-reviews' ) ); ?>
+			<p class="sh-note"><?php esc_html_e( 'On this screen:', 'optima-reviews' ); ?> <a href="#reviews-list"><?php esc_html_e( 'Reviews', 'optima-reviews' ); ?></a> · <a href="#reviews-platforms"><?php esc_html_e( 'Platforms', 'optima-reviews' ); ?></a> · <a href="#reviews-ask"><?php esc_html_e( 'Ask for reviews', 'optima-reviews' ); ?></a> · <a href="#reviews-display"><?php esc_html_e( 'Display', 'optima-reviews' ); ?></a></p>
+
+			<?php self::list_box(); ?>
 
 			<?php do_action( 'optima_reviews_settings_top' ); ?>
 
 			<form method="post" action="options.php">
 				<?php settings_fields( self::PAGE ); ?>
 
-				<h2><?php esc_html_e( 'Your profile on each platform', 'optima-reviews' ); ?></h2>
+				<section class="sh-box" id="reviews-platforms">
+				<h2><?php esc_html_e( 'Platforms', 'optima-reviews' ); ?></h2>
 				<p class="description" style="max-width:720px;">
 					<?php esc_html_e( 'Copy the overall rating and total review count exactly as each platform shows them. The rating summary on the site uses these numbers, so visitors see your real totals, not just the reviews you picked. Leave a row empty to skip that platform.', 'optima-reviews' ); ?>
 				</p>
 
-				<table class="widefat striped" style="max-width:1100px;margin-top:12px;">
+				<div class="sh-scroll"><table class="widefat striped" style="margin-top:12px;">
 					<thead>
 						<tr>
 							<th><?php esc_html_e( 'Platform', 'optima-reviews' ); ?></th>
@@ -167,9 +194,10 @@ final class Optima_Reviews_Settings {
 					</thead>
 					<tbody>
 						<?php
+						$listed = Optima_Reviews_Sources::for_site();
 						foreach ( Optima_Reviews_Sources::all() as $slug => $info ) :
-							if ( 'direct' === $slug ) {
-								continue; // Direct testimonials have no platform profile.
+							if ( 'direct' === $slug || ! in_array( $slug, $listed, true ) ) {
+								continue; // Direct testimonials have no platform profile; other kinds of business use other platforms.
 							}
 							$p      = self::profile( $slug );
 							$base   = $name . '[profiles][' . $slug . ']';
@@ -185,23 +213,31 @@ final class Optima_Reviews_Settings {
 								</td>
 								<td>
 									<?php if ( $info['stars'] ) : ?>
-										<input type="number" step="0.1" min="1" max="5" style="width:80px;"<?php echo $lock; // phpcs:ignore WordPress.Security.EscapeOutput ?> name="<?php echo esc_attr( $base . '[rating]' ); ?>" value="<?php echo $p['rating'] ? esc_attr( (string) $p['rating'] ) : ''; ?>" />
+										<input type="number" step="0.1" min="1" max="5" style="width:80px;" aria-label="<?php echo esc_attr( sprintf( /* translators: %s: platform */ __( '%s overall rating', 'optima-reviews' ), $info['label'] ) ); ?>"<?php echo $lock; // phpcs:ignore WordPress.Security.EscapeOutput ?> name="<?php echo esc_attr( $base . '[rating]' ); ?>" value="<?php echo $p['rating'] ? esc_attr( (string) $p['rating'] ) : ''; ?>" />
 									<?php else : ?>
 										<span class="description"><?php esc_html_e( 'No stars', 'optima-reviews' ); ?></span>
 									<?php endif; ?>
 								</td>
-								<td><input type="number" min="0" step="1" style="width:90px;"<?php echo $lock; // phpcs:ignore WordPress.Security.EscapeOutput ?> name="<?php echo esc_attr( $base . '[count]' ); ?>" value="<?php echo $p['count'] ? esc_attr( (string) $p['count'] ) : ''; ?>" /></td>
-								<td><input type="url" class="regular-text" placeholder="https://"<?php echo $lock; // phpcs:ignore WordPress.Security.EscapeOutput ?> name="<?php echo esc_attr( $base . '[url]' ); ?>" value="<?php echo esc_attr( $p['url'] ); ?>" /></td>
-								<td><input type="url" class="regular-text" placeholder="https://"<?php echo $lock; // phpcs:ignore WordPress.Security.EscapeOutput ?> name="<?php echo esc_attr( $base . '[write_url]' ); ?>" value="<?php echo esc_attr( $p['write_url'] ); ?>" /></td>
+								<td><input type="number" min="0" step="1" style="width:90px;" aria-label="<?php echo esc_attr( sprintf( /* translators: %s: platform */ __( '%s total reviews', 'optima-reviews' ), $info['label'] ) ); ?>"<?php echo $lock; // phpcs:ignore WordPress.Security.EscapeOutput ?> name="<?php echo esc_attr( $base . '[count]' ); ?>" value="<?php echo $p['count'] ? esc_attr( (string) $p['count'] ) : ''; ?>" /></td>
+								<td><input type="url" class="regular-text" placeholder="https://" aria-label="<?php echo esc_attr( sprintf( /* translators: %s: platform */ __( '%s profile link', 'optima-reviews' ), $info['label'] ) ); ?>"<?php echo $lock; // phpcs:ignore WordPress.Security.EscapeOutput ?> name="<?php echo esc_attr( $base . '[url]' ); ?>" value="<?php echo esc_attr( $p['url'] ); ?>" /></td>
+								<td><input type="url" class="regular-text" placeholder="https://" aria-label="<?php echo esc_attr( sprintf( /* translators: %s: platform */ __( '%s leave a review link', 'optima-reviews' ), $info['label'] ) ); ?>"<?php echo $lock; // phpcs:ignore WordPress.Security.EscapeOutput ?> name="<?php echo esc_attr( $base . '[write_url]' ); ?>" value="<?php echo esc_attr( $p['write_url'] ); ?>" /></td>
 							</tr>
 						<?php endforeach; ?>
 					</tbody>
-				</table>
+				</table></div>
 				<p class="description">
 					<?php esc_html_e( 'Google\'s "leave a review" link is in your Business Profile under "Ask for reviews." It takes clients straight to the review box.', 'optima-reviews' ); ?>
 				</p>
+				</section>
 
-				<h2 style="margin-top:32px;"><?php esc_html_e( 'Display', 'optima-reviews' ); ?></h2>
+				<section class="sh-box" id="reviews-ask">
+					<h2><?php esc_html_e( 'Ask for reviews', 'optima-reviews' ); ?></h2>
+					<p><?php esc_html_e( 'One review link, ready-made messages and printed cards with a QR code, so every client is asked the same way.', 'optima-reviews' ); ?></p>
+					<p><a class="button" href="<?php echo esc_url( Optima_Reviews_Menu::url( Optima_Reviews_Requests::PAGE ) ); ?>"><?php esc_html_e( 'Open Ask for reviews', 'optima-reviews' ); ?></a></p>
+				</section>
+
+				<section class="sh-box" id="reviews-display">
+				<h2><?php esc_html_e( 'Display', 'optima-reviews' ); ?></h2>
 				<table class="form-table" role="presentation">
 					<tr>
 						<th scope="row"><label for="optima-reviews-disclaimer"><?php esc_html_e( 'Disclaimer (optional)', 'optima-reviews' ); ?></label></th>
@@ -230,10 +266,12 @@ final class Optima_Reviews_Settings {
 						</td>
 					</tr>
 				</table>
+				</section>
 
-				<?php submit_button(); ?>
+				<?php submit_button( __( 'Save', 'optima-reviews' ) ); ?>
 			</form>
 
+			<?php Optima_Admin_UI::dev_open(); ?>
 			<h2><?php esc_html_e( 'Putting reviews on a page', 'optima-reviews' ); ?></h2>
 			<p><?php esc_html_e( 'In the block editor, add the "Optima Reviews" block. Anywhere else, use a shortcode:', 'optima-reviews' ); ?></p>
 			<ul style="list-style:disc;padding-left:20px;">
@@ -245,6 +283,8 @@ final class Optima_Reviews_Settings {
 				<li><code>[optima_review_summary]</code> <?php esc_html_e( 'shows only the rating summary.', 'optima-reviews' ); ?></li>
 			</ul>
 			<p><?php esc_html_e( 'Theme developers: call optima_reviews_slot() in a template to show the reviews for that page automatically. See the plugin README.', 'optima-reviews' ); ?></p>
+			<?php do_action( 'optima_reviews_settings_dev' ); ?>
+			<?php Optima_Admin_UI::dev_close(); ?>
 		<?php Optima_Admin_UI::close(); ?>
 		<?php
 	}
