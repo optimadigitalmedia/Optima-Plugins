@@ -2,6 +2,7 @@
 
 ## 0.1.11.1 (2026-11-05)
 
+- No em dash in visible text: a missing title on Add a person reads Not set.
 - Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).
 - Profiles is the list's name everywhere; one way to add a person (Add New lands on Add a person); credentials read-only on the profile (rule 47) and kept on save; law-firm tile says Needs you when the business type is missing; the team table scrolls in its own box; Back to People links; flat steps not reached.
 

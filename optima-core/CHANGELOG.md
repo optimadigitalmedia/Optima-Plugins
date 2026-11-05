@@ -2,6 +2,7 @@
 
 ## 1.6.0.12 (2026-11-05)
 
+- No em dash in visible text: the empty choice in a select reads Select one.
 - Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).
 - Your business, Details (was Business info): grouped fields with where each shows, a business type picker, hours typed once (the box leaves Details when Optima Hours is on; a save never blanks a field it did not show), old values that differ listed for checking.
 - Testimonials and FAQs list under Optima, Content. SEO opens with its checks and a media picker for the share image. Approved copy's empty state says what to do; applying from Build, Updates returns there. Spam protection shows the form guard's status. No SEO box on a person's profile.

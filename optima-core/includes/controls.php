@@ -140,7 +140,7 @@ final class Optima_Core_Controls {
 
 			case 'select':
 				echo '<select id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '">';
-				echo '<option value="">' . esc_html__( '— Select —', 'optima-core' ) . '</option>';
+				echo '<option value="">' . esc_html__( 'Select one', 'optima-core' ) . '</option>';
 				foreach ( $field['options'] as $opt_val => $opt_label ) {
 					echo '<option value="' . esc_attr( $opt_val ) . '" ' . selected( $value, (string) $opt_val, false ) . '>' . esc_html( $opt_label ) . '</option>';
 				}
