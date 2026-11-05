@@ -592,3 +592,7 @@ html:has(body.sh-list), body.sh-list, body.sh-list #wpcontent, body.sh-list #wpf
 	margin-right: 0;
 }
 .sh .srk .button-primary { color: #fff; }
+
+/* A switch-like checkbox with a 24px target (WCAG 2.2 target size). */
+.sh .sh-target > input[type="checkbox"], .sh .sh-target > input[type="radio"] { width: 24px; height: 24px; min-width: 24px; margin: 0; }
+.sh .sh-target > input[type="checkbox"]::before { width: 100%; height: 100%; margin: 0; }
