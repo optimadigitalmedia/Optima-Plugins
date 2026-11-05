@@ -19,6 +19,7 @@ final class Optima_Accessibility_Admin {
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
 		add_filter( 'plugin_action_links_' . plugin_basename( OPTIMA_ACCESSIBILITY_FILE ), array( __CLASS__, 'action_link' ) );
 		add_filter( 'optima_admin_nav_hint', array( __CLASS__, 'nav_hint' ), 10, 2 );
+		add_action( 'admin_init', array( 'Optima_Accessibility', 'migrate' ) ); // Release 3: the phone moves to Details once.
 		foreach ( array( 'statement', 'run', 'launch', 'footer', 'menu_add' ) as $action ) {
 			add_action( 'admin_post_optima_a11y_' . $action, array( __CLASS__, 'handle_' . $action ) );
 		}
@@ -109,7 +110,8 @@ final class Optima_Accessibility_Admin {
 		// phpcs:enable
 		$s                  = Optima_Accessibility::settings();
 		$s['email']         = sanitize_email( (string) ( $in['email'] ?? '' ) );
-		$s['phone']         = sanitize_text_field( (string) ( $in['phone'] ?? '' ) );
+		// The phone is typed on Details now; what this screen saved before stays.
+		$s['phone']         = sanitize_text_field( (string) ( $in['phone'] ?? ( Optima_Accessibility::settings()['phone'] ?? '' ) ) );
 		$s['response_days'] = min( 30, absint( $in['response_days'] ?? 0 ) );
 		$s['other_formats'] = empty( $in['other_formats'] ) ? 0 : 1;
 		$s['last_reviewed'] = self::valid_date( sanitize_text_field( (string) ( $in['last_reviewed'] ?? '' ) ) );
@@ -547,9 +549,9 @@ final class Optima_Accessibility_Admin {
 						<p class="description"><?php esc_html_e( 'Leave blank to use the email in the business info. Use an inbox someone reads.', 'optima-accessibility' ); ?></p></td>
 				</tr>
 				<tr>
-					<th scope="row"><label for="sa-phone"><?php esc_html_e( 'Phone', 'optima-accessibility' ); ?></label></th>
-					<td><input id="sa-phone" type="tel" class="regular-text" name="sa[phone]" value="<?php echo esc_attr( $s['phone'] ); ?>" placeholder="<?php echo esc_attr( Optima_Accessibility::phone() ); ?>">
-						<p class="description"><?php esc_html_e( 'Leave blank to use the phone in the business info. A second way to reach you helps people who cannot use email.', 'optima-accessibility' ); ?></p></td>
+					<th scope="row"><?php esc_html_e( 'Phone', 'optima-accessibility' ); ?></th>
+					<td><?php Optima_Admin_UI::fact( __( 'From Details', 'optima-accessibility' ), Optima_Accessibility::phone() ); ?>
+						<p class="description"><?php esc_html_e( 'A second way to reach you helps people who cannot use email.', 'optima-accessibility' ); ?></p></td>
 				</tr>
 				<tr>
 					<th scope="row"><label for="sa-days"><?php esc_html_e( 'Reply within', 'optima-accessibility' ); ?></label></th>
