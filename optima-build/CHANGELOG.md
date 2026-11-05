@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.9.15 (2026-11-05)
+
+- Build → Updates: every section (Features and Optima Build, Release channel, Approved copy, Theme setup, Site lock) is a padded box with space between, like the Theme box. They used the feature-card style, which drew them dashed and touching.
+
 ## 0.7.9.14 (2026-11-04)
 
 - **Release channel** (Build, Updates, operators only): Test means this site gets each release first, before the client sites; Stable (the default) means it gets releases after they are checked on the test site. One button switches it and checks for new versions straight away. Stored in the `optima_hub_channel` option; `define( 'OPTIMA_HUB_CHANNEL', 'test' );` in wp-config fixes it and the card then only shows it. Plugin updates only: theme updates still follow the theme's own repo.

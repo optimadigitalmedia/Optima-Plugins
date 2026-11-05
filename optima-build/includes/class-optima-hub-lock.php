@@ -209,7 +209,7 @@ final class Optima_Hub_Lock {
 		);
 		$pill   = array( 'on' => 'is-on', 'waiting' => 'is-received', 'off' => '' );
 		?>
-		<section class="sh-card" id="sh-lock">
+		<section class="sh-box" id="sh-lock">
 			<div class="sh-cardhead">
 				<h2><?php esc_html_e( 'Site lock', 'optima-build' ); ?></h2>
 				<span class="sh-pill <?php echo esc_attr( $pill[ $state ] ); ?>"><?php echo esc_html( $labels[ $state ] ); ?></span>
