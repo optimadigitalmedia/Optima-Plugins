@@ -137,11 +137,11 @@ final class Optima_AEO_Admin {
 					</tr>
 					<?php endif; ?>
 				</table>
-				<?php submit_button(); ?>
+				<?php submit_button( __( 'Save', 'optima-aeo' ) ); ?>
 			</form>
 			<section class="sh-box">
 			<h2><?php esc_html_e( 'Questions and answers', 'optima-aeo' ); ?></h2>
-			<p><?php esc_html_e( 'AI tools quote short, direct answers. Every page and post has a "Questions this page answers" box in the editor. Answers show at the end of the page (or wherever you put [optima_faq]) with the matching schema.', 'optima-aeo' ); ?></p>
+			<p><?php esc_html_e( 'AI tools quote short, direct answers. Every page and post has a "Questions this page answers" box in the editor. Answers show at the end of the page with the matching schema.', 'optima-aeo' ); ?></p>
 			<?php
 			$with = Optima_AEO_FAQ::pages_with_answers();
 			if ( $with ) {
@@ -155,6 +155,9 @@ final class Optima_AEO_Admin {
 			}
 			?>
 			</section>
+			<?php Optima_Admin_UI::dev_open(); ?>
+			<p class="sh-note"><?php esc_html_e( 'To place the answers somewhere else on a page, put the [optima_faq] shortcode there.', 'optima-aeo' ); ?></p>
+			<?php Optima_Admin_UI::dev_close(); ?>
 		<?php
 		Optima_Admin_UI::close();
 	}

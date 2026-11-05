@@ -68,7 +68,7 @@ final class Optima_Accessibility_Admin {
 		}
 		$n = self::to_fix();
 		if ( $n < 0 ) {
-			return __( 'Not checked', 'optima-accessibility' );
+			return __( 'Not run yet', 'optima-accessibility' );
 		}
 		/* translators: %d: checks to fix */
 		return $n ? sprintf( _n( '%d to fix', '%d to fix', $n, 'optima-accessibility' ), $n ) : __( 'All pass', 'optima-accessibility' );
@@ -306,11 +306,18 @@ final class Optima_Accessibility_Admin {
 					<?php endif; ?>
 				</p>
 			</section>
-			<section class="sh-box sh-check is-<?php echo ! $ran ? 'warn' : ( $to_fix ? 'warn' : 'good' ); ?>">
+			<?php
+			// A weekly run whose time has passed is late: the tile says so, with the way to run it.
+			$next = wp_next_scheduled( Optima_Accessibility_Checks::CRON );
+			$late = $next && $next < time() - HOUR_IN_SECONDS;
+			?>
+			<section class="sh-box sh-check is-<?php echo ( ! $ran || $to_fix || $late ) ? 'needs' : 'good'; ?>">
 				<p class="sh-label"><?php esc_html_e( 'Weekly checks', 'optima-accessibility' ); ?></p>
 				<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span>
 					<?php
-					if ( ! $ran ) {
+					if ( $late ) {
+						esc_html_e( 'Late', 'optima-accessibility' );
+					} elseif ( ! $ran ) {
 						esc_html_e( 'Not run yet', 'optima-accessibility' );
 					} elseif ( $to_fix ) {
 						/* translators: %d: number of checks */
@@ -322,8 +329,10 @@ final class Optima_Accessibility_Admin {
 				</p>
 				<p class="sh-note">
 					<?php
-					$next = wp_next_scheduled( Optima_Accessibility_Checks::CRON );
-					if ( $next ) {
+					if ( $late ) {
+						/* translators: %s: date */
+						echo esc_html( sprintf( __( 'It was due %s.', 'optima-accessibility' ), wp_date( get_option( 'date_format' ), $next ) ) ) . ' <a href="#sa-weekly">' . esc_html__( 'Run now', 'optima-accessibility' ) . ' &rsaquo;</a>';
+					} elseif ( $next ) {
 						/* translators: %s: date */
 						echo esc_html( sprintf( __( 'Next run %s', 'optima-accessibility' ), wp_date( get_option( 'date_format' ), $next ) ) );
 					} else {

@@ -127,7 +127,7 @@ final class Optima_Analytics_Admin {
 				</tr>
 			</table>
 
-			<h2 class="sh-title"><?php esc_html_e( 'Consent and the cookie notice', 'optima-analytics' ); ?></h2>
+			<h2 class="sh-title" style="margin-top:28px"><?php esc_html_e( 'Consent and the cookie notice', 'optima-analytics' ); ?></h2>
 			<table class="form-table" role="presentation">
 				<tr>
 					<th scope="row"><?php esc_html_e( 'Before a visitor chooses', 'optima-analytics' ); ?></th>
@@ -161,9 +161,10 @@ final class Optima_Analytics_Admin {
 					<p class="description"><?php esc_html_e( 'Tag Manager starts once the page has loaded, or at the visitor\'s first tap, scroll or key. The page shows faster on phones. A visitor who leaves in the first second or two is not counted.', 'optima-analytics' ); ?></p></td>
 				</tr>
 			</table>
-			<?php submit_button(); ?>
+			<?php submit_button( __( 'Save', 'optima-analytics' ) ); ?>
 		</form>
 
+		<?php Optima_Admin_UI::dev_open(); ?>
 		<section class="sh-box">
 			<h2 class="sh-title"><?php esc_html_e( 'Events other Optima features send', 'optima-analytics' ); ?></h2>
 			<p><?php esc_html_e( 'The digital business cards and the link page report their views and taps here. In Tag Manager, one Custom Event trigger catches them all: event name ^(card|links)_ with "Use regex matching" ticked, feeding a GA4 Event tag whose event name is {{Event}}.', 'optima-analytics' ); ?></p>
@@ -171,6 +172,7 @@ final class Optima_Analytics_Admin {
 			<p class="description"><?php esc_html_e( 'optima_consent_update fires when a visitor answers the cookie notice. It is for Tag Manager only; leave it out of GA4.', 'optima-analytics' ); ?></p>
 			<p class="description"><?php esc_html_e( 'Each event carries link_label, and link_url when it is a link. In Tag Manager, add both as Data Layer Variables and send them as event parameters.', 'optima-analytics' ); ?></p>
 		</section>
+		<?php Optima_Admin_UI::dev_close(); ?>
 		<?php
 		Optima_Admin_UI::close();
 	}
