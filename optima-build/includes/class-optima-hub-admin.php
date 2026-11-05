@@ -246,7 +246,7 @@ final class Optima_Hub_Admin {
 		$test  = 'test' === Optima_Hub_Access::channel();
 		$fixed = Optima_Hub_Access::channel_fixed();
 		?>
-		<section class="sh-card">
+		<section class="sh-box">
 			<h2><?php esc_html_e( 'Release channel', 'optima-build' ); ?></h2>
 			<p>
 				<strong><?php echo esc_html( $test ? __( 'Test', 'optima-build' ) : __( 'Stable', 'optima-build' ) ); ?>:</strong>
@@ -297,7 +297,7 @@ final class Optima_Hub_Admin {
 		$build_new  = $updates->response[ plugin_basename( OPTIMA_HUB_FILE ) ]->new_version ?? '';
 		$build_test = ! empty( $updates->response[ plugin_basename( OPTIMA_HUB_FILE ) ]->prerelease );
 		?>
-		<section class="sh-card">
+		<section class="sh-box">
 			<h2><?php esc_html_e( 'Features and Optima Build', 'optima-build' ); ?></h2>
 			<p class="sh-note"><?php esc_html_e( 'Features update themselves. Check now to see a release published in the last few hours.', 'optima-build' ); ?></p>
 			<?php if ( $operator ) : ?>
@@ -355,7 +355,7 @@ final class Optima_Hub_Admin {
 		<?php Optima_Hub_Themes::panel( $operator ); ?>
 
 		<?php if ( Optima_Hub_Setup::data() ) : ?>
-			<section class="sh-card">
+			<section class="sh-box">
 				<h2><?php esc_html_e( 'Fill from the theme', 'optima-build' ); ?></h2>
 				<p class="sh-note"><?php esc_html_e( 'The theme carries this site\'s facts (team, hours, call buttons, which features it uses). Fill again after a theme update brings new facts. Only blank or default fields change.', 'optima-build' ); ?></p>
 				<?php if ( $operator ) : ?>
@@ -364,7 +364,7 @@ final class Optima_Hub_Admin {
 			</section>
 		<?php endif; ?>
 
-		<section class="sh-card">
+		<section class="sh-box">
 			<h2><?php esc_html_e( 'Approved copy', 'optima-build' ); ?></h2>
 			<p class="sh-note"><?php esc_html_e( 'New words come from this site\'s repo: approve the page in content/, release the theme, then apply it here. Every change keeps a revision.', 'optima-build' ); ?></p>
 			<?php if ( $content ) : ?>
@@ -384,7 +384,7 @@ final class Optima_Hub_Admin {
 		<?php Optima_Hub_Lock::card(); ?>
 		<?php $setup = Optima_Hub_Menu::theme_setup_screen(); ?>
 		<?php if ( $setup ) : ?>
-		<section class="sh-card">
+		<section class="sh-box">
 			<h2><?php esc_html_e( 'Theme setup', 'optima-build' ); ?></h2>
 			<p class="sh-note"><?php esc_html_e( 'The theme\'s own one-time setup: pages, menus and starter content it needs.', 'optima-build' ); ?></p>
 			<p><a class="button" href="<?php echo esc_url( $setup['url'] ); ?>"><?php echo esc_html( $setup['label'] ); ?></a></p>
