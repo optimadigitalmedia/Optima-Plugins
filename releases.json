@@ -1,0 +1,2618 @@
+[
+  {
+    "tag_name": "optima-team-v0.1.11.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.11.1 (2026-11-05)\n\n- No em dash in visible text: a missing title on Add a person reads Not set.\n- Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).\n- Profiles is the list's name everywhere; one way to add a person (Add New lands on Add a person); credentials read-only on the profile (rule 47) and kept on save; law-firm tile says Needs you when the business type is missing; the team table scrolls in its own box; Back to People links; flat steps not reached.",
+    "assets": [
+      {
+        "name": "optima-team.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-team-v0.1.11.1/optima-team.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-team-v0.1.11.0",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.11.0 (2026-11-05)\n\n- People (rule 47): the Team screen is named People and its list shows what each profile feeds (posts under the byline, case results naming them, pages they reviewed), with a \"This profile feeds\" box on the profile editor. Optima Case Results picks the attorney from here.\n- Reviewed by: a box on every public post type names the reviewer from People and the date. The page prints one line at the theme's before-close slot and carries reviewedBy and lastReviewed in its schema with the reviewer's Person node. ?optima_reviewed_by=<id> filters a post list.\n- Offboarding (rule 48), from \"Start offboarding\" on a profile: Review (everything on the site that names the person and what happens to each), Archive (a bundle under wp-content/optima-archive, closed to visitors, with a zip to put in the site repo and the firm's Drive; a failed write stops the flow), Confirm (one link emailed to every operator, a day's life, opened signed in by an operator other than the starter where the site has two or more), Remove (profile, photo, posts under the byline, results naming them and the card are deleted; every old address is forwarded through Optima Redirects; reviewed pages keep the date, lose the name and go on the Inbox). A former-people record with the archive link sits on the People screen. Stopping before the last step removes nothing.\n- Optima admin kit 1.7.0.0, one nav (plugin-first rule 49): the WordPress sidebar is the only group navigation. A screen is a slim ",
+    "assets": [
+      {
+        "name": "optima-team.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-team-v0.1.11.0/optima-team.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-sitecheck-v0.2.4.9",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.4.9 (2026-11-05)\n\n- Labels (rule 44): the settings screen is named Site check, as the sidebar says.\n- Optima admin kit 1.7.0.0, one nav (plugin-first rule 49): the WordPress sidebar is the only group navigation. A screen is a slim top bar (the client's logo and name, a Find box that opens the WordPress Command Palette, the Optima mark), the title with its group as the eyebrow, the lede, and one row of tabs. The hero band and the row of groups are gone. The Optima menu has eight items; People sits after Overview and holds the profiles and Cards.",
+    "assets": [
+      {
+        "name": "optima-sitecheck.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-sitecheck-v0.2.4.9/optima-sitecheck.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-sitecheck-v0.2.4.10",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.4.10 (2026-11-05)\n\n- Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).",
+    "assets": [
+      {
+        "name": "optima-sitecheck.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-sitecheck-v0.2.4.10/optima-sitecheck.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-reviews-v0.5.5.9",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.5.5.9 (2026-11-05)\n\n- Optima admin kit 1.7.0.0, one nav (plugin-first rule 49): the WordPress sidebar is the only group navigation. A screen is a slim top bar (the client's logo and name, a Find box that opens the WordPress Command Palette, the Optima mark), the title with its group as the eyebrow, the lede, and one row of tabs. The hero band and the row of groups are gone. The Optima menu has eight items; People sits after Overview and holds the profiles and Cards.",
+    "assets": [
+      {
+        "name": "optima-reviews.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-reviews-v0.5.5.9/optima-reviews.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-reviews-v0.5.5.10",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.5.5.10 (2026-11-05)\n\n- Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).\n- One count (Optima_Reviews_Inbox::counts()) for the notice, the Review inbox and Optima Build. One Reviews tab (reviews, platforms, Ask for reviews, display). Review inbox and Ask for reviews use the kit with titles equal to their tabs. Platforms follow the kind of business; every input labeled. Ask for reviews reads the business name from Details and colors and fonts from the design tokens; saved values are kept.",
+    "assets": [
+      {
+        "name": "optima-reviews.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-reviews-v0.5.5.10/optima-reviews.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-results-v0.1.10.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.10.1 (2026-11-05)\n\n- Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).\n- One Case results tab with the results list on top (amount, type, year, attorney, above threshold, firm approval); Amount, Year and Above threshold columns on the WordPress list; a publishing threshold setting (default 1000000) that labels results and changes nothing on the site.",
+    "assets": [
+      {
+        "name": "optima-results.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-results-v0.1.10.1/optima-results.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-results-v0.1.10.0",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.10.0 (2026-11-05)\n\n- A result names its attorney from People (rule 47): a select on the editor, an Attorney column on the list, a filter by profile (?optima_attorney=<id>). The card prints \"Attorney: <name>\" linked to the profile page while it is published; a removed profile names nobody. Results without an attorney do not change.\n- Labels (rule 44): the settings screen is named Case results, as the sidebar says.\n- Optima admin kit 1.7.0.0, one nav (plugin-first rule 49): the WordPress sidebar is the only group navigation. A screen is a slim top bar (the client's logo and name, a Find box that opens the WordPress Command Palette, the Optima mark), the title with its group as the eyebrow, the lede, and one row of tabs. The hero band and the row of groups are gone. The Optima menu has eight items; People sits after Overview and holds the profiles and Cards.",
+    "assets": [
+      {
+        "name": "optima-results.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-results-v0.1.10.0/optima-results.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-redirects-v0.1.9.9",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.9.9 (2026-11-05)\n\n- Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).\n- The screen title is Redirects; one status line instead of three big numbers; the Type label lines up; the file input in the kit's style.",
+    "assets": [
+      {
+        "name": "optima-redirects.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-redirects-v0.1.9.9/optima-redirects.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-redirects-v0.1.9.8",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.9.8 (2026-11-05)\n\n- Optima admin kit 1.7.0.0, one nav (plugin-first rule 49): the WordPress sidebar is the only group navigation. A screen is a slim top bar (the client's logo and name, a Find box that opens the WordPress Command Palette, the Optima mark), the title with its group as the eyebrow, the lede, and one row of tabs. The hero band and the row of groups are gone. The Optima menu has eight items; People sits after Overview and holds the profiles and Cards.",
+    "assets": [
+      {
+        "name": "optima-redirects.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-redirects-v0.1.9.8/optima-redirects.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-partners-v0.1.2.9",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.2.9 (2026-11-05)\n\n- Labels (rule 44): every screen's title is its sidebar word (Overview, Settings).\n- Optima admin kit 1.7.0.0, one nav (plugin-first rule 49): the WordPress sidebar is the only group navigation. A screen is a slim top bar (the client's logo and name, a Find box that opens the WordPress Command Palette, the Optima mark), the title with its group as the eyebrow, the lede, and one row of tabs. The hero band and the row of groups are gone. The Optima menu has eight items; People sits after Overview and holds the profiles and Cards.",
+    "assets": [
+      {
+        "name": "optima-partners.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-partners-v0.1.2.9/optima-partners.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-partners-v0.1.2.10",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.2.10 (2026-11-05)\n\n- Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).",
+    "assets": [
+      {
+        "name": "optima-partners.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-partners-v0.1.2.10/optima-partners.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-optimize-v0.9.3.9",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.9.3.9 (2026-11-05)\n\n- Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).\n- One settings card with Save at its foot; Yes and No pills; labels on every field.",
+    "assets": [
+      {
+        "name": "optima-optimize.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-optimize-v0.9.3.9/optima-optimize.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-optimize-v0.9.3.8",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.9.3.8 (2026-11-05)\n\n- Optima admin kit 1.7.0.0, one nav (plugin-first rule 49): the WordPress sidebar is the only group navigation. A screen is a slim top bar (the client's logo and name, a Find box that opens the WordPress Command Palette, the Optima mark), the title with its group as the eyebrow, the lede, and one row of tabs. The hero band and the row of groups are gone. The Optima menu has eight items; People sits after Overview and holds the profiles and Cards.",
+    "assets": [
+      {
+        "name": "optima-optimize.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-optimize-v0.9.3.8/optima-optimize.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-members-v0.3.3.9",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.3.3.9 (2026-11-05)\n\n- Labels (rule 44): every screen's title is its sidebar word (Overview, All members, Import, Settings).\n- Optima admin kit 1.7.0.0, one nav (plugin-first rule 49): the WordPress sidebar is the only group navigation. A screen is a slim top bar (the client's logo and name, a Find box that opens the WordPress Command Palette, the Optima mark), the title with its group as the eyebrow, the lede, and one row of tabs. The hero band and the row of groups are gone. The Optima menu has eight items; People sits after Overview and holds the profiles and Cards.",
+    "assets": [
+      {
+        "name": "optima-members.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-members-v0.3.3.9/optima-members.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-members-v0.3.3.10",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.3.3.10 (2026-11-05)\n\n- Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).",
+    "assets": [
+      {
+        "name": "optima-members.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-members-v0.3.3.10/optima-members.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-hours-v0.1.8.11",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.8.11 (2026-11-05)\n\n- Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).\n- The screen title is Hours. Hours typed in the old box on Details show once for checking. Where it updates shows a neutral dot until the hours are confirmed. Kit-size Save; shortcodes in For developers.",
+    "assets": [
+      {
+        "name": "optima-hours.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-hours-v0.1.8.11/optima-hours.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-hours-v0.1.8.10",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.8.10 (2026-11-05)\n\n- Optima admin kit 1.7.0.0, one nav (plugin-first rule 49): the WordPress sidebar is the only group navigation. A screen is a slim top bar (the client's logo and name, a Find box that opens the WordPress Command Palette, the Optima mark), the title with its group as the eyebrow, the lede, and one row of tabs. The hero band and the row of groups are gone. The Optima menu has eight items; People sits after Overview and holds the profiles and Cards.",
+    "assets": [
+      {
+        "name": "optima-hours.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-hours-v0.1.8.10/optima-hours.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-forms-guard-v0.3.2.6",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.3.2.6 (2026-11-05)\n\n- Now carries the Optima admin kit 1.8.0.0. Search and AI, Spam protection on a site without Optima Core shows the guard's status and what it blocked; with Core the address opens Core's Spam protection tab. Listed as Spam protection for forms in the catalog.",
+    "assets": [
+      {
+        "name": "optima-forms-guard.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-forms-guard-v0.3.2.6/optima-forms-guard.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-events-v0.14.3.9",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.14.3.9 (2026-11-05)\n\n- Labels (rule 44): every screen's title is its sidebar word (Overview, Sign-ups, Volunteers, Import, Settings, Topics).\n- Optima admin kit 1.7.0.0, one nav (plugin-first rule 49): the WordPress sidebar is the only group navigation. A screen is a slim top bar (the client's logo and name, a Find box that opens the WordPress Command Palette, the Optima mark), the title with its group as the eyebrow, the lede, and one row of tabs. The hero band and the row of groups are gone. The Optima menu has eight items; People sits after Overview and holds the profiles and Cards.",
+    "assets": [
+      {
+        "name": "optima-events.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-events-v0.14.3.9/optima-events.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-events-v0.14.3.10",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.14.3.10 (2026-11-05)\n\n- Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).",
+    "assets": [
+      {
+        "name": "optima-events.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-events-v0.14.3.10/optima-events.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-core-v1.6.0.12",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.6.0.12 (2026-11-05)\n\n- No em dash in visible text: the empty choice in a select reads Select one.\n- Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).\n- Your business, Details (was Business info): grouped fields with where each shows, a business type picker, hours typed once (the box leaves Details when Optima Hours is on; a save never blanks a field it did not show), old values that differ listed for checking.\n- Testimonials and FAQs list under Optima, Content. SEO opens with its checks and a media picker for the share image. Approved copy's empty state says what to do; applying from Build, Updates returns there. Spam protection shows the form guard's status. No SEO box on a person's profile.",
+    "assets": [
+      {
+        "name": "optima-core.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-core-v1.6.0.12/optima-core.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-core-v1.6.0.11",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.6.0.11 (2026-11-05)\n\n- Labels (rule 44): the Site Sync tab is named Approved copy, the name the plugin-first rules use. Its address does not change.\n- Optima admin kit 1.7.0.0, one nav (plugin-first rule 49): the WordPress sidebar is the only group navigation. A screen is a slim top bar (the client's logo and name, a Find box that opens the WordPress Command Palette, the Optima mark), the title with its group as the eyebrow, the lede, and one row of tabs. The hero band and the row of groups are gone. The Optima menu has eight items; People sits after Overview and holds the profiles and Cards.",
+    "assets": [
+      {
+        "name": "optima-core.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-core-v1.6.0.11/optima-core.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-contact-v0.1.11.9",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.11.9 (2026-11-05)\n\n- Optima admin kit 1.7.0.0, one nav (plugin-first rule 49): the WordPress sidebar is the only group navigation. A screen is a slim top bar (the client's logo and name, a Find box that opens the WordPress Command Palette, the Optima mark), the title with its group as the eyebrow, the lede, and one row of tabs. The hero band and the row of groups are gone. The Optima menu has eight items; People sits after Overview and holds the profiles and Cards.",
+    "assets": [
+      {
+        "name": "optima-contact.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-contact-v0.1.11.9/optima-contact.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-contact-v0.1.11.10",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.11.10 (2026-11-05)\n\n- Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).\n- The phone comes from Details and shows read-only (rule 45). Migration, once: a phone typed here and missing from Details moves there; the old value stays in optima_contact and is used only while Details has none. Off states grey; taps link to Analytics.",
+    "assets": [
+      {
+        "name": "optima-contact.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-contact-v0.1.11.10/optima-contact.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-chat-v0.2.4.9",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.4.9 (2026-11-05)\n\n- Labels (rule 44): the settings screen is named Chat, as the sidebar says.\n- Optima admin kit 1.7.0.0, one nav (plugin-first rule 49): the WordPress sidebar is the only group navigation. A screen is a slim top bar (the client's logo and name, a Find box that opens the WordPress Command Palette, the Optima mark), the title with its group as the eyebrow, the lede, and one row of tabs. The hero band and the row of groups are gone. The Optima menu has eight items; People sits after Overview and holds the profiles and Cards.",
+    "assets": [
+      {
+        "name": "optima-chat.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-chat-v0.2.4.9/optima-chat.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-chat-v0.2.4.10",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.4.10 (2026-11-05)\n\n- Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).\n- AI connection shows Connected or Not connected; the key belongs in wp-config.php (a saved key keeps working until removed). Chat questions show the day asked, No contact left, and Question for older entries. Labels and 24px switch targets.",
+    "assets": [
+      {
+        "name": "optima-chat.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-chat-v0.2.4.10/optima-chat.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-cards-v1.0.21.9",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.0.21.9 (2026-11-05)\n\n- Labels (rule 44): the screen is named Cards (section 4a), and it sits under People.\n- Optima admin kit 1.7.0.0, one nav (plugin-first rule 49): the WordPress sidebar is the only group navigation. A screen is a slim top bar (the client's logo and name, a Find box that opens the WordPress Command Palette, the Optima mark), the title with its group as the eyebrow, the lede, and one row of tabs. The hero band and the row of groups are gone. The Optima menu has eight items; People sits after Overview and holds the profiles and Cards.",
+    "assets": [
+      {
+        "name": "optima-cards.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-cards-v1.0.21.9/optima-cards.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-cards-v1.0.21.10",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.0.21.10 (2026-11-05)\n\n- Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).\n- Rule 47: cards come from People profiles (tick a profile; name, title, email and photo read from it). Rule 45: business facts read-only from Details. Rule 7: no accent or font fields; the card reads the design tokens. Migration, once: facts move to Details where blank, and slots link to the profile with the same name or email, keeping their card addresses; unlinked slots keep working. Labels on every input; Reset last and closed.",
+    "assets": [
+      {
+        "name": "optima-cards.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-cards-v1.0.21.10/optima-cards.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.9.15",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.9.15 (2026-11-05)\n\n- Build → Updates: every section (Features and Optima Build, Release channel, Approved copy, Theme setup, Site lock) is a padded box with space between, like the Theme box. They used the feature-card style, which drew them dashed and touching.",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.9.15/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.11.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.11.1 (2026-11-05)\n\n- Updates polish: Site setup and Content updates leave the Build tab row (they are blocks on Updates); their tab shows only while that screen is open.\n- Fill from theme again counts only setup sections whose plugin is active, so a section for a plugin the site does not run no longer shows Ready.\n- Last update logs Optima plugin updates, including WordPress's automatic ones (\"WordPress (automatic) updated Chat assistant to v0.2.4.10\").",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.11.1/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.11.0",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.11.0 (2026-11-05)\n\n- Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).\n- One Update Screen: Build, Updates holds ten blocks in update order (site status with Copy for Claude, plugin updates, theme, fill from theme again, approved copy, release channel, email, what Site health flags, site lock, last update), each Needs you, Ready or Done. Update now updates a plugin or the theme in place through Optima_Hub_Features::handle() and returns to Updates; WordPress's bare update screen is no longer used.\n- The release list asks again when it is older than an hour or WordPress's update list is gone; Overview, Updates and Features say when it was last checked.\n- One count: change requests leave the Inbox count and have their own list; Inbox lists exactly what it counts and hides empty groups; review counts read the Review inbox's list.\n- Overview: body-size status line with a state pill, the six dashboard tiles always (Not linked yet), plain last change, no link a viewer cannot open. Everyone who can view lands on Overview after sign-in.\n- Site health: score line and one score per group, Copy for",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.11.0/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.10.0",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.10.0 (2026-11-05)\n\n- Overview is the operator glance (rule 46): one status line (health, updates waiting, Inbox count, last version check), the dashboards row (Recon, Analytics, Search Console, Business Profile and the host from a new optional \"dashboards\" section of the theme's setup file, plus the site's repo and the site itself), the queue (Updates, Inbox, Requests, each a short list with one action), and the site facts row (theme, Optima Build and channel, features on, last change, site lock). The client answers, everyday-job links and request box left this screen; the request form stays under Inbox, Request a change. An operator who signs in with no deep link lands on Overview.\n- Inbox: a new kind, \"Pages waiting for a reviewer\", for pages whose reviewer was offboarded (Optima Team 0.1.11.0).\n- Sidebar order follows the eight groups; the hub's rename map is empty now that every plugin names its screen the way the sidebar does (rule 44).\n- Optima admin kit 1.7.0.0, one nav (plugin-first rule 49): the WordPress sidebar is the only group navigation. A screen is a slim top bar (the client's logo and name, a Find box that opens the WordPress Command Palette, the Optima mark), the title with its group as the eyebrow, the lede, and one row of tabs. The hero band and the row of groups are gone. The Optima menu has eight items; People sits after Overview and holds the profiles and Cards.",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.10.0/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-analytics-v0.1.15.9",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.15.9 (2026-11-05)\n\n- Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).\n- Space above the consent heading; event names in For developers.",
+    "assets": [
+      {
+        "name": "optima-analytics.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-analytics-v0.1.15.9/optima-analytics.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-analytics-v0.1.15.8",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.15.8 (2026-11-05)\n\n- Optima admin kit 1.7.0.0, one nav (plugin-first rule 49): the WordPress sidebar is the only group navigation. A screen is a slim top bar (the client's logo and name, a Find box that opens the WordPress Command Palette, the Optima mark), the title with its group as the eyebrow, the lede, and one row of tabs. The hero band and the row of groups are gone. The Optima menu has eight items; People sits after Overview and holds the profiles and Cards.",
+    "assets": [
+      {
+        "name": "optima-analytics.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-analytics-v0.1.15.8/optima-analytics.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-aeo-v0.2.4.9",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.4.9 (2026-11-05)\n\n- Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).\n- No box inside the settings card; the shortcode note in For developers; no Questions box on a person's profile.",
+    "assets": [
+      {
+        "name": "optima-aeo.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-aeo-v0.2.4.9/optima-aeo.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-aeo-v0.2.4.8",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.4.8 (2026-11-05)\n\n- Optima admin kit 1.7.0.0, one nav (plugin-first rule 49): the WordPress sidebar is the only group navigation. A screen is a slim top bar (the client's logo and name, a Find box that opens the WordPress Command Palette, the Optima mark), the title with its group as the eyebrow, the lede, and one row of tabs. The hero band and the row of groups are gone. The Optima menu has eight items; People sits after Overview and holds the profiles and Cards.",
+    "assets": [
+      {
+        "name": "optima-aeo.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-aeo-v0.2.4.8/optima-aeo.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-accessibility-v0.1.12.9",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.12.9 (2026-11-05)\n\n- Optima admin kit 1.7.0.0, one nav (plugin-first rule 49): the WordPress sidebar is the only group navigation. A screen is a slim top bar (the client's logo and name, a Find box that opens the WordPress Command Palette, the Optima mark), the title with its group as the eyebrow, the lede, and one row of tabs. The hero band and the row of groups are gone. The Optima menu has eight items; People sits after Overview and holds the profiles and Cards.",
+    "assets": [
+      {
+        "name": "optima-accessibility.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-accessibility-v0.1.12.9/optima-accessibility.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-accessibility-v0.1.12.10",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.12.10 (2026-11-05)\n\n- Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).\n- The statement phone comes from Details (migration once, old value kept). A weekly check past its date shows Late with Run now; the tab hint says Not run yet.",
+    "assets": [
+      {
+        "name": "optima-accessibility.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-accessibility-v0.1.12.10/optima-accessibility.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-team-v0.1.9.8",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.9.8 (2026-11-04)\n\n- Shared updater: release channels. A site on the stable channel (the default) sees only normal releases, exactly as before. A site on the test channel (Optima Build, Build, Updates, Release channel, or `OPTIMA_HUB_CHANNEL` in wp-config) also sees test releases (GitHub pre-releases) and takes the newest version from either. Without Optima Build a site is always on stable. This release goes out as a normal release so every site gets the channel-aware updater; test releases start with a later release.",
+    "assets": [
+      {
+        "name": "optima-team.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-team-v0.1.9.8/optima-team.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-team-v0.1.9.7",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.9.7 (2026-11-04)\n\n- Optima menu, seven items (shared admin kit 1.6.0.0): Overview, Your business, Content, Search and AI, Site health, Inbox, Build. Each screen's group comes from its address, so a label change never moves it; every screen keeps its address. The eyebrow on each screen names its group, the word the sidebar shows. Screens opened from a button now have a page title (no PHP notice).",
+    "assets": [
+      {
+        "name": "optima-team.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-team-v0.1.9.7/optima-team.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-team-v0.1.9.6",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.9.6 (2026-11-04)\n\n- Optima admin footer: no personal email address. It reads \"Built and looked after by Optima Digital\" with a Request a change link (shared admin kit 1.5.1.5).",
+    "assets": [
+      {
+        "name": "optima-team.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-team-v0.1.9.6/optima-team.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-team-v0.1.9.5",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.9.5 (2026-11-04)\n\n- Optima layer revision 5: visitor-facing styles now use the `--optima-*` design variables Optima Build 0.7.9.5 prints from the theme's DESIGN.md, so this feature dresses in each site's brand (plugin-first rule 7). Same look on sites without DESIGN.md.",
+    "assets": [
+      {
+        "name": "optima-team.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-team-v0.1.9.5/optima-team.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-sitecheck-v0.2.4.8",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.4.8 (2026-11-04)\n\n- Shared updater: release channels. A site on the stable channel (the default) sees only normal releases, exactly as before. A site on the test channel (Optima Build, Build, Updates, Release channel, or `OPTIMA_HUB_CHANNEL` in wp-config) also sees test releases (GitHub pre-releases) and takes the newest version from either. Without Optima Build a site is always on stable. This release goes out as a normal release so every site gets the channel-aware updater; test releases start with a later release.",
+    "assets": [
+      {
+        "name": "optima-sitecheck.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-sitecheck-v0.2.4.8/optima-sitecheck.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-sitecheck-v0.2.4.7",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.4.7 (2026-11-04)\n\n- Optima menu, seven items (shared admin kit 1.6.0.0): Overview, Your business, Content, Search and AI, Site health, Inbox, Build. Each screen's group comes from its address, so a label change never moves it; every screen keeps its address. The eyebrow on each screen names its group, the word the sidebar shows. Screens opened from a button now have a page title (no PHP notice).",
+    "assets": [
+      {
+        "name": "optima-sitecheck.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-sitecheck-v0.2.4.7/optima-sitecheck.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-sitecheck-v0.2.4.6",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.4.6 (2026-11-04)\n\n- Optima admin footer: no personal email address. It reads \"Built and looked after by Optima Digital\" with a Request a change link (shared admin kit 1.5.1.5).",
+    "assets": [
+      {
+        "name": "optima-sitecheck.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-sitecheck-v0.2.4.6/optima-sitecheck.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-sitecheck-v0.2.4.5",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.4.5 (2026-11-04)\n\n- Optima layer revision 5: visitor-facing styles now use the `--optima-*` design variables Optima Build 0.7.9.5 prints from the theme's DESIGN.md, so this feature dresses in each site's brand (plugin-first rule 7). Same look on sites without DESIGN.md.",
+    "assets": [
+      {
+        "name": "optima-sitecheck.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-sitecheck-v0.2.4.5/optima-sitecheck.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-reviews-v0.5.5.8",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.5.5.8 (2026-11-04)\n\n- Shared updater: release channels. A site on the stable channel (the default) sees only normal releases, exactly as before. A site on the test channel (Optima Build, Build, Updates, Release channel, or `OPTIMA_HUB_CHANNEL` in wp-config) also sees test releases (GitHub pre-releases) and takes the newest version from either. Without Optima Build a site is always on stable. This release goes out as a normal release so every site gets the channel-aware updater; test releases start with a later release.",
+    "assets": [
+      {
+        "name": "optima-reviews.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-reviews-v0.5.5.8/optima-reviews.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-reviews-v0.5.5.7",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.5.5.7 (2026-11-04)\n\n- Optima menu, seven items (shared admin kit 1.6.0.0): Overview, Your business, Content, Search and AI, Site health, Inbox, Build. Each screen's group comes from its address, so a label change never moves it; every screen keeps its address. The eyebrow on each screen names its group, the word the sidebar shows. Screens opened from a button now have a page title (no PHP notice).",
+    "assets": [
+      {
+        "name": "optima-reviews.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-reviews-v0.5.5.7/optima-reviews.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-reviews-v0.5.5.6",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.5.5.6 (2026-11-04)\n\n- Optima admin footer: no personal email address. It reads \"Built and looked after by Optima Digital\" with a Request a change link (shared admin kit 1.5.1.5).",
+    "assets": [
+      {
+        "name": "optima-reviews.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-reviews-v0.5.5.6/optima-reviews.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-reviews-v0.5.5.5",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.5.5.5 (2026-11-04)\n\n- Optima layer revision 5: visitor-facing styles now use the `--optima-*` design variables Optima Build 0.7.9.5 prints from the theme's DESIGN.md, so this feature dresses in each site's brand (plugin-first rule 7). Same look on sites without DESIGN.md.\n- The Ask for reviews screen no longer loads IBM Plex itself; the shared Optima admin kit already does. The standalone review page prints the design variables in its own head.",
+    "assets": [
+      {
+        "name": "optima-reviews.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-reviews-v0.5.5.5/optima-reviews.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-results-v0.1.9.8",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.9.8 (2026-11-04)\n\n- Shared updater: release channels. A site on the stable channel (the default) sees only normal releases, exactly as before. A site on the test channel (Optima Build, Build, Updates, Release channel, or `OPTIMA_HUB_CHANNEL` in wp-config) also sees test releases (GitHub pre-releases) and takes the newest version from either. Without Optima Build a site is always on stable. This release goes out as a normal release so every site gets the channel-aware updater; test releases start with a later release.",
+    "assets": [
+      {
+        "name": "optima-results.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-results-v0.1.9.8/optima-results.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-results-v0.1.9.7",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.9.7 (2026-11-04)\n\n- Optima menu, seven items (shared admin kit 1.6.0.0): Overview, Your business, Content, Search and AI, Site health, Inbox, Build. Each screen's group comes from its address, so a label change never moves it; every screen keeps its address. The eyebrow on each screen names its group, the word the sidebar shows. Screens opened from a button now have a page title (no PHP notice).",
+    "assets": [
+      {
+        "name": "optima-results.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-results-v0.1.9.7/optima-results.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-results-v0.1.9.6",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.9.6 (2026-11-04)\n\n- Optima admin footer: no personal email address. It reads \"Built and looked after by Optima Digital\" with a Request a change link (shared admin kit 1.5.1.5).",
+    "assets": [
+      {
+        "name": "optima-results.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-results-v0.1.9.6/optima-results.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-results-v0.1.9.5",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.9.5 (2026-11-04)\n\n- Optima layer revision 5: visitor-facing styles now use the `--optima-*` design variables Optima Build 0.7.9.5 prints from the theme's DESIGN.md, so this feature dresses in each site's brand (plugin-first rule 7). Same look on sites without DESIGN.md.",
+    "assets": [
+      {
+        "name": "optima-results.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-results-v0.1.9.5/optima-results.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-redirects-v0.1.9.7",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.9.7 (2026-11-04)\n\n- Shared updater: release channels. A site on the stable channel (the default) sees only normal releases, exactly as before. A site on the test channel (Optima Build, Build, Updates, Release channel, or `OPTIMA_HUB_CHANNEL` in wp-config) also sees test releases (GitHub pre-releases) and takes the newest version from either. Without Optima Build a site is always on stable. This release goes out as a normal release so every site gets the channel-aware updater; test releases start with a later release.",
+    "assets": [
+      {
+        "name": "optima-redirects.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-redirects-v0.1.9.7/optima-redirects.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-redirects-v0.1.9.6",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.9.6 (2026-11-04)\n\n- Optima menu, seven items (shared admin kit 1.6.0.0): Overview, Your business, Content, Search and AI, Site health, Inbox, Build. Each screen's group comes from its address, so a label change never moves it; every screen keeps its address. The eyebrow on each screen names its group, the word the sidebar shows. Screens opened from a button now have a page title (no PHP notice).",
+    "assets": [
+      {
+        "name": "optima-redirects.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-redirects-v0.1.9.6/optima-redirects.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-redirects-v0.1.9.5",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.9.5 (2026-11-04)\n\n- Optima admin footer: no personal email address. It reads \"Built and looked after by Optima Digital\" with a Request a change link (shared admin kit 1.5.1.5).",
+    "assets": [
+      {
+        "name": "optima-redirects.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-redirects-v0.1.9.5/optima-redirects.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-partners-v0.1.2.8",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.2.8 (2026-11-04)\n\n- Shared updater: release channels. A site on the stable channel (the default) sees only normal releases, exactly as before. A site on the test channel (Optima Build, Build, Updates, Release channel, or `OPTIMA_HUB_CHANNEL` in wp-config) also sees test releases (GitHub pre-releases) and takes the newest version from either. Without Optima Build a site is always on stable. This release goes out as a normal release so every site gets the channel-aware updater; test releases start with a later release.",
+    "assets": [
+      {
+        "name": "optima-partners.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-partners-v0.1.2.8/optima-partners.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-partners-v0.1.2.7",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.2.7 (2026-11-04)\n\n- Shared admin kit 1.6.0.0 (the Optima menu now has seven items: Overview, Your business, Content, Search and AI, Site health, Inbox, Build). This plugin's own menu is not part of it and keeps its one row of tabs. Screens opened from a button now have a page title (no PHP notice).",
+    "assets": [
+      {
+        "name": "optima-partners.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-partners-v0.1.2.7/optima-partners.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-partners-v0.1.2.6",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.2.6 (2026-11-04)\n\n- Optima admin footer: no personal email address. It reads \"Built and looked after by Optima Digital\" with a Request a change link (shared admin kit 1.5.1.5).",
+    "assets": [
+      {
+        "name": "optima-partners.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-partners-v0.1.2.6/optima-partners.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-partners-v0.1.2.5",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.2.5 (2026-11-04)\n\n- Optima layer revision 5: visitor-facing styles now use the `--optima-*` design variables Optima Build 0.7.9.5 prints from the theme's DESIGN.md, so this feature dresses in each site's brand (plugin-first rule 7). Same look on sites without DESIGN.md.",
+    "assets": [
+      {
+        "name": "optima-partners.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-partners-v0.1.2.5/optima-partners.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-optimize-v0.9.3.7",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.9.3.7 (2026-11-04)\n\n- Shared updater: release channels. A site on the stable channel (the default) sees only normal releases, exactly as before. A site on the test channel (Optima Build, Build, Updates, Release channel, or `OPTIMA_HUB_CHANNEL` in wp-config) also sees test releases (GitHub pre-releases) and takes the newest version from either. Without Optima Build a site is always on stable. This release goes out as a normal release so every site gets the channel-aware updater; test releases start with a later release.",
+    "assets": [
+      {
+        "name": "optima-optimize.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-optimize-v0.9.3.7/optima-optimize.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-optimize-v0.9.3.6",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.9.3.6 (2026-11-04)\n\n- Optima menu, seven items (shared admin kit 1.6.0.0): Overview, Your business, Content, Search and AI, Site health, Inbox, Build. Each screen's group comes from its address, so a label change never moves it; every screen keeps its address. The eyebrow on each screen names its group, the word the sidebar shows. Screens opened from a button now have a page title (no PHP notice).",
+    "assets": [
+      {
+        "name": "optima-optimize.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-optimize-v0.9.3.6/optima-optimize.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-optimize-v0.9.3.5",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.9.3.5 (2026-11-04)\n\n- Optima admin footer: no personal email address. It reads \"Built and looked after by Optima Digital\" with a Request a change link (shared admin kit 1.5.1.5).",
+    "assets": [
+      {
+        "name": "optima-optimize.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-optimize-v0.9.3.5/optima-optimize.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-members-v0.3.3.8",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.3.3.8 (2026-11-04)\n\n- Shared updater: release channels. A site on the stable channel (the default) sees only normal releases, exactly as before. A site on the test channel (Optima Build, Build, Updates, Release channel, or `OPTIMA_HUB_CHANNEL` in wp-config) also sees test releases (GitHub pre-releases) and takes the newest version from either. Without Optima Build a site is always on stable. This release goes out as a normal release so every site gets the channel-aware updater; test releases start with a later release.",
+    "assets": [
+      {
+        "name": "optima-members.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-members-v0.3.3.8/optima-members.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-members-v0.3.3.7",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.3.3.7 (2026-11-04)\n\n- Shared admin kit 1.6.0.0 (the Optima menu now has seven items: Overview, Your business, Content, Search and AI, Site health, Inbox, Build). This plugin's own menu is not part of it and keeps its one row of tabs. Screens opened from a button now have a page title (no PHP notice).",
+    "assets": [
+      {
+        "name": "optima-members.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-members-v0.3.3.7/optima-members.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-members-v0.3.3.6",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.3.3.6 (2026-11-04)\n\n- Optima admin footer: no personal email address. It reads \"Built and looked after by Optima Digital\" with a Request a change link (shared admin kit 1.5.1.5).",
+    "assets": [
+      {
+        "name": "optima-members.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-members-v0.3.3.6/optima-members.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-members-v0.3.3.5",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.3.3.5 (2026-11-04)\n\n- Optima layer revision 5: visitor-facing styles now use the `--optima-*` design variables Optima Build 0.7.9.5 prints from the theme's DESIGN.md, so this feature dresses in each site's brand (plugin-first rule 7). Same look on sites without DESIGN.md.",
+    "assets": [
+      {
+        "name": "optima-members.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-members-v0.3.3.5/optima-members.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-hours-v0.1.8.9",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.8.9 (2026-11-04)\n\n- Shared updater: release channels. A site on the stable channel (the default) sees only normal releases, exactly as before. A site on the test channel (Optima Build, Build, Updates, Release channel, or `OPTIMA_HUB_CHANNEL` in wp-config) also sees test releases (GitHub pre-releases) and takes the newest version from either. Without Optima Build a site is always on stable. This release goes out as a normal release so every site gets the channel-aware updater; test releases start with a later release.",
+    "assets": [
+      {
+        "name": "optima-hours.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-hours-v0.1.8.9/optima-hours.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-hours-v0.1.8.8",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.8.8 (2026-11-04)\n\n- Optima menu, seven items (shared admin kit 1.6.0.0): Overview, Your business, Content, Search and AI, Site health, Inbox, Build. Each screen's group comes from its address, so a label change never moves it; every screen keeps its address. The eyebrow on each screen names its group, the word the sidebar shows. Screens opened from a button now have a page title (no PHP notice).",
+    "assets": [
+      {
+        "name": "optima-hours.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-hours-v0.1.8.8/optima-hours.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-hours-v0.1.8.7",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.8.7 (2026-11-04)\n\n- Optima admin footer: no personal email address. It reads \"Built and looked after by Optima Digital\" with a Request a change link (shared admin kit 1.5.1.5).",
+    "assets": [
+      {
+        "name": "optima-hours.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-hours-v0.1.8.7/optima-hours.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-hours-v0.1.8.6",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.8.6 (2026-11-04)\n\n- Optima layer revision 6: **hours fill the footer beside the address.** When the hours are confirmed and at least one day is open, they print in the theme's `footer-contact` slot as one line (\"Monday to Friday, 9 a.m. to 5 p.m.\"), so `optima_slot_has( 'footer-contact' )` is true only when there is something to show. Filter `optima_hours_footer_show` picks `summary` (default), `table`, `status` or `both`, or `''` for none; `optima_hours_summary` changes the words. Styles use the theme's type and `--optima-*` variables only.",
+    "assets": [
+      {
+        "name": "optima-hours.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-hours-v0.1.8.6/optima-hours.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-hours-v0.1.8.5",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.8.5 (2026-11-04)\n\n- Optima layer revision 5: visitor-facing styles now use the `--optima-*` design variables Optima Build 0.7.9.5 prints from the theme's DESIGN.md, so this feature dresses in each site's brand (plugin-first rule 7). Same look on sites without DESIGN.md.",
+    "assets": [
+      {
+        "name": "optima-hours.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-hours-v0.1.8.5/optima-hours.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-forms-guard-v0.3.2.5",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.3.2.5 (2026-11-04)\n\n- Shared updater: release channels. A site on the stable channel (the default) sees only normal releases, exactly as before. A site on the test channel (Optima Build, Build, Updates, Release channel, or `OPTIMA_HUB_CHANNEL` in wp-config) also sees test releases (GitHub pre-releases) and takes the newest version from either. Without Optima Build a site is always on stable. This release goes out as a normal release so every site gets the channel-aware updater; test releases start with a later release.",
+    "assets": [
+      {
+        "name": "optima-forms-guard.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-forms-guard-v0.3.2.5/optima-forms-guard.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-events-v0.14.3.8",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.14.3.8 (2026-11-04)\n\n- Shared updater: release channels. A site on the stable channel (the default) sees only normal releases, exactly as before. A site on the test channel (Optima Build, Build, Updates, Release channel, or `OPTIMA_HUB_CHANNEL` in wp-config) also sees test releases (GitHub pre-releases) and takes the newest version from either. Without Optima Build a site is always on stable. This release goes out as a normal release so every site gets the channel-aware updater; test releases start with a later release.",
+    "assets": [
+      {
+        "name": "optima-events.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-events-v0.14.3.8/optima-events.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-events-v0.14.3.7",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.14.3.7 (2026-11-04)\n\n- Shared admin kit 1.6.0.0 (the Optima menu now has seven items: Overview, Your business, Content, Search and AI, Site health, Inbox, Build). This plugin's own menu is not part of it and keeps its one row of tabs. Screens opened from a button now have a page title (no PHP notice).",
+    "assets": [
+      {
+        "name": "optima-events.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-events-v0.14.3.7/optima-events.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-events-v0.14.3.6",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.14.3.6 (2026-11-04)\n\n- Optima admin footer: no personal email address. It reads \"Built and looked after by Optima Digital\" with a Request a change link (shared admin kit 1.5.1.5).",
+    "assets": [
+      {
+        "name": "optima-events.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-events-v0.14.3.6/optima-events.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-events-v0.14.3.5",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.14.3.5 (2026-11-04)\n\n- Optima layer revision 5: visitor-facing styles now use the `--optima-*` design variables Optima Build 0.7.9.5 prints from the theme's DESIGN.md, so this feature dresses in each site's brand (plugin-first rule 7). Same look on sites without DESIGN.md.",
+    "assets": [
+      {
+        "name": "optima-events.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-events-v0.14.3.5/optima-events.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-crm-v0.1.1.5",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.1.5 (2026-11-04)\n\n- Shared updater: release channels. A site on the stable channel (the default) sees only normal releases, exactly as before. A site on the test channel (Optima Build, Build, Updates, Release channel, or `OPTIMA_HUB_CHANNEL` in wp-config) also sees test releases (GitHub pre-releases) and takes the newest version from either. Without Optima Build a site is always on stable. This release goes out as a normal release so every site gets the channel-aware updater; test releases start with a later release.",
+    "assets": [
+      {
+        "name": "optima-crm.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-crm-v0.1.1.5/optima-crm.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-core-v1.6.0.9",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.6.0.9 (2026-11-04)\n\n- Optima menu, seven items (shared admin kit 1.6.0.0): Overview, Your business, Content, Search and AI, Site health, Inbox, Build. Each screen's group comes from its address, so a label change never moves it; every screen keeps its address. The eyebrow on each screen names its group, the word the sidebar shows. Screens opened from a button now have a page title (no PHP notice).",
+    "assets": [
+      {
+        "name": "optima-core.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-core-v1.6.0.9/optima-core.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-core-v1.6.0.8",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.6.0.8 (2026-11-04)\n\n- Optima admin footer: no personal email address. It reads \"Built and looked after by Optima Digital\" with a Request a change link (shared admin kit 1.5.1.5).",
+    "assets": [
+      {
+        "name": "optima-core.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-core-v1.6.0.8/optima-core.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-core-v1.6.0.7",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.6.0.7 (2026-11-04)\n\n- Optima layer revision 7: **a theme's head can move to Core with no change in what search engines see.** New keys in the `seo` section of `optima-setup.json` (docs/plugin-first.md, section 3a), each optional; a site without the section prints what it printed before:\n  - `site.production_url`: off the live host, robots gets `noindex, nofollow` and addresses written with the live origin move to the current host (JSON-LD, canonical, `og:url`, images). `site.robots_exact`: a noindex page drops `max-image-preview:large`.\n  - `site.print` switches for tags a theme never printed (`og:locale`, `twitter:title`/`description`/`image`, `article:*_time`, the WebSite SearchAction, and `og:image` sizes as `auto`, `given` or off). `site.og_type` and `site.og_type_post`. `default_description` named as `\"\"` or `false` means no description, never the tagline.\n  - Special page keys `:search`, `:404`, `:posts`, `:category`, `:tag`, `:date`, `:author`, `:archive`. A search is no longer matched to the home page's entry.\n  - Per URL: `canonical: false` (none), `og_url`, `schema_blocks` (print the nodes as separate script blocks or `@graph` groups, as the theme did), and tokens in titles, descriptions, addresses and schema (`%site%`, `%tagline%`, `%query%`, `%url%`, `%link%`, `%title%`, `%published%`, `%modified%`, `%page%`). Titles keep their spaces as written.\n  - Schema: the organization's and website's own `@id` are kept and every reference follows them; a page node with",
+    "assets": [
+      {
+        "name": "optima-core.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-core-v1.6.0.7/optima-core.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-core-v1.6.0.5",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.6.0.5 (2026-11-04)\n\n- Optima layer revision 5: visitor-facing styles now use the `--optima-*` design variables Optima Build 0.7.9.5 prints from the theme's DESIGN.md, so this feature dresses in each site's brand (plugin-first rule 7). Same look on sites without DESIGN.md.",
+    "assets": [
+      {
+        "name": "optima-core.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-core-v1.6.0.5/optima-core.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-core-v1.6.0.10",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.6.0.10 (2026-11-04)\n\n- Shared updater: release channels. A site on the stable channel (the default) sees only normal releases, exactly as before. A site on the test channel (Optima Build, Build, Updates, Release channel, or `OPTIMA_HUB_CHANNEL` in wp-config) also sees test releases (GitHub pre-releases) and takes the newest version from either. Without Optima Build a site is always on stable. This release goes out as a normal release so every site gets the channel-aware updater; test releases start with a later release.",
+    "assets": [
+      {
+        "name": "optima-core.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-core-v1.6.0.10/optima-core.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-contact-v0.1.11.8",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.11.8 (2026-11-04)\n\n- Shared updater: release channels. A site on the stable channel (the default) sees only normal releases, exactly as before. A site on the test channel (Optima Build, Build, Updates, Release channel, or `OPTIMA_HUB_CHANNEL` in wp-config) also sees test releases (GitHub pre-releases) and takes the newest version from either. Without Optima Build a site is always on stable. This release goes out as a normal release so every site gets the channel-aware updater; test releases start with a later release.",
+    "assets": [
+      {
+        "name": "optima-contact.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-contact-v0.1.11.8/optima-contact.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-contact-v0.1.11.7",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.11.7 (2026-11-04)\n\n- Optima menu, seven items (shared admin kit 1.6.0.0): Overview, Your business, Content, Search and AI, Site health, Inbox, Build. Each screen's group comes from its address, so a label change never moves it; every screen keeps its address. The eyebrow on each screen names its group, the word the sidebar shows. Screens opened from a button now have a page title (no PHP notice).",
+    "assets": [
+      {
+        "name": "optima-contact.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-contact-v0.1.11.7/optima-contact.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-contact-v0.1.11.6",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.11.6 (2026-11-04)\n\n- Optima admin footer: no personal email address. It reads \"Built and looked after by Optima Digital\" with a Request a change link (shared admin kit 1.5.1.5).",
+    "assets": [
+      {
+        "name": "optima-contact.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-contact-v0.1.11.6/optima-contact.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-contact-v0.1.11.5",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.11.5 (2026-11-04)\n\n- Optima layer revision 5: visitor-facing styles now use the `--optima-*` design variables Optima Build 0.7.9.5 prints from the theme's DESIGN.md, so this feature dresses in each site's brand (plugin-first rule 7). Same look on sites without DESIGN.md.\n- The bar renders in the theme's `body-end` slot (plugin-first rule 12); themes without slots still get it from the footer, once per page.",
+    "assets": [
+      {
+        "name": "optima-contact.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-contact-v0.1.11.5/optima-contact.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-chat-v0.2.4.8",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.4.8 (2026-11-04)\n\n- Shared updater: release channels. A site on the stable channel (the default) sees only normal releases, exactly as before. A site on the test channel (Optima Build, Build, Updates, Release channel, or `OPTIMA_HUB_CHANNEL` in wp-config) also sees test releases (GitHub pre-releases) and takes the newest version from either. Without Optima Build a site is always on stable. This release goes out as a normal release so every site gets the channel-aware updater; test releases start with a later release.",
+    "assets": [
+      {
+        "name": "optima-chat.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-chat-v0.2.4.8/optima-chat.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-chat-v0.2.4.7",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.4.7 (2026-11-04)\n\n- Optima menu, seven items (shared admin kit 1.6.0.0): Overview, Your business, Content, Search and AI, Site health, Inbox, Build. Each screen's group comes from its address, so a label change never moves it; every screen keeps its address. The eyebrow on each screen names its group, the word the sidebar shows. Screens opened from a button now have a page title (no PHP notice).",
+    "assets": [
+      {
+        "name": "optima-chat.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-chat-v0.2.4.7/optima-chat.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-chat-v0.2.4.6",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.4.6 (2026-11-04)\n\n- Optima admin footer: no personal email address. It reads \"Built and looked after by Optima Digital\" with a Request a change link (shared admin kit 1.5.1.5).",
+    "assets": [
+      {
+        "name": "optima-chat.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-chat-v0.2.4.6/optima-chat.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-chat-v0.2.4.5",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.4.5 (2026-11-04)\n\n- Optima layer revision 5: visitor-facing styles now use the `--optima-*` design variables Optima Build 0.7.9.5 prints from the theme's DESIGN.md, so this feature dresses in each site's brand (plugin-first rule 7). Same look on sites without DESIGN.md.",
+    "assets": [
+      {
+        "name": "optima-chat.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-chat-v0.2.4.5/optima-chat.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-cards-v1.0.21.8",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.0.21.8 (2026-11-04)\n\n- Shared updater: release channels. A site on the stable channel (the default) sees only normal releases, exactly as before. A site on the test channel (Optima Build, Build, Updates, Release channel, or `OPTIMA_HUB_CHANNEL` in wp-config) also sees test releases (GitHub pre-releases) and takes the newest version from either. Without Optima Build a site is always on stable. This release goes out as a normal release so every site gets the channel-aware updater; test releases start with a later release.",
+    "assets": [
+      {
+        "name": "optima-cards.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-cards-v1.0.21.8/optima-cards.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-cards-v1.0.21.7",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.0.21.7 (2026-11-04)\n\n- Optima menu, seven items (shared admin kit 1.6.0.0): Overview, Your business, Content, Search and AI, Site health, Inbox, Build. Each screen's group comes from its address, so a label change never moves it; every screen keeps its address. The eyebrow on each screen names its group, the word the sidebar shows. Screens opened from a button now have a page title (no PHP notice).",
+    "assets": [
+      {
+        "name": "optima-cards.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-cards-v1.0.21.7/optima-cards.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-cards-v1.0.21.6",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.0.21.6 (2026-11-04)\n\n- Optima admin footer: no personal email address. It reads \"Built and looked after by Optima Digital\" with a Request a change link (shared admin kit 1.5.1.5).",
+    "assets": [
+      {
+        "name": "optima-cards.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-cards-v1.0.21.6/optima-cards.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-cards-v1.0.21.5",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.0.21.5 (2026-11-04)\n\n- Optima layer revision 5: visitor-facing styles now use the `--optima-*` design variables Optima Build 0.7.9.5 prints from the theme's DESIGN.md, so this feature dresses in each site's brand (plugin-first rule 7). Same look on sites without DESIGN.md.\n- The standalone card page prints the design variables in its own head.",
+    "assets": [
+      {
+        "name": "optima-cards.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-cards-v1.0.21.5/optima-cards.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.9.9",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.9.9 (2026-11-04)\n\n- Optima admin footer: no personal email address. It reads \"Built and looked after by Optima Digital\" with a Request a change link (shared admin kit 1.5.1.5).\n- Business info sits under Business in the Optima menu, next to Call buttons, Hours and Team (it was under Search).",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.9.9/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.9.8",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.9.8 (2026-11-04)\n\n- **The `seo` section is no longer autoloaded.** A big site's section runs to hundreds of KB; Core reads it only on the front end.\n- **Fill from theme keeps the new `seo` keys** Optima Core 1.6.0.7 reads: `production_url`, `robots_exact`, `print`, `og_type_post`, `og_url`, `schema_blocks`, `false` for no canonical or description, and the special page keys (`:search`, `:404`, `:posts`, `:archive` ...). Titles keep their spaces exactly as the theme printed them.\n- **Fix: Call buttons stayed off after Fill from theme.** A new option now starts from the plugin's defaults (switched on included). An option an editor already saved is never re-enabled.\n- Site setup and Content updates sit behind Updates: gone from the sidebar and the tab row, and Updates links to both.\n- The Design screen uses the Optima layout, and its swatches wrap.\n- The Features screen stays first in the Optima menu (the shared nav names it \"Home\", so the name sort missed it).",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.9.8/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.9.6",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.9.6 (2026-11-04)\n\n- **Account names stay private on every site** (new job `account-privacy`). For visitors, author pages and `?author=N` go to the About page (or home), the public REST users list and the users sitemap are closed, and author links point to About. Signed-in people and the editor are unaffected; bylines and schema keep the display name, so nothing visible changes. Login names are often email addresses and can show who has access to a site. Filters: `optima_build_account_privacy`, `optima_build_author_target`.",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.9.6/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.9.5",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.9.5 (2026-11-04)\n\n- Optima layer revision 5: the plugin-first foundation (`docs/plugin-first.md`).\n- **`optima_owns( $job )`.** Tells a theme whether a plugin owns a job (SEO, schema, content sync, AI search, redirects, accessibility, team, cards, call bar, results, hours, reviews, analytics, spam guard, chat). Themes run their own version only when it returns false. Filter: `optima_owns`.\n- **`optima_slot( $name )`.** The fixed spots a theme offers for plugin blocks (header, after-hero, before-close, footer, footer-contact, body-end), so a feature lands in the same place on every site. Plugins attach with `add_action( 'optima_slot_<name>', ... )`.\n- **Design from the theme.** Optima Build reads the `optima-design` block in the theme's `DESIGN.md` (cached until the file changes) and prints it once as `--optima-*` CSS variables on the site and in the dashboard. Without the file, the Optima design system values apply. New screen: Optima Build → Design shows the colors, fonts and corners every feature uses.\n- **One menu, the same on every site.** Optima Build tidies the Optima menu last: one fixed order (Features, Business info, the features with settings, then Design, Updates, Site health, Request a change) and plain names (\"Team\", \"Chat\", \"Case results\", \"Site check\" instead of \"... settings\"). No plugin changes needed.\n- **Updates: every update tool on one screen.** New Optima Build → Updates holds Check for new versions, the theme (version and its read-only key), Fill",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.9.5/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.9.14",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.9.14 (2026-11-04)\n\n- **Release channel** (Build, Updates, operators only): Test means this site gets each release first, before the client sites; Stable (the default) means it gets releases after they are checked on the test site. One button switches it and checks for new versions straight away. Stored in the `optima_hub_channel` option; `define( 'OPTIMA_HUB_CHANNEL', 'test' );` in wp-config fixes it and the card then only shows it. Plugin updates only: theme updates still follow the theme's own repo.\n- On the test channel the update queue and the feature cards label a test release (a GitHub pre-release) \"Test release\", and turning a feature on or going back a version can use test releases too. Stable sites never see them.\n- Site health: a test release installed on a test-channel site is expected and no longer listed under Test builds; on a stable site it is listed as before. Test-channel sites get a Release channel row, which warns when an Optima plugin with an older updater loaded first (that copy ignores test releases until it is updated).\n- Shared updater: release channels. A site on the stable channel (the default) sees only normal releases, exactly as before. A site on the test channel (Optima Build, Build, Updates, Release channel, or `OPTIMA_HUB_CHANNEL` in wp-config) also sees test releases (GitHub pre-releases) and takes the newest version from either. Without Optima Build a site is always on stable. This release goes out as a normal release so every site get",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.9.14/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.9.13",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.9.13 (2026-11-04)\n\n- Fix: clicking Optima in the sidebar opened a 404 on sites without Optima Core (the Optima section is created by Build there). Overview was added before its parent menu existed, so WordPress gave it the wrong address. It is now added after the section, and the menu link opens Overview on every site.",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.9.13/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.9.12",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.9.12 (2026-11-04)\n\n- Fix: the web team's own accounts are operators again. 0.7.9.10 limited the default operators to administrators on the agency domain, which left the web team's administrator accounts (on the agency's web-team partner domain) outside Build and inside the site lock. Administrators on that domain are operators by default again; the domain is stored only as a hash. A site's own `OPTIMA_HUB_OPERATORS` list still replaces the defaults.",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.9.12/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.9.11",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.9.11 (2026-11-04)\n\n- **The site lock waits for an operator account.** It applies only when at least one user on the site passes the operator check, so a site can never be locked with nobody able to edit it. The answer is kept in a transient (keyed to the operator list) and cleared whenever a user is added, changed, removed or given a new role. While it waits, administrators see \"Site lock is waiting: no Optima operator account on this site yet.\" on Overview and in the WordPress Dashboard box, and the Site lock card on Build reads On, Waiting for an operator account, or Off.",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.9.11/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-analytics-v0.1.15.7",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.15.7 (2026-11-04)\n\n- Shared updater: release channels. A site on the stable channel (the default) sees only normal releases, exactly as before. A site on the test channel (Optima Build, Build, Updates, Release channel, or `OPTIMA_HUB_CHANNEL` in wp-config) also sees test releases (GitHub pre-releases) and takes the newest version from either. Without Optima Build a site is always on stable. This release goes out as a normal release so every site gets the channel-aware updater; test releases start with a later release.",
+    "assets": [
+      {
+        "name": "optima-analytics.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-analytics-v0.1.15.7/optima-analytics.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-analytics-v0.1.15.6",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.15.6 (2026-11-04)\n\n- Optima menu, seven items (shared admin kit 1.6.0.0): Overview, Your business, Content, Search and AI, Site health, Inbox, Build. Each screen's group comes from its address, so a label change never moves it; every screen keeps its address. The eyebrow on each screen names its group, the word the sidebar shows. Screens opened from a button now have a page title (no PHP notice).",
+    "assets": [
+      {
+        "name": "optima-analytics.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-analytics-v0.1.15.6/optima-analytics.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-analytics-v0.1.15.5",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.15.5 (2026-11-04)\n\n- Optima admin footer: no personal email address. It reads \"Built and looked after by Optima Digital\" with a Request a change link (shared admin kit 1.5.1.5).",
+    "assets": [
+      {
+        "name": "optima-analytics.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-analytics-v0.1.15.5/optima-analytics.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-aeo-v0.2.4.7",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.4.7 (2026-11-04)\n\n- Shared updater: release channels. A site on the stable channel (the default) sees only normal releases, exactly as before. A site on the test channel (Optima Build, Build, Updates, Release channel, or `OPTIMA_HUB_CHANNEL` in wp-config) also sees test releases (GitHub pre-releases) and takes the newest version from either. Without Optima Build a site is always on stable. This release goes out as a normal release so every site gets the channel-aware updater; test releases start with a later release.",
+    "assets": [
+      {
+        "name": "optima-aeo.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-aeo-v0.2.4.7/optima-aeo.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-aeo-v0.2.4.6",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.4.6 (2026-11-04)\n\n- Optima menu, seven items (shared admin kit 1.6.0.0): Overview, Your business, Content, Search and AI, Site health, Inbox, Build. Each screen's group comes from its address, so a label change never moves it; every screen keeps its address. The eyebrow on each screen names its group, the word the sidebar shows. Screens opened from a button now have a page title (no PHP notice).",
+    "assets": [
+      {
+        "name": "optima-aeo.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-aeo-v0.2.4.6/optima-aeo.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-aeo-v0.2.4.5",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.4.5 (2026-11-04)\n\n- Optima admin footer: no personal email address. It reads \"Built and looked after by Optima Digital\" with a Request a change link (shared admin kit 1.5.1.5).",
+    "assets": [
+      {
+        "name": "optima-aeo.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-aeo-v0.2.4.5/optima-aeo.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-accessibility-v0.1.12.8",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.12.8 (2026-11-04)\n\n- Shared updater: release channels. A site on the stable channel (the default) sees only normal releases, exactly as before. A site on the test channel (Optima Build, Build, Updates, Release channel, or `OPTIMA_HUB_CHANNEL` in wp-config) also sees test releases (GitHub pre-releases) and takes the newest version from either. Without Optima Build a site is always on stable. This release goes out as a normal release so every site gets the channel-aware updater; test releases start with a later release.",
+    "assets": [
+      {
+        "name": "optima-accessibility.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-accessibility-v0.1.12.8/optima-accessibility.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-accessibility-v0.1.12.7",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.12.7 (2026-11-04)\n\n- Optima menu, seven items (shared admin kit 1.6.0.0): Overview, Your business, Content, Search and AI, Site health, Inbox, Build. Each screen's group comes from its address, so a label change never moves it; every screen keeps its address. The eyebrow on each screen names its group, the word the sidebar shows. Screens opened from a button now have a page title (no PHP notice).",
+    "assets": [
+      {
+        "name": "optima-accessibility.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-accessibility-v0.1.12.7/optima-accessibility.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-accessibility-v0.1.12.6",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.12.6 (2026-11-04)\n\n- Optima admin footer: no personal email address. It reads \"Built and looked after by Optima Digital\" with a Request a change link (shared admin kit 1.5.1.5).",
+    "assets": [
+      {
+        "name": "optima-accessibility.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-accessibility-v0.1.12.6/optima-accessibility.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-accessibility-v0.1.12.5",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.12.5 (2026-11-04)\n\n- The Weekly checks section no longer shows its title twice (\"Weekly\" above \"Weekly checks\").",
+    "assets": [
+      {
+        "name": "optima-accessibility.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-accessibility-v0.1.12.5/optima-accessibility.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-team-v0.1.9.4",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.9.4 (2026-10-31)\n\n- Optima release of upstream 0.1.9.\n- **The Plugins screen shows auto-updates as on.** The updater now reports the newest release even when the plugin is already on it, so WordPress lists Optima plugins as up to date and shows \"Auto-updates enabled\" instead of a blank column and an \"Auto-updates Disabled\" count. Optima plugins were already updating themselves; only the label was wrong.\n- Optima layer revision 4: the port now carries the Optima-only work itself: editable pages in Optima Core, site-font widgets, full changelog history.",
+    "assets": [
+      {
+        "name": "optima-team.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-team-v0.1.9.4/optima-team.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-sitecheck-v0.2.4.4",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.4.4 (2026-10-31)\n\n- Optima release of upstream 0.2.4.\n- **The Plugins screen shows auto-updates as on.** The updater now reports the newest release even when the plugin is already on it, so WordPress lists Optima plugins as up to date and shows \"Auto-updates enabled\" instead of a blank column and an \"Auto-updates Disabled\" count. Optima plugins were already updating themselves; only the label was wrong.\n- Optima layer revision 4: the port now carries the Optima-only work itself: editable pages in Optima Core, site-font widgets, full changelog history.",
+    "assets": [
+      {
+        "name": "optima-sitecheck.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-sitecheck-v0.2.4.4/optima-sitecheck.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-reviews-v0.5.5.4",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.5.5.4 (2026-10-31)\n\n- Optima release of upstream 0.5.5.\n- **The Plugins screen shows auto-updates as on.** The updater now reports the newest release even when the plugin is already on it, so WordPress lists Optima plugins as up to date and shows \"Auto-updates enabled\" instead of a blank column and an \"Auto-updates Disabled\" count. Optima plugins were already updating themselves; only the label was wrong.\n- **The site notes when the review totals were last updated.** Saving Review settings, or a Google sync, records the time. Optima Build 0.7.8 shows it in Site health as \"Review totals\" and asks for a look after 30 days, so the counts on the site keep up with the platforms.\n- Optima layer revision 4: the port now carries the Optima-only work itself: editable pages in Optima Core, site-font widgets, full changelog history.",
+    "assets": [
+      {
+        "name": "optima-reviews.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-reviews-v0.5.5.4/optima-reviews.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-results-v0.1.9.4",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.9.4 (2026-10-31)\n\n- Optima release of upstream 0.1.9.\n- **The Plugins screen shows auto-updates as on.** The updater now reports the newest release even when the plugin is already on it, so WordPress lists Optima plugins as up to date and shows \"Auto-updates enabled\" instead of a blank column and an \"Auto-updates Disabled\" count. Optima plugins were already updating themselves; only the label was wrong.\n- Optima layer revision 4: the port now carries the Optima-only work itself: editable pages in Optima Core, site-font widgets, full changelog history.",
+    "assets": [
+      {
+        "name": "optima-results.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-results-v0.1.9.4/optima-results.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-redirects-v0.1.9.4",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.9.4 (2026-10-31)\n\n- Optima release of upstream 0.1.9.\n- **The Plugins screen shows auto-updates as on.** The updater now reports the newest release even when the plugin is already on it, so WordPress lists Optima plugins as up to date and shows \"Auto-updates enabled\" instead of a blank column and an \"Auto-updates Disabled\" count. Optima plugins were already updating themselves; only the label was wrong.\n- Optima layer revision 4: the port now carries the Optima-only work itself: editable pages in Optima Core, site-font widgets, full changelog history.",
+    "assets": [
+      {
+        "name": "optima-redirects.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-redirects-v0.1.9.4/optima-redirects.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-partners-v0.1.2.4",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.2.4 (2026-10-31)\n\n- Optima release of upstream 0.1.2.\n- **The Plugins screen shows auto-updates as on.** The updater now reports the newest release even when the plugin is already on it, so WordPress lists Optima plugins as up to date and shows \"Auto-updates enabled\" instead of a blank column and an \"Auto-updates Disabled\" count. Optima plugins were already updating themselves; only the label was wrong.\n- Optima layer revision 4: the port now carries the Optima-only work itself: editable pages in Optima Core, site-font widgets, full changelog history.",
+    "assets": [
+      {
+        "name": "optima-partners.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-partners-v0.1.2.4/optima-partners.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-optimize-v0.9.3.4",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.9.3.4 (2026-10-31)\n\n- Optima release of upstream 0.9.3.\n- **The Plugins screen shows auto-updates as on.** The updater now reports the newest release even when the plugin is already on it, so WordPress lists Optima plugins as up to date and shows \"Auto-updates enabled\" instead of a blank column and an \"Auto-updates Disabled\" count. Optima plugins were already updating themselves; only the label was wrong.\n- Optima layer revision 4: the port now carries the Optima-only work itself: editable pages in Optima Core, site-font widgets, full changelog history.",
+    "assets": [
+      {
+        "name": "optima-optimize.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-optimize-v0.9.3.4/optima-optimize.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-members-v0.3.3.4",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.3.3.4 (2026-10-31)\n\n- Optima release of upstream 0.3.3.\n- **The Plugins screen shows auto-updates as on.** The updater now reports the newest release even when the plugin is already on it, so WordPress lists Optima plugins as up to date and shows \"Auto-updates enabled\" instead of a blank column and an \"Auto-updates Disabled\" count. Optima plugins were already updating themselves; only the label was wrong.\n- Optima layer revision 4: the port now carries the Optima-only work itself: editable pages in Optima Core, site-font widgets, full changelog history.",
+    "assets": [
+      {
+        "name": "optima-members.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-members-v0.3.3.4/optima-members.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-hours-v0.1.8.4",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.8.4 (2026-10-31)\n\n- Optima release of upstream 0.1.8.\n- **The Plugins screen shows auto-updates as on.** The updater now reports the newest release even when the plugin is already on it, so WordPress lists Optima plugins as up to date and shows \"Auto-updates enabled\" instead of a blank column and an \"Auto-updates Disabled\" count. Optima plugins were already updating themselves; only the label was wrong.\n- Optima layer revision 4: the port now carries the Optima-only work itself: editable pages in Optima Core, site-font widgets, full changelog history.",
+    "assets": [
+      {
+        "name": "optima-hours.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-hours-v0.1.8.4/optima-hours.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-forms-guard-v0.3.2.4",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.3.2.4 (2026-10-31)\n\n- Optima release of upstream 0.3.2.\n- **Catches \"add your site to Google\" spam.** Forms Guard now reads the message too. An entry that links to another website (email addresses are fine) or uses a known pitch (\"search index\", \"backlink\" and a few more) is marked as spam: the visitor sees the normal confirmation, no notification goes out, and the entry waits in the form's Spam folder in case a real person was caught. It counts toward the monthly blocked total. Turn it off with `optima_forms_guard_content_check`; change the phrases with `optima_forms_guard_spam_phrases`.\n- **Refuses files sent to hidden upload fields.** A reported critical Gravity Forms flaw (CVE-2026-84434, reported 9.8) lets a stranger upload a file that runs code through any File Upload field whose Visibility is Hidden. Gravity Forms has no fix yet. Optima Forms Guard now drops any file sent to a File Upload field set to Hidden or Administrative, on a normal submit and on drag-and-drop uploads (those get a 403). A visitor never sees those fields, so real visitors lose nothing. Logged-in staff who can edit entries are let through. Each refusal adds to the monthly blocked count. Turn it off with the `optima_forms_guard_block_hidden_uploads` filter.\n- **Names the fields to fix.** Site admins see a red notice listing each form and field, with a link to the form and what to change (set Visibility to Visible, or delete the field). `Optima_Forms_Guard::upload_check()` gives Optima Build the",
+    "assets": [
+      {
+        "name": "optima-forms-guard.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-forms-guard-v0.3.2.4/optima-forms-guard.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-events-v0.14.3.4",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.14.3.4 (2026-10-31)\n\n- Optima release of upstream 0.14.3.\n- **The Plugins screen shows auto-updates as on.** The updater now reports the newest release even when the plugin is already on it, so WordPress lists Optima plugins as up to date and shows \"Auto-updates enabled\" instead of a blank column and an \"Auto-updates Disabled\" count. Optima plugins were already updating themselves; only the label was wrong.\n- Optima layer revision 4: the port now carries the Optima-only work itself: editable pages in Optima Core, site-font widgets, full changelog history.",
+    "assets": [
+      {
+        "name": "optima-events.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-events-v0.14.3.4/optima-events.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-crm-v0.1.1.4",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.1.4 (2026-10-31)\n\n- Optima release of upstream 0.1.1.\n- **The Plugins screen shows auto-updates as on.** The updater now reports the newest release even when the plugin is already on it, so WordPress lists Optima plugins as up to date and shows \"Auto-updates enabled\" instead of a blank column and an \"Auto-updates Disabled\" count. Optima plugins were already updating themselves; only the label was wrong.\n- Optima layer revision 4: the port now carries the Optima-only work itself: editable pages in Optima Core, site-font widgets, full changelog history.",
+    "assets": [
+      {
+        "name": "optima-crm.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-crm-v0.1.1.4/optima-crm.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-core-v1.6.0.4",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.6.0.4 (2026-10-31)\n\n- Optima release of upstream 1.6.0.\n- **Email addresses are hidden from spam bots.** Client sites printed their contact email in plain text (email links, visible text, the business details for search), and bots collected it, so clients got SEO spam. Optima Core now codes every address on the finished page before it is sent. Visitors see and click it as usual, and a page cache stores the coded copy. Inside the search data (JSON-LD) only the \"@\" is written as `\\u0040`, so Google reads the same email. Scripts, styles, text boxes, form values and comments are left alone, and if anything goes wrong the page is sent unchanged. Filter `optima_core_email_guard` (true or false).\n- **Comments and pingbacks are closed.** New comments and pingbacks on client sites mostly brought spam. With the switch on, pages and posts take no new comments or pingbacks, the `X-Pingback` header is gone, and the pingback XML-RPC methods are removed. Comments already saved stay in WordPress. Turn it off and the site works exactly as before. Filter `optima_core_close_comments` (true or false).\n- **The Plugins screen shows auto-updates as on.** The updater now reports the newest release even when the plugin is already on it, so WordPress lists Optima plugins as up to date and shows \"Auto-updates enabled\" instead of a blank column and an \"Auto-updates Disabled\" count. Optima plugins were already updating themselves; only the label was wrong.\n- Test: `php tools/tests/email-guard.php`.\n",
+    "assets": [
+      {
+        "name": "optima-core.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-core-v1.6.0.4/optima-core.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-contact-v0.1.11.4",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.11.4 (2026-10-31)\n\n- Optima release of upstream 0.1.11.\n- **The Plugins screen shows auto-updates as on.** The updater now reports the newest release even when the plugin is already on it, so WordPress lists Optima plugins as up to date and shows \"Auto-updates enabled\" instead of a blank column and an \"Auto-updates Disabled\" count. Optima plugins were already updating themselves; only the label was wrong.\n- Optima layer revision 4: the port now carries the Optima-only work itself: editable pages in Optima Core, site-font widgets, full changelog history.",
+    "assets": [
+      {
+        "name": "optima-contact.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-contact-v0.1.11.4/optima-contact.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-chat-v0.2.4.4",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.4.4 (2026-10-31)\n\n- Optima release of upstream 0.2.4.\n- **The Plugins screen shows auto-updates as on.** The updater now reports the newest release even when the plugin is already on it, so WordPress lists Optima plugins as up to date and shows \"Auto-updates enabled\" instead of a blank column and an \"Auto-updates Disabled\" count. Optima plugins were already updating themselves; only the label was wrong.\n- Optima layer revision 4: the port now carries the Optima-only work itself: editable pages in Optima Core, site-font widgets, full changelog history.",
+    "assets": [
+      {
+        "name": "optima-chat.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-chat-v0.2.4.4/optima-chat.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-cards-v1.0.21.4",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.0.21.4 (2026-10-31)\n\n- Optima release of upstream 1.0.21.\n- **The Plugins screen shows auto-updates as on.** The updater now reports the newest release even when the plugin is already on it, so WordPress lists Optima plugins as up to date and shows \"Auto-updates enabled\" instead of a blank column and an \"Auto-updates Disabled\" count. Optima plugins were already updating themselves; only the label was wrong.\n- Optima layer revision 4: the port now carries the Optima-only work itself: editable pages in Optima Core, site-font widgets, full changelog history.",
+    "assets": [
+      {
+        "name": "optima-cards.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-cards-v1.0.21.4/optima-cards.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.9.4",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.9.4 (2026-10-31)\n\n- Optima release of upstream 0.7.9.\n- **\"Test builds\" no longer flags a client's own plugin.** The row now looks only at plugins that update from this repo.\n- **Form emails in the site's own colors.** Gravity Forms notifications now arrive in the same card as the Email test: the site's color bar, its Site Icon, the site name, and the subject as the headline, with the form answers below. When the message has a phone number, it gets Call and Text buttons; when it has an email address, an Email back button that reads plain-text addresses too (the first one that is not the site's own). The headline leaves out the phone number, since it already has its Call button. Confirmations sent to the person who filled in the form get the card without those buttons. Light colors like Carolina blue get dark button text so it stays readable. Only HTML notifications, only while Optima Email is set up. Off switch: the `optima_mail_brand_forms` filter.\n- **Other Optima plugins can use the site's brand color.** `Optima_Hub_Mail::brand_color()` returns the Email screen's pick or the detected color; Optima Analytics 0.1.15 colors the cookie notice's OK button with it.\n- **Site health: \"Hidden upload fields\".** With Optima Forms Guard 0.3.0 or later, Site health lists any Gravity Forms File Upload field set to Hidden, with a link to fix it.\n- **The Plugins screen shows auto-updates as on.** The updater now reports the newest release even when the plugin is already on it, so W",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.9.4/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-analytics-v0.1.15.4",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.15.4 (2026-10-31)\n\n- Optima release of upstream 0.1.15.\n- **The cookie notice is readable on every site.** The notice now carries its own colors: light by default, dark when the page sets `data-theme=\"dark\"`, and the OK button in the site's brand color from Optima Build 0.7.8, with dark text when that color is too light for white.\n- **The Plugins screen shows auto-updates as on.** The updater now reports the newest release even when the plugin is already on it, so WordPress lists Optima plugins as up to date and shows \"Auto-updates enabled\" instead of a blank column and an \"Auto-updates Disabled\" count. Optima plugins were already updating themselves; only the label was wrong.\n- Optima layer revision 4: the port now carries the Optima-only work itself: editable pages in Optima Core, site-font widgets, full changelog history.",
+    "assets": [
+      {
+        "name": "optima-analytics.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-analytics-v0.1.15.4/optima-analytics.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-aeo-v0.2.4.4",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.4.4 (2026-10-31)\n\n- Optima release of upstream 0.2.4.\n- **The Plugins screen shows auto-updates as on.** The updater now reports the newest release even when the plugin is already on it, so WordPress lists Optima plugins as up to date and shows \"Auto-updates enabled\" instead of a blank column and an \"Auto-updates Disabled\" count. Optima plugins were already updating themselves; only the label was wrong.\n- Optima layer revision 4: the port now carries the Optima-only work itself: editable pages in Optima Core, site-font widgets, full changelog history.",
+    "assets": [
+      {
+        "name": "optima-aeo.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-aeo-v0.2.4.4/optima-aeo.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-accessibility-v0.1.12.4",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.12.4 (2026-10-31)\n\n- Optima release of upstream 0.1.12.\n- **The Plugins screen shows auto-updates as on.** The updater now reports the newest release even when the plugin is already on it, so WordPress lists Optima plugins as up to date and shows \"Auto-updates enabled\" instead of a blank column and an \"Auto-updates Disabled\" count. Optima plugins were already updating themselves; only the label was wrong.\n- Optima layer revision 4: the port now carries the Optima-only work itself: editable pages in Optima Core, site-font widgets, full changelog history.",
+    "assets": [
+      {
+        "name": "optima-accessibility.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-accessibility-v0.1.12.4/optima-accessibility.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-team-v0.1.7.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.7.3 (2026-10-28)\n\n- Optima release of upstream 0.1.7.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-team.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-team-v0.1.7.3/optima-team.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-sitecheck-v0.2.2.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.2.3 (2026-10-28)\n\n- Optima release of upstream 0.2.2.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.\n- The emailed site check report uses IBM Plex Sans (email clients cannot inherit a site font), with system-ui, Helvetica and Arial as fallbacks.",
+    "assets": [
+      {
+        "name": "optima-sitecheck.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-sitecheck-v0.2.2.3/optima-sitecheck.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-reviews-v0.5.3.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.5.3.3 (2026-10-28)\n\n- Optima release of upstream 0.5.3.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.\n- Ask for reviews and Inbox screens load and use IBM Plex Sans in place of Nunito Sans. The review page's default heading and body font is now IBM Plex Sans (added to the font list). Saved font choices, including Nunito Sans, are kept.",
+    "assets": [
+      {
+        "name": "optima-reviews.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-reviews-v0.5.3.3/optima-reviews.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-results-v0.1.7.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.7.3 (2026-10-28)\n\n- Optima release of upstream 0.1.7.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-results.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-results-v0.1.7.3/optima-results.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-redirects-v0.1.6.4",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.6.4 (2026-10-28)\n\n- **Fix: a new redirect works the moment it is saved.** Saving a redirect checked the old address first, which cached \"no redirect here\", and the cache clear that followed did nothing on WP Engine's object cache. New and imported redirects returned 404 for up to an hour (found on staging after the 27-row import). Lookups now use a generation number that every change bumps. Same fix as upstream 0.1.8.",
+    "assets": [
+      {
+        "name": "optima-redirects.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-redirects-v0.1.6.4/optima-redirects.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-redirects-v0.1.6.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.6.3 (2026-10-28)\n\n- Optima release of upstream 0.1.6.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-redirects.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-redirects-v0.1.6.3/optima-redirects.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-partners-v0.1.0.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.0.3 (2026-10-28)\n\n- Optima release of upstream 0.1.0.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-partners.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-partners-v0.1.0.3/optima-partners.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-optimize-v0.9.1.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.9.1.3 (2026-10-28)\n\n- Optima release of upstream 0.9.1.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-optimize.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-optimize-v0.9.1.3/optima-optimize.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-members-v0.3.1.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.3.1.3 (2026-10-28)\n\n- Optima release of upstream 0.3.1.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-members.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-members-v0.3.1.3/optima-members.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-hours-v0.1.6.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.6.3 (2026-10-28)\n\n- Optima release of upstream 0.1.6.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-hours.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-hours-v0.1.6.3/optima-hours.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-events-v0.14.1.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.14.1.3 (2026-10-28)\n\n- Optima release of upstream 0.14.1.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-events.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-events-v0.14.1.3/optima-events.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-core-v1.6.0.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.6.0.1 (2026-10-28)\n\n- Editable pages (upstream 1.6.0 feature, Optima revision 1). A designed page's words and photos are edited on the page in the block editor; the layout, icons and theme parts stay locked with WordPress's content-only lock. Themes opt in with `add_theme_support( 'optima-editable-pages', array( 'content_dir' => ..., 'editor_css' => array( ... ) ) )` and call `optima_core_render_editable()` where the page body goes. Five blocks (`optima/box`, `optima/text`, `optima/image`, `optima/frozen`, `optima/part`), a Page photos panel, theme parts through the `optima_core_editable_part` filter, import that fills empty pages and refreshes untouched ones but never overwrites an edited page, and FAQ structured data rebuilt from the visible questions (`optima_schema_graph`, or `optima_core_editable_faq()` for themes that print their own schema).\n- Administrators can rearrange a page with WordPress's \"Edit pattern\" button; clients and editors get the lock on the whole editor and no unlock button.\n- Build tool for client repos: `tools/editable-pages/build_blocks.py` (not shipped in the plugin).\n- Nothing changes for themes that do not opt in.",
+    "assets": [
+      {
+        "name": "optima-core.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-core-v1.6.0.1/optima-core.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-core-v1.5.1.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.5.1.3 (2026-10-28)\n\n- Optima release of upstream 1.5.1.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-core.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-core-v1.5.1.3/optima-core.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-contact-v0.1.9.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.9.3 (2026-10-28)\n\n- Optima release of upstream 0.1.9.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.\n- The call buttons take their font from the site (`font-family: inherit`) instead of naming Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-contact.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-contact-v0.1.9.3/optima-contact.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-chat-v0.2.2.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.2.3 (2026-10-28)\n\n- Optima release of upstream 0.2.2.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.\n- The chat widget takes its font from the site (`font-family: inherit`) instead of naming Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-chat.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-chat-v0.2.2.3/optima-chat.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-cards-v1.0.19.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.0.19.3 (2026-10-28)\n\n- Optima release of upstream 1.0.19.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.\n- The Font field's example names IBM Plex Sans instead of Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-cards.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-cards-v1.0.19.3/optima-cards.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.4.6",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.4.6 (2026-10-28)\n\n- **Fix: Direct answers no longer counts password-protected pages.** A private partner page (WordPress page password) is read by no visitor and no AI tool, but it was checked as a main page and counted as one without answers. It is skipped like the legal pages. The count catches up at the next scan (within 12 hours).",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.4.6/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.4.5",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.4.5 (2026-10-28)\n\n- Brings two fixes from a side branch into the main line, on top of revision 3 (staging ran 0.7.4.4 from that branch, so the main line now moves past it):\n  - Site health, Search engines: a staging copy behind the host's password protection, or one the theme already marks noindex, reads \"Kept out on staging\" instead of asking for a password that is already on.\n  - Features screen: recommended cards no longer show a stray \"01\" counter.\n- Features screen: AI search is listed under \"Not used on this site\" with the Optima Digital theme, which already runs llms.txt, the AI crawler rules and the question-and-answer blocks. Running both replaced the theme's guide with a generic one.\n- Revision 3 (already in 0.7.4.3): IBM Plex Sans on admin screens; the section nav shows on every list screen; settings tabs say \"settings\".",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.4.5/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.4.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.4.3 (2026-10-28)\n\n- Optima release of upstream 0.7.4.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.4.3/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-analytics-v0.1.13.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.13.3 (2026-10-28)\n\n- Optima release of upstream 0.1.13.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.\n- The cookie notice takes its font from the site (`font-family: inherit`) instead of naming Nunito Sans, so it matches whatever theme it sits on.",
+    "assets": [
+      {
+        "name": "optima-analytics.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-analytics-v0.1.13.3/optima-analytics.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-aeo-v0.2.2.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.2.3 (2026-10-28)\n\n- Optima release of upstream 0.2.2.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-aeo.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-aeo-v0.2.2.3/optima-aeo.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-accessibility-v0.1.10.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.10.3 (2026-10-28)\n\n- Optima release of upstream 0.1.10.\n- Optima layer revision 3: the Optima admin screens use IBM Plex Sans for body text (Optima design system v2, October 2026), replacing Nunito Sans.",
+    "assets": [
+      {
+        "name": "optima-accessibility.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-accessibility-v0.1.10.3/optima-accessibility.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-team-v0.1.7.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.7.2 (2026-10-27)\n\n- Optima release of upstream 0.1.7.",
+    "assets": [
+      {
+        "name": "optima-team.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-team-v0.1.7.2/optima-team.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-team-v0.1.7.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.7.1 (2026-10-27)\n\n- Optima release of upstream 0.1.7.",
+    "assets": [
+      {
+        "name": "optima-team.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-team-v0.1.7.1/optima-team.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-team-v0.1.7",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.7 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-team.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-team-v0.1.7/optima-team.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-sitecheck-v0.2.2.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.2.2 (2026-10-27)\n\n- Optima release of upstream 0.2.2.",
+    "assets": [
+      {
+        "name": "optima-sitecheck.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-sitecheck-v0.2.2.2/optima-sitecheck.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-sitecheck-v0.2.2.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.2.1 (2026-10-27)\n\n- Optima release of upstream 0.2.2.",
+    "assets": [
+      {
+        "name": "optima-sitecheck.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-sitecheck-v0.2.2.1/optima-sitecheck.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-sitecheck-v0.2.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.2 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-sitecheck.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-sitecheck-v0.2.2/optima-sitecheck.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-reviews-v0.5.3.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.5.3.2 (2026-10-27)\n\n- Optima release of upstream 0.5.3.",
+    "assets": [
+      {
+        "name": "optima-reviews.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-reviews-v0.5.3.2/optima-reviews.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-reviews-v0.5.3.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.5.3.1 (2026-10-27)\n\n- Optima release of upstream 0.5.3.",
+    "assets": [
+      {
+        "name": "optima-reviews.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-reviews-v0.5.3.1/optima-reviews.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-reviews-v0.5.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.5.3 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-reviews.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-reviews-v0.5.3/optima-reviews.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-results-v0.1.7.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.7.2 (2026-10-27)\n\n- Optima release of upstream 0.1.7.",
+    "assets": [
+      {
+        "name": "optima-results.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-results-v0.1.7.2/optima-results.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-results-v0.1.7.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.7.1 (2026-10-27)\n\n- Optima release of upstream 0.1.7.",
+    "assets": [
+      {
+        "name": "optima-results.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-results-v0.1.7.1/optima-results.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-results-v0.1.7",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.7 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-results.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-results-v0.1.7/optima-results.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-redirects-v0.1.6.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.6.2 (2026-10-27)\n\n- Optima release of upstream 0.1.6.",
+    "assets": [
+      {
+        "name": "optima-redirects.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-redirects-v0.1.6.2/optima-redirects.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-redirects-v0.1.6.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.6.1 (2026-10-27)\n\n- Optima release of upstream 0.1.6.",
+    "assets": [
+      {
+        "name": "optima-redirects.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-redirects-v0.1.6.1/optima-redirects.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-redirects-v0.1.6",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.6 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-redirects.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-redirects-v0.1.6/optima-redirects.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-partners-v0.1.0.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.0.2 (2026-10-27)\n\n- Optima release of upstream 0.1.0.",
+    "assets": [
+      {
+        "name": "optima-partners.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-partners-v0.1.0.2/optima-partners.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-partners-v0.1.0.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.0.1 (2026-10-27)\n\n- Optima release of upstream 0.1.0.",
+    "assets": [
+      {
+        "name": "optima-partners.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-partners-v0.1.0.1/optima-partners.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-partners-v0.1.0",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.0 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-partners.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-partners-v0.1.0/optima-partners.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-optimize-v0.9.1.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.9.1.2 (2026-10-27)\n\n- Optima release of upstream 0.9.1.",
+    "assets": [
+      {
+        "name": "optima-optimize.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-optimize-v0.9.1.2/optima-optimize.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-optimize-v0.9.1.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.9.1.1 (2026-10-27)\n\n- Optima release of upstream 0.9.1.",
+    "assets": [
+      {
+        "name": "optima-optimize.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-optimize-v0.9.1.1/optima-optimize.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-optimize-v0.9.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.9.1 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-optimize.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-optimize-v0.9.1/optima-optimize.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-members-v0.3.1.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.3.1.2 (2026-10-27)\n\n- Optima release of upstream 0.3.1.",
+    "assets": [
+      {
+        "name": "optima-members.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-members-v0.3.1.2/optima-members.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-members-v0.3.1.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.3.1.1 (2026-10-27)\n\n- Optima release of upstream 0.3.1.",
+    "assets": [
+      {
+        "name": "optima-members.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-members-v0.3.1.1/optima-members.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-members-v0.3.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.3.1 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-members.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-members-v0.3.1/optima-members.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-hours-v0.1.6.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.6.2 (2026-10-27)\n\n- Optima release of upstream 0.1.6.",
+    "assets": [
+      {
+        "name": "optima-hours.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-hours-v0.1.6.2/optima-hours.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-hours-v0.1.6.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.6.1 (2026-10-27)\n\n- Optima release of upstream 0.1.6.",
+    "assets": [
+      {
+        "name": "optima-hours.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-hours-v0.1.6.1/optima-hours.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-hours-v0.1.6",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.6 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-hours.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-hours-v0.1.6/optima-hours.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-forms-guard-v0.2.0.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.0.2 (2026-10-27)\n\n- Optima release of upstream 0.2.0.",
+    "assets": [
+      {
+        "name": "optima-forms-guard.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-forms-guard-v0.2.0.2/optima-forms-guard.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-forms-guard-v0.2.0.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.0.1 (2026-10-27)\n\n- Optima release of upstream 0.2.0.",
+    "assets": [
+      {
+        "name": "optima-forms-guard.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-forms-guard-v0.2.0.1/optima-forms-guard.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-forms-guard-v0.2.0",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.0 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-forms-guard.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-forms-guard-v0.2.0/optima-forms-guard.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-events-v0.14.1.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.14.1.2 (2026-10-27)\n\n- Optima release of upstream 0.14.1.",
+    "assets": [
+      {
+        "name": "optima-events.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-events-v0.14.1.2/optima-events.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-events-v0.14.1.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.14.1.1 (2026-10-27)\n\n- Optima release of upstream 0.14.1.",
+    "assets": [
+      {
+        "name": "optima-events.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-events-v0.14.1.1/optima-events.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-events-v0.14.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.14.1 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-events.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-events-v0.14.1/optima-events.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-crm-v0.1.0.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.0.2 (2026-10-27)\n\n- Optima release of upstream 0.1.0.",
+    "assets": [
+      {
+        "name": "optima-crm.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-crm-v0.1.0.2/optima-crm.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-crm-v0.1.0.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.0.1 (2026-10-27)\n\n- Optima release of upstream 0.1.0.",
+    "assets": [
+      {
+        "name": "optima-crm.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-crm-v0.1.0.1/optima-crm.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-crm-v0.1.0",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.0 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-crm.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-crm-v0.1.0/optima-crm.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-core-v1.5.1.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.5.1.2 (2026-10-27)\n\n- Optima release of upstream 1.5.1.",
+    "assets": [
+      {
+        "name": "optima-core.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-core-v1.5.1.2/optima-core.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-core-v1.5.1.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.5.1.1 (2026-10-27)\n\n- Optima release of upstream 1.5.1.",
+    "assets": [
+      {
+        "name": "optima-core.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-core-v1.5.1.1/optima-core.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-core-v1.5.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.5.1 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-core.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-core-v1.5.1/optima-core.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-contact-v0.1.9.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.9.2 (2026-10-27)\n\n- Optima release of upstream 0.1.9.",
+    "assets": [
+      {
+        "name": "optima-contact.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-contact-v0.1.9.2/optima-contact.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-contact-v0.1.9.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.9.1 (2026-10-27)\n\n- Optima release of upstream 0.1.9.",
+    "assets": [
+      {
+        "name": "optima-contact.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-contact-v0.1.9.1/optima-contact.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-contact-v0.1.9",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.9 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-contact.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-contact-v0.1.9/optima-contact.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-chat-v0.2.2.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.2.2 (2026-10-27)\n\n- Optima release of upstream 0.2.2.",
+    "assets": [
+      {
+        "name": "optima-chat.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-chat-v0.2.2.2/optima-chat.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-chat-v0.2.2.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.2.1 (2026-10-27)\n\n- Optima release of upstream 0.2.2.",
+    "assets": [
+      {
+        "name": "optima-chat.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-chat-v0.2.2.1/optima-chat.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-chat-v0.2.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.2 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-chat.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-chat-v0.2.2/optima-chat.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-cards-v1.0.19.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.0.19.2 (2026-10-27)\n\n- Optima release of upstream 1.0.19.",
+    "assets": [
+      {
+        "name": "optima-cards.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-cards-v1.0.19.2/optima-cards.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-cards-v1.0.19.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.0.19.1 (2026-10-27)\n\n- Optima release of upstream 1.0.19.",
+    "assets": [
+      {
+        "name": "optima-cards.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-cards-v1.0.19.1/optima-cards.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-cards-v1.0.19",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 1.0.19 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-cards.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-cards-v1.0.19/optima-cards.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.4.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.4.2 (2026-10-27)\n\n- Optima release of upstream 0.7.4.",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.4.2/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.4.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.4.1 (2026-10-27)\n\n- Optima release of upstream 0.7.4.",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.4.1/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.4",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.4 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.4/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-build-v0.7.3",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.7.3 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-build.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-build-v0.7.3/optima-build.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-analytics-v0.1.13.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.13.2 (2026-10-27)\n\n- Optima release of upstream 0.1.13.",
+    "assets": [
+      {
+        "name": "optima-analytics.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-analytics-v0.1.13.2/optima-analytics.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-analytics-v0.1.13.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.13.1 (2026-10-27)\n\n- Optima release of upstream 0.1.13.",
+    "assets": [
+      {
+        "name": "optima-analytics.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-analytics-v0.1.13.1/optima-analytics.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-analytics-v0.1.13",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.13 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-analytics.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-analytics-v0.1.13/optima-analytics.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-aeo-v0.2.2.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.2.2 (2026-10-27)\n\n- Optima release of upstream 0.2.2.",
+    "assets": [
+      {
+        "name": "optima-aeo.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-aeo-v0.2.2.2/optima-aeo.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-aeo-v0.2.2.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.2.1 (2026-10-27)\n\n- Optima release of upstream 0.2.2.",
+    "assets": [
+      {
+        "name": "optima-aeo.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-aeo-v0.2.2.1/optima-aeo.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-aeo-v0.2.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.2.2 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-aeo.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-aeo-v0.2.2/optima-aeo.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-accessibility-v0.1.10.2",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.10.2 (2026-10-27)\n\n- Optima release of upstream 0.1.10.",
+    "assets": [
+      {
+        "name": "optima-accessibility.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-accessibility-v0.1.10.2/optima-accessibility.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-accessibility-v0.1.10.1",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.10.1 (2026-10-27)\n\n- Optima release of upstream 0.1.10.",
+    "assets": [
+      {
+        "name": "optima-accessibility.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-accessibility-v0.1.10.1/optima-accessibility.zip"
+      }
+    ]
+  },
+  {
+    "tag_name": "optima-accessibility-v0.1.10",
+    "draft": false,
+    "prerelease": false,
+    "body": "## 0.1.10 (2026-10-27)",
+    "assets": [
+      {
+        "name": "optima-accessibility.zip",
+        "browser_download_url": "https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-accessibility-v0.1.10/optima-accessibility.zip"
+      }
+    ]
+  }
+]
