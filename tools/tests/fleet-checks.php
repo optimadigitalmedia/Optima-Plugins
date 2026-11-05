@@ -89,6 +89,7 @@ t_reset();
 plugin( 'optima-build', '0.6.7-test.1' );
 feed( array( 'optima-build-v0.7.8' ) );
 $r = Optima_Hub_Health::test_builds();
+$r['note'] .= ' ' . implode( ' ', (array) ( $r['list'] ?? array() ) ); // Release 3: one line, the details in the list.
 ok( 'warn' === $r['state'] && false !== strpos( $r['note'], 'Optima Build 0.6.7-test.1 is a test build' ) && false !== strpos( $r['note'], 'once 0.6.7 is released' ), 'a -test version: warn, names it and the release it waits for' );
 
 t_reset();
@@ -96,12 +97,14 @@ plugin( 'optima-forms-guard', '0.3.0' );
 plugin( 'optima-build', '0.6.7' );
 feed( array( 'optima-forms-guard-v0.2.0', 'optima-build-v0.6.6' ) );
 $r = Optima_Hub_Health::test_builds();
+$r['note'] .= ' ' . implode( ' ', (array) ( $r['list'] ?? array() ) );
 ok( 'warn' === $r['state'] && '2 plugins' === $r['value'] && false !== strpos( $r['note'], 'Optima Forms Guard 0.3.0 is newer than the newest release (0.2.0)' ), 'newer than any release: warn, 2 plugins' );
 
 t_reset();
 plugin( 'optima-forms-guard', '0.3.0' );
 feed( array( 'optima-build-v0.7.8' ) );
 $r = Optima_Hub_Health::test_builds();
+$r['note'] .= ' ' . implode( ' ', (array) ( $r['list'] ?? array() ) );
 ok( 'warn' === $r['state'] && false !== strpos( $r['note'], 'has no release yet' ), 'no release at all: warn, has no release yet' );
 
 t_reset();
@@ -127,6 +130,7 @@ t_reset();
 plugin( 'optima-core', '1.6.0.10' );
 feed( array( 'optima-core-v1.6.0.9', 'optima-core-v1.6.0.10' ), array( 'optima-core-v1.6.0.10' ) );
 $r = Optima_Hub_Health::test_builds();
+$r['note'] .= ' ' . implode( ' ', (array) ( $r['list'] ?? array() ) );
 ok( 'warn' === $r['state'] && false !== strpos( $r['note'], 'newer than the newest release (1.6.0.9)' ), 'stable site running a test release: still warned, as before' );
 ok( null === Optima_Hub_Health::release_channel(), 'stable site: no Release channel row' );
 $GLOBALS['t']['options']['optima_hub_channel'] = 'test';

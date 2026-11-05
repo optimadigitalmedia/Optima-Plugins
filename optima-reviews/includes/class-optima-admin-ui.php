@@ -192,7 +192,7 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 		 * filter, the theme's custom logo, the Site Icon; with none, the site name.
 		 */
 		private static function lockup(): void {
-			$name = trim( (string) preg_split( '/\s+[|–—-]\s+/u', wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES ) )[0] );
+			$name = trim( (string) preg_split( '/\s+[|\x{2013}\x{2014}-]\s+/u', wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES ) )[0] );
 			$logo = (string) apply_filters( 'optima_admin_client_logo', '' );
 			if ( '' === $logo ) {
 				$id   = (int) get_theme_mod( 'custom_logo' );
