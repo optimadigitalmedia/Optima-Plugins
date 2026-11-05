@@ -17,6 +17,16 @@ final class Optima_Hub_Dashboard {
 
 	public static function boot(): void {
 		add_action( 'wp_dashboard_setup', array( __CLASS__, 'register' ) );
+		// One answer about the site on the Dashboard: Optima's box, first, with no
+		// Welcome panel above it and no second site-health box beside it.
+		add_action( 'wp_dashboard_setup', array( __CLASS__, 'tidy' ), 99 );
+		add_action( 'load-index.php', static fn() => remove_action( 'welcome_panel', 'wp_welcome_panel' ) );
+	}
+
+	/** Remove WordPress's own Site Health box: Optima's box already says how the site is. */
+	public static function tidy(): void {
+		remove_meta_box( 'dashboard_site_health', 'dashboard', 'normal' );
+		remove_meta_box( 'dashboard_site_health', 'dashboard', 'side' );
 	}
 
 	public static function register(): void {
@@ -41,18 +51,8 @@ final class Optima_Hub_Dashboard {
 		}
 		$totals = Optima_Reviews_Query::totals();
 		$top    = $totals[0] ?? null;
-		$new    = class_exists( 'Optima_Reviews_Google_Sync' ) ? count(
-			get_posts(
-				array(
-					'post_type'      => Optima_Reviews_Post_Type::TYPE,
-					'post_status'    => 'any',
-					'fields'         => 'ids',
-					'posts_per_page' => 50,
-					'meta_key'       => Optima_Reviews_Google_Sync::META_NEW, // phpcs:ignore WordPress.DB.SlowDBQuery
-					'meta_value'     => '1', // phpcs:ignore WordPress.DB.SlowDBQuery
-				)
-			)
-		) : 0;
+		// The same count the Review inbox and the Inbox show.
+		$new    = class_exists( 'Optima_Reviews_Inbox' ) ? count( Optima_Reviews_Inbox::items() ) : 0;
 		$list   = admin_url( 'edit.php?post_type=' . Optima_Reviews_Post_Type::TYPE );
 		?>
 		<p class="sd-reviews">
@@ -107,7 +107,12 @@ final class Optima_Hub_Dashboard {
 		$count  = Optima_Hub_Inbox::count();
 		?>
 		<style>
+			#<?php echo esc_attr( self::ID ); ?> .postbox-header .hndle{justify-content:flex-start}
 			#<?php echo esc_attr( self::ID ); ?> .hndle::before{content:""; display:inline-block; width:12px; height:15px; margin-right:8px; background:#1272C4; clip-path:polygon(35% 0,100% 0,100% 65%,76% 41%,17% 100%,0 83%,59% 24%); vertical-align:-2px}
+			#<?php echo esc_attr( self::ID ); ?> .button{border-radius:10px; border-color:#C9D3E1; color:#1B2150}
+			#<?php echo esc_attr( self::ID ); ?> .button-primary{background:#1272C4; border-color:#1272C4; color:#fff}
+			#<?php echo esc_attr( self::ID ); ?> .button-primary:hover{background:#0D5490; border-color:#0D5490}
+			#<?php echo esc_attr( self::ID ); ?> a:not(.button){color:#0F63AB}
 			.sd-status{display:grid; grid-template-columns:10px 1fr; gap:8px; align-items:start; margin:4px 0 12px; font-size:14px}
 			.sd-status strong{font-weight:600}
 			.sd-dot{width:8px; height:8px; border-radius:50%; margin-top:6px; background:#0B6B3A}

@@ -25,6 +25,68 @@ final class Optima_Hub_Inbox {
 	/** @var array<string, array>|null Built once per request. */
 	private static $kinds = null;
 
+	/** @var array|null Change requests, built once per request. */
+	private static $requests = null;
+
+	/**
+	 * Change requests that are not done, in the same shape as an Inbox kind.
+	 * They are counted on their own (Overview's Requests list, the Request a
+	 * change tab), not in the Inbox count, so no screen counts one item twice
+	 * (dashboard audit, Overview and Inbox).
+	 *
+	 * @return array{label:string, who:string, count:int, url:string, link:string, cap:string, rows:array}
+	 */
+	public static function requests(): array {
+		if ( null !== self::$requests ) {
+			return self::$requests;
+		}
+		// Change requests the team has not marked Done.
+		$open = get_posts(
+			array(
+				'post_type'      => Optima_Hub_Requests::TYPE,
+				'post_status'    => 'private',
+				'posts_per_page' => -1,
+				'orderby'        => 'date',
+				'order'          => 'DESC',
+				'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery
+					'relation' => 'OR',
+					array(
+						'key'     => Optima_Hub_Requests::META_STATUS,
+						'value'   => 'done',
+						'compare' => '!=',
+					),
+					array(
+						'key'     => Optima_Hub_Requests::META_STATUS,
+						'compare' => 'NOT EXISTS',
+					),
+				),
+			)
+		);
+		$rows = array();
+		foreach ( array_slice( $open, 0, self::SHOW ) as $post ) {
+			$status = (string) get_post_meta( $post->ID, Optima_Hub_Requests::META_STATUS, true );
+			$status = isset( Optima_Hub_Requests::STATUSES[ $status ] ) ? $status : 'received';
+			$rows[] = array(
+				'title' => get_the_title( $post ),
+				'note'  => get_the_date( 'M j, Y', $post ),
+				'url'   => Optima_Hub_Admin::url( 'requests' ),
+				'state' => $status,
+				'pill'  => Optima_Hub_Requests::STATUSES[ $status ],
+			);
+		}
+		self::$requests = array(
+			'label' => __( 'Change requests', 'optima-build' ),
+			'who'   => 'optima',
+			'count' => count( $open ),
+			'url'   => Optima_Hub_Admin::url( 'requests' ),
+			'link'  => __( 'Open Request a change', 'optima-build' ),
+			'cap'   => Optima_Hub_Lock::VIEW,
+			'rows'  => $rows,
+		);
+
+		return self::$requests;
+	}
+
 	public static function boot(): void {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ), 16 );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
@@ -74,50 +136,6 @@ final class Optima_Hub_Inbox {
 		}
 		$kinds = array();
 
-		// Change requests the team has not marked Done.
-		$open = get_posts(
-			array(
-				'post_type'      => Optima_Hub_Requests::TYPE,
-				'post_status'    => 'private',
-				'posts_per_page' => -1,
-				'orderby'        => 'date',
-				'order'          => 'DESC',
-				'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery
-					'relation' => 'OR',
-					array(
-						'key'     => Optima_Hub_Requests::META_STATUS,
-						'value'   => 'done',
-						'compare' => '!=',
-					),
-					array(
-						'key'     => Optima_Hub_Requests::META_STATUS,
-						'compare' => 'NOT EXISTS',
-					),
-				),
-			)
-		);
-		$rows = array();
-		foreach ( array_slice( $open, 0, self::SHOW ) as $post ) {
-			$status = (string) get_post_meta( $post->ID, Optima_Hub_Requests::META_STATUS, true );
-			$status = isset( Optima_Hub_Requests::STATUSES[ $status ] ) ? $status : 'received';
-			$rows[] = array(
-				'title' => get_the_title( $post ),
-				'note'  => get_the_date( 'M j, Y', $post ),
-				'url'   => Optima_Hub_Admin::url( 'requests' ),
-				'state' => $status,
-				'pill'  => Optima_Hub_Requests::STATUSES[ $status ],
-			);
-		}
-		$kinds['requests'] = array(
-			'label' => __( 'Change requests', 'optima-build' ),
-			'who'   => 'optima',
-			'count' => count( $open ),
-			'url'   => Optima_Hub_Admin::url( 'requests' ),
-			'link'  => __( 'Open Request a change', 'optima-build' ),
-			'cap'   => Optima_Hub_Lock::VIEW,
-			'rows'  => $rows,
-		);
-
 		// Chat questions nobody has answered yet.
 		if ( class_exists( 'Optima_Chat' ) && post_type_exists( Optima_Chat::CPT ) ) {
 			$questions = get_posts(
@@ -151,19 +169,10 @@ final class Optima_Hub_Inbox {
 		}
 
 		// New reviews and notes from the review page, waiting in the Review inbox.
-		if ( class_exists( 'Optima_Reviews_Post_Type' ) && class_exists( 'Optima_Reviews_Google_Sync' ) && post_type_exists( Optima_Reviews_Post_Type::TYPE ) ) {
-			$waiting = get_posts(
-				array(
-					'post_type'      => Optima_Reviews_Post_Type::TYPE,
-					'post_status'    => 'draft',
-					'posts_per_page' => -1,
-					'orderby'        => 'date',
-					'order'          => 'DESC',
-					'meta_key'       => Optima_Reviews_Google_Sync::META_NEW, // phpcs:ignore WordPress.DB.SlowDBQuery
-					'meta_value'     => '1', // phpcs:ignore WordPress.DB.SlowDBQuery
-				)
-			);
-			$inbox = admin_url( 'admin.php?page=' . ( class_exists( 'Optima_Reviews_Inbox' ) ? Optima_Reviews_Inbox::PAGE : 'optima-reviews-inbox' ) );
+		if ( class_exists( 'Optima_Reviews_Inbox' ) && class_exists( 'Optima_Reviews_Post_Type' ) && post_type_exists( Optima_Reviews_Post_Type::TYPE ) ) {
+			// The same list the Review inbox shows and the Reviews notice counts.
+			$waiting = class_exists( 'Optima_Reviews_Inbox' ) ? Optima_Reviews_Inbox::items() : array();
+			$inbox = admin_url( 'admin.php?page=' . Optima_Reviews_Inbox::PAGE );
 			$split = array( 'reviews' => array(), 'notes' => array() );
 			foreach ( $waiting as $post ) {
 				$note = class_exists( 'Optima_Reviews_Notes' ) && Optima_Reviews_Notes::from_website( $post->ID );
@@ -271,34 +280,23 @@ final class Optima_Hub_Inbox {
 		if ( ! current_user_can( Optima_Hub_Lock::VIEW ) ) {
 			return;
 		}
-		$kinds = self::kinds();
-		$count = self::count();
+		$kinds = array_filter( self::kinds(), static fn( $k ) => $k['count'] > 0 );
 		Optima_Admin_UI::open(
 			__( 'Inbox', 'optima-build' ),
-			__( 'Everything waiting on a person: change requests, chat questions, new reviews and notes from your review page. Each one opens the screen that handles it.', 'optima-build' )
+			__( 'Everything waiting on a person: chat questions, new reviews, notes from the review page and pages that need a reviewer. Each one opens the screen that handles it. Change requests are on Request a change.', 'optima-build' )
 		);
-		?>
-		<section class="sh-box">
-			<div class="sh-status <?php echo $count ? 'is-warn' : 'is-good'; ?>">
-				<span class="sh-dot" aria-hidden="true"></span>
-				<p class="sh-value">
-					<?php
-					echo esc_html(
-						$count
-							/* translators: %d: items waiting */
-							? sprintf( _n( '%d item waiting', '%d items waiting', $count, 'optima-build' ), $count )
-							: __( 'Nothing waiting', 'optima-build' )
-					);
-					?>
-				</p>
-			</div>
-		</section>
-		<div class="sh-grid sh-grid-2">
-			<?php foreach ( $kinds as $kind ) : ?>
-				<?php self::box( $kind ); ?>
-			<?php endforeach; ?>
-		</div>
-		<?php
+		if ( ! $kinds ) {
+			echo '<section class="sh-box"><p class="sh-value" style="margin:0">' . esc_html__( 'Nothing waiting.', 'optima-build' ) . '</p></section>';
+		} else {
+			echo '<div class="sh-grid sh-grid-2">';
+			foreach ( $kinds as $kind ) {
+				self::box( $kind, false );
+			}
+			echo '</div>';
+			if ( count( $kinds ) < count( self::kinds() ) ) {
+				echo '<p class="sh-note">' . esc_html__( 'Nothing else waiting.', 'optima-build' ) . '</p>';
+			}
+		}
 		Optima_Admin_UI::close();
 	}
 }

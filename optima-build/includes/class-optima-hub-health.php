@@ -446,7 +446,9 @@ final class Optima_Hub_Health {
 			/* translators: %d: number of plugins */
 			'value'     => sprintf( _n( '%d plugin', '%d plugins', count( $notes ), 'optima-build' ), count( $notes ) ),
 			'state'     => 'warn',
-			'note'      => implode( ' ', $notes ),
+			/* translators: %d: number of plugins */
+			'note'      => sprintf( _n( '%d plugin is a test build, so it waits for a release before it updates.', '%d plugins are test builds, so they wait for a release before they update.', count( $notes ), 'optima-build' ), count( $notes ) ),
+			'list'      => $notes,
 			'link'      => admin_url( 'plugins.php' ),
 			'link_text' => __( 'Plugins', 'optima-build' ),
 		);
@@ -628,8 +630,8 @@ final class Optima_Hub_Health {
 		);
 		$https = 0 === strpos( home_url(), 'https://' );
 		$out[] = array(
-			'label' => __( 'Security lock', 'optima-build' ),
-			'value' => $https ? __( 'On', 'optima-build' ) : __( 'Off', 'optima-build' ),
+			'label' => __( 'HTTPS', 'optima-build' ),
+			'value' => $https ? __( 'Yes', 'optima-build' ) : __( 'No', 'optima-build' ),
 			'state' => $https ? 'good' : 'bad',
 			'note'  => $https ? __( 'The site loads over HTTPS.', 'optima-build' ) : __( 'The site address is not HTTPS.', 'optima-build' ),
 		);
@@ -799,8 +801,8 @@ final class Optima_Hub_Health {
 				/* translators: 1: posts with a bio, 2: posts checked */
 				'value' => sprintf( __( '%1$d of %2$d', 'optima-build' ), $with, count( $recent ) ),
 				'state' => $share >= 0.8 ? 'good' : 'warn',
-				'note'  => $share >= 0.8 ? __( 'Recent posts are signed by a person with a bio.', 'optima-build' ) : __( 'Add a short bio to each author\'s profile (Users, Profile, Biographical Info).', 'optima-build' ),
-			) + ( $share >= 0.8 ? array() : array( 'link' => admin_url( 'users.php' ), 'link_text' => __( 'Users', 'optima-build' ) ) );
+				'note'  => $share >= 0.8 ? __( 'Recent posts are signed by a person with a bio.', 'optima-build' ) : ( class_exists( 'Optima_Team' ) ? __( 'Give each post a byline from People, with a short bio on the profile.', 'optima-build' ) : __( 'Add a short bio to each author\'s profile (Users, Profile, Biographical Info).', 'optima-build' ) ),
+			) + ( $share >= 0.8 ? array() : ( class_exists( 'Optima_Team' ) ? array( 'link' => admin_url( 'admin.php?page=optima-team' ), 'link_text' => __( 'People', 'optima-build' ) ) : array( 'link' => admin_url( 'users.php' ), 'link_text' => __( 'Users', 'optima-build' ) ) ) );
 		}
 		return $out;
 	}

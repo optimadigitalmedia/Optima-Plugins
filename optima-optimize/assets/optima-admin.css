@@ -566,3 +566,9 @@ html:has(body.sh-list), body.sh-list, body.sh-list #wpcontent, body.sh-list #wpf
 .sh .sh-step-block .sh-waiting { margin-top: 4px; }
 .sh .sh-step-block .sh-waiting li { align-items: center; }
 .sh .sh-step-block details > summary { cursor: pointer; color: var(--sh-accent-text); font-weight: 600; font-size: 13px; }
+
+/* Overview: a dashboard tile not linked yet, and the facts row for a viewer. */
+.sh .sh-link-card.is-off { box-shadow: none; background: #F6F8FB; }
+.sh .sh-link-card.is-off h2 { color: var(--sh-text-3); }
+.sh .sh-glance-facts .sh-fact-item { display: flex; flex-direction: column; gap: 2px; min-width: 0; color: var(--sh-navy); }
+.sh .sh-glance-facts .sh-fact-item strong { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }

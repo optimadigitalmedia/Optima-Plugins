@@ -120,6 +120,43 @@ final class Optima_Hub_Features {
 		Optima_Hub_Themes::forget();
 		delete_site_transient( 'update_themes' );
 		wp_update_themes();
+		update_option( self::CHECKED, time(), false );
+	}
+
+	/** When Build last asked GitHub for new versions (the Check for new versions button, or by itself). */
+	const CHECKED = 'optima_hub_checked';
+
+	/** When the release list was last asked for, as a Unix time; 0 when never. */
+	public static function last_checked(): int {
+		return (int) get_option( self::CHECKED, 0 );
+	}
+
+	/**
+	 * Overview and Updates call this as they open: a release list older than an
+	 * hour is asked for again right then, so neither screen ever says "no
+	 * updates" while one is waiting (dashboard audit, Overview). One check at a
+	 * time; a check that fails leaves the old list and the old time.
+	 *
+	 * @return int When the list was last checked.
+	 */
+	public static function ensure_fresh(): int {
+		$at = self::last_checked();
+		if ( ( $at && time() - $at < self::STALE_AFTER ) || get_transient( 'optima_hub_refreshing' ) || ! current_user_can( Optima_Hub_Lock::VIEW ) ) {
+			return $at;
+		}
+		set_transient( 'optima_hub_refreshing', 1, 2 * MINUTE_IN_SECONDS );
+		self::refresh();
+		delete_transient( 'optima_hub_refreshing' );
+		return self::last_checked();
+	}
+
+	/** "Checked 5 minutes ago", or "Not checked yet". */
+	public static function checked_words(): string {
+		$at = self::last_checked();
+		return $at
+			/* translators: %s: time since, e.g. "5 minutes" */
+			? sprintf( __( 'Last checked %s ago', 'optima-build' ), human_time_diff( $at ) )
+			: __( 'Not checked yet', 'optima-build' );
 	}
 
 	/** How old the last version check may get before the Features screen asks again by itself. */
@@ -131,12 +168,8 @@ final class Optima_Hub_Features {
 	 * waits on it and the "Up to date" marks are current on the next look.
 	 */
 	public static function refresh_if_stale( int $checked ): void {
-		if ( $checked && time() - $checked < self::STALE_AFTER ) {
-			return;
-		}
-		if ( ! wp_next_scheduled( 'optima_hub_refresh_versions' ) ) {
-			wp_schedule_single_event( time(), 'optima_hub_refresh_versions' );
-		}
+		unset( $checked ); // Kept for older callers; ensure_fresh() reads its own time.
+		self::ensure_fresh();
 	}
 
 	public static function handle(): void {
@@ -167,6 +200,39 @@ final class Optima_Hub_Features {
 				'success',
 				'updates'
 			);
+		}
+		if ( 'recheck' === $do ) {
+			Optima_Hub_Health::forget_scan();
+			delete_transient( 'health-check-site-status-result' );
+			self::back( __( 'Site health checked again.', 'optima-build' ), 'success', 'updates' );
+		}
+		if ( 'update' === $do ) {
+			// Optima Build itself, or any installed feature: updated here, back to Updates.
+			if ( 'optima-build' !== $slug && ! isset( $features[ $slug ] ) ) {
+				self::back( __( 'That feature is not in the list.', 'optima-build' ), 'error', 'updates' );
+			}
+			$name   = 'optima-build' === $slug ? __( 'Optima Build', 'optima-build' ) : (string) $features[ $slug ]['name'];
+			$from   = self::status( $slug )['version'];
+			$result = self::update_plugin( $slug );
+			if ( is_wp_error( $result ) ) {
+				self::log( $slug, 'update', false, $result->get_error_message() );
+				/* translators: 1: feature name, 2: error */
+				self::back( sprintf( __( '%1$s did not update: %2$s', 'optima-build' ), $name, $result->get_error_message() ), 'error', 'updates' );
+			}
+			self::log( $slug, 'update', true, $from . ' > ' . $result );
+			/* translators: 1: feature name, 2: version */
+			self::back( sprintf( __( '%1$s is on v%2$s.', 'optima-build' ), $name, $result ), 'success', 'updates' );
+		}
+		if ( 'theme' === $do ) {
+			$result = self::update_theme();
+			if ( is_wp_error( $result ) ) {
+				self::log( 'theme', 'update', false, $result->get_error_message() );
+				/* translators: %s: error */
+				self::back( sprintf( __( 'The theme did not update: %s', 'optima-build' ), $result->get_error_message() ), 'error', 'updates' );
+			}
+			self::log( 'theme', 'update', true, $result );
+			/* translators: %s: version */
+			self::back( sprintf( __( 'The theme is on %s.', 'optima-build' ), $result ), 'success', 'updates' );
 		}
 		if ( 'refill' === $do ) {
 			// The setup file runs once per theme version. A save from a page that was
@@ -297,6 +363,82 @@ final class Optima_Hub_Features {
 		}
 		self::auto_update( 'optima-build' );
 		update_option( 'optima_hub_auto_update_sweep', time(), false );
+	}
+
+	/**
+	 * Update one installed plugin in place, the way WordPress's own Update now
+	 * does it on the Plugins screen, without leaving Build. An active plugin
+	 * stays active.
+	 *
+	 * @return string|WP_Error The new version.
+	 */
+	private static function update_plugin( string $slug ) {
+		if ( ! current_user_can( 'update_plugins' ) || ( defined( 'DISALLOW_FILE_MODS' ) && DISALLOW_FILE_MODS ) ) {
+			return new WP_Error( 'optima_hub', __( 'This site does not allow updates from the dashboard.', 'optima-build' ) );
+		}
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
+		$file    = self::file( $slug );
+		$updates = get_site_transient( 'update_plugins' );
+		if ( ! is_object( $updates ) || empty( $updates->response[ $file ] ) ) {
+			return new WP_Error( 'optima_hub', __( 'No update is waiting for it. Check for new versions first.', 'optima-build' ) );
+		}
+		if ( 'direct' !== get_filesystem_method() ) {
+			return new WP_Error( 'optima_hub', __( 'The host needs file access set to direct before plugins can be updated from here.', 'optima-build' ) );
+		}
+		$was_on  = is_plugin_active( $file );
+		$skin    = new WP_Ajax_Upgrader_Skin();
+		$results = ( new Plugin_Upgrader( $skin ) )->bulk_upgrade( array( $file ) );
+		$errors  = $skin->get_errors();
+		if ( $errors instanceof WP_Error && $errors->has_errors() ) {
+			return $errors;
+		}
+		if ( ! is_array( $results ) || empty( $results[ $file ] ) || is_wp_error( $results[ $file ] ) ) {
+			return ( is_array( $results ) && is_wp_error( $results[ $file ] ?? null ) ) ? $results[ $file ] : new WP_Error( 'optima_hub', __( 'The update did not finish.', 'optima-build' ) );
+		}
+		wp_clean_plugins_cache( true );
+		if ( $was_on && ! is_plugin_active( $file ) ) {
+			$on = activate_plugin( $file, '', false, true );
+			if ( is_wp_error( $on ) ) {
+				return $on;
+			}
+		}
+		$plugins = get_plugins();
+		return (string) ( $plugins[ $file ]['Version'] ?? '' );
+	}
+
+	/**
+	 * Update the site's theme from its own repo, in place, without leaving Build.
+	 *
+	 * @return string|WP_Error The new version.
+	 */
+	private static function update_theme() {
+		$src = Optima_Hub_Themes::source();
+		if ( ! $src ) {
+			return new WP_Error( 'optima_hub', __( 'This theme does not update itself from a repo.', 'optima-build' ) );
+		}
+		if ( ! current_user_can( 'update_themes' ) || ( defined( 'DISALLOW_FILE_MODS' ) && DISALLOW_FILE_MODS ) ) {
+			return new WP_Error( 'optima_hub', __( 'This site does not allow updates from the dashboard.', 'optima-build' ) );
+		}
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/theme.php';
+		require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
+		if ( 'direct' !== get_filesystem_method() ) {
+			return new WP_Error( 'optima_hub', __( 'The host needs file access set to direct before the theme can be updated from here.', 'optima-build' ) );
+		}
+		$skin    = new WP_Ajax_Upgrader_Skin();
+		$results = ( new Theme_Upgrader( $skin ) )->bulk_upgrade( array( $src['stylesheet'] ) );
+		$errors  = $skin->get_errors();
+		if ( $errors instanceof WP_Error && $errors->has_errors() ) {
+			return $errors;
+		}
+		$one = is_array( $results ) ? ( $results[ $src['stylesheet'] ] ?? null ) : null;
+		if ( ! $one || is_wp_error( $one ) ) {
+			return is_wp_error( $one ) ? $one : new WP_Error( 'optima_hub', __( 'The update did not finish.', 'optima-build' ) );
+		}
+		wp_clean_themes_cache();
+		return (string) wp_get_theme( $src['stylesheet'] )->get( 'Version' );
 	}
 
 	/** @return true|WP_Error */
