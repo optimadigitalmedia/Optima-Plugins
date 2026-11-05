@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.11.1 (2026-11-05)
+
+- Updates polish: Site setup and Content updates leave the Build tab row (they are blocks on Updates); their tab shows only while that screen is open.
+- Fill from theme again counts only setup sections whose plugin is active, so a section for a plugin the site does not run no longer shows Ready.
+- Last update logs Optima plugin updates, including WordPress's automatic ones ("WordPress (automatic) updated Chat assistant to v0.2.4.10").
+
 ## 0.7.11.0 (2026-11-05)
 
 - Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).

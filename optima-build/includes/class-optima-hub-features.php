@@ -29,6 +29,31 @@ final class Optima_Hub_Features {
 		add_action( 'optima_hub_refresh_versions', array( __CLASS__, 'refresh' ) );
 		add_action( 'admin_init', array( __CLASS__, 'auto_update_sweep' ) );
 		add_filter( 'auto_update_plugin', array( __CLASS__, 'hold_updates' ), 20, 2 );
+		// Every Optima plugin update lands in Recent changes, however it ran (Update now, WordPress's
+		// own screen, or the background auto-update), so Last update is never out of date.
+		add_action( 'upgrader_process_complete', array( __CLASS__, 'log_upgrade' ), 20, 2 );
+	}
+
+	/**
+	 * @param mixed $upgrader
+	 * @param array $extra
+	 */
+	public static function log_upgrade( $upgrader, $extra ): void {
+		if ( ! is_array( $extra ) || 'plugin' !== ( $extra['type'] ?? '' ) || 'update' !== ( $extra['action'] ?? '' ) ) {
+			return;
+		}
+		if ( doing_action( 'admin_post_' . self::ACTION ) ) {
+			return; // handle() logs its own updates.
+		}
+		$files = isset( $extra['plugins'] ) ? (array) $extra['plugins'] : ( isset( $extra['plugin'] ) ? array( $extra['plugin'] ) : array() );
+		foreach ( $files as $file ) {
+			$slug = dirname( (string) $file );
+			if ( 0 !== strpos( $slug, 'optima-' ) ) {
+				continue;
+			}
+			$data = function_exists( 'get_plugin_data' ) && file_exists( WP_PLUGIN_DIR . '/' . $file ) ? get_plugin_data( WP_PLUGIN_DIR . '/' . $file, false, false ) : array();
+			self::log( $slug, 'update', true, '> ' . (string) ( $data['Version'] ?? '' ) );
+		}
 	}
 
 	public static function file( string $slug ): string {
@@ -529,7 +554,7 @@ final class Optima_Hub_Features {
 			$log,
 			array(
 				'time' => time(),
-				'who'  => $user->display_name,
+				'who'  => $user->exists() ? $user->display_name : __( 'WordPress (automatic)', 'optima-build' ),
 				'slug' => $slug,
 				'do'   => $do,
 				'ok'   => $ok,
