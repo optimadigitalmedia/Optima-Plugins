@@ -641,6 +641,7 @@ final class Optima_Team_Offboard {
 			Optima_Team_Admin::SLUG
 		);
 		Optima_Team_Add::print_notice();
+		echo '<p class="sh-note"><a href="' . esc_url( admin_url( 'admin.php?page=' . Optima_Team_Admin::SLUG ) ) . '">&lsaquo; ' . esc_html__( 'Back to People', 'optima-team' ) . '</a></p>';
 		self::stepper( max( 1, $state['step'] ) );
 		if ( 0 === $state['step'] ) {
 			self::step_start( $person );

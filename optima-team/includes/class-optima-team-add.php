@@ -410,6 +410,7 @@ final class Optima_Team_Add {
 			Optima_Team_Admin::SLUG
 		);
 		self::print_notice();
+		echo '<p class="sh-note"><a href="' . esc_url( admin_url( 'admin.php?page=' . Optima_Team_Admin::SLUG ) ) . '">&lsaquo; ' . esc_html__( 'Back to People', 'optima-team' ) . '</a></p>';
 		self::stepper( $state['step'] );
 		switch ( $state['step'] ) {
 			case 2:
@@ -494,7 +495,7 @@ final class Optima_Team_Add {
 					<?php
 					echo esc_html(
 						class_exists( 'Optima_Hub_Setup' )
-							? __( 'Everyone the setup file names is already on the site.', 'optima-team' )
+							? ( Optima_Hub_Setup::data() ? __( 'Everyone the setup file names is already on the site.', 'optima-team' ) : __( 'This theme has no setup file yet, so there is nobody to pick from.', 'optima-team' ) )
 							: __( 'Optima Build is not on, so there is no setup file to pick from.', 'optima-team' )
 					);
 					?>

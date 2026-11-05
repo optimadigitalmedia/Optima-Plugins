@@ -19,7 +19,21 @@ final class Optima_Team_Admin {
 		add_filter( 'parent_file', array( __CLASS__, 'highlight' ) );
 		add_action( 'admin_init', array( __CLASS__, 'register' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
+		add_action( 'load-post-new.php', array( __CLASS__, 'one_way_in' ) );
 		add_filter( 'plugin_action_links_' . plugin_basename( OPTIMA_TEAM_FILE ), array( __CLASS__, 'action_link' ) );
+	}
+
+	/**
+	 * One way to add a person (dashboard audit, People): WordPress's own Add New
+	 * for a profile opens Add a person, which reads the setup file. The address
+	 * keeps working; it just lands there.
+	 */
+	public static function one_way_in(): void {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- reading the screen address only.
+		if ( Optima_Team::POST_TYPE === sanitize_key( wp_unslash( (string) ( $_GET['post_type'] ?? '' ) ) ) && class_exists( 'Optima_Team_Add' ) ) {
+			wp_safe_redirect( Optima_Team_Add::url() );
+			exit;
+		}
 	}
 
 	/** Nest under the site's Build section; fall back to Settings. */
@@ -122,7 +136,6 @@ final class Optima_Team_Admin {
 		}
 		$law     = Optima_Team::is_law();
 		$archive = get_post_type_archive_link( Optima_Team::POST_TYPE );
-		$add_url = admin_url( 'post-new.php?post_type=' . Optima_Team::POST_TYPE );
 
 		Optima_Admin_UI::open(
 			__( 'People', 'optima-team' ),
@@ -147,10 +160,22 @@ final class Optima_Team_Admin {
 				</p>
 				<p class="sh-note"><?php esc_html_e( 'Complete means a real photo, a role and bio, a byline, education and profile links.', 'optima-team' ); ?></p>
 			</section>
-			<section class="sh-box sh-check is-good">
+			<?php
+			// Green only means good: Off because the business type is not set yet needs a person; Off by choice is grey.
+			$type     = (string) ( Optima_Admin_UI::business()['business_type'] ?? '' );
+			$law_need = ! $law && 'auto' === $s['law'] && '' === $type;
+			$law_cls  = $law ? 'good' : ( $law_need ? 'needs' : 'off' );
+			?>
+			<section class="sh-box sh-check is-<?php echo esc_attr( $law_cls ); ?>">
 				<p class="sh-label"><?php esc_html_e( 'Law firm details', 'optima-team' ); ?></p>
-				<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php echo esc_html( $law ? __( 'On', 'optima-team' ) : __( 'Off', 'optima-team' ) ); ?></p>
-				<p class="sh-note"><?php echo esc_html( $law ? __( 'Bar admissions show for anyone marked as an attorney.', 'optima-team' ) : __( 'Bar admissions are hidden. Turn this on below for a law firm.', 'optima-team' ) ); ?></p>
+				<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php echo esc_html( $law ? __( 'On', 'optima-team' ) : ( $law_need ? __( 'Needs you', 'optima-team' ) : __( 'Off', 'optima-team' ) ) ); ?></p>
+				<p class="sh-note">
+					<?php if ( $law_need ) : ?>
+						<?php esc_html_e( 'The business type is not set, so bar admissions stay hidden.', 'optima-team' ); ?> <a href="<?php echo esc_url( Optima_Admin_UI::details_url() ); ?>"><?php esc_html_e( 'Set it in Details', 'optima-team' ); ?> &rsaquo;</a>
+					<?php else : ?>
+						<?php echo esc_html( $law ? __( 'Bar admissions show for anyone marked as an attorney.', 'optima-team' ) : __( 'Bar admissions are hidden. Turn this on below for a law firm.', 'optima-team' ) ); ?>
+					<?php endif; ?>
+				</p>
 			</section>
 		</div>
 
@@ -158,7 +183,7 @@ final class Optima_Team_Admin {
 			<h2 class="sh-title"><?php esc_html_e( 'The team', 'optima-team' ); ?></h2>
 			<p><?php esc_html_e( 'People show in order of the Order number on each profile, lowest first, then by name. Open a person to fill in their credentials.', 'optima-team' ); ?></p>
 			<?php if ( $people ) : ?>
-				<table class="widefat striped">
+				<div class="sh-scroll"><table class="widefat striped">
 					<thead><tr><th scope="col"><?php esc_html_e( 'Name', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Role', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Feeds', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Trust signals', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Status', 'optima-team' ); ?></th></tr></thead>
 					<tbody>
 					<?php foreach ( $people as $person ) : ?>
@@ -202,11 +227,10 @@ final class Optima_Team_Admin {
 						</tr>
 					<?php endforeach; ?>
 					</tbody>
-				</table>
+				</table></div>
 			<?php endif; ?>
 			<p class="sh-actions" style="margin-top:14px">
 				<a class="button button-primary" href="<?php echo esc_url( Optima_Team_Add::url() ); ?>"><?php esc_html_e( 'Add a person', 'optima-team' ); ?></a>
-				<a class="button sh-quiet" href="<?php echo esc_url( $add_url ); ?>"><?php esc_html_e( 'Blank profile', 'optima-team' ); ?></a>
 				<?php if ( $people && $archive ) : ?>
 					<a class="button sh-quiet" href="<?php echo esc_url( $archive ); ?>"><?php esc_html_e( 'View the team page', 'optima-team' ); ?></a>
 				<?php endif; ?>
@@ -249,9 +273,10 @@ final class Optima_Team_Admin {
 						<p class="description"><?php esc_html_e( 'Phones always show one column.', 'optima-team' ); ?></p></td>
 				</tr>
 			</table>
-			<?php submit_button(); ?>
+			<?php submit_button( __( 'Save', 'optima-team' ) ); ?>
 		</form>
 
+		<?php Optima_Admin_UI::dev_open(); ?>
 		<section class="sh-box">
 			<h2 class="sh-title"><?php esc_html_e( 'Show the team on a page', 'optima-team' ); ?></h2>
 			<p><?php esc_html_e( 'Paste this shortcode where the team grid should go, for example on the About page. Each card links to that person\'s profile.', 'optima-team' ); ?></p>
@@ -263,6 +288,7 @@ final class Optima_Team_Admin {
 			</table>
 			<p class="description"><?php esc_html_e( 'With Optima Analytics on, profile opens, calls and emails report as team_profile_click, team_profile_view, team_call and team_email.', 'optima-team' ); ?></p>
 		</section>
+		<?php Optima_Admin_UI::dev_close(); ?>
 		<?php
 		Optima_Admin_UI::close();
 	}
