@@ -28,7 +28,7 @@ a theme never orphans content.
 | `optima-results` | 0.1.9.8 |
 | `optima-reviews` | 0.5.5.8 |
 | `optima-sitecheck` | 0.2.4.8 |
-| `optima-team` | 0.1.9.8 |
+| `optima-team` | 0.1.10.0 |
 
 ## Install
 

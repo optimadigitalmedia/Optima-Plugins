@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.10.0 (2026-11-05)
+
+- Add a person: a three-step walkthrough on the Team screen (Optima, Your business, Team, Add a person). Step 1 picks someone the theme's setup file names who is not on the site yet, with the facts the file holds (or starts from a name and a title for someone the file does not have). Step 2 sets the photo (media library, or the file's photo brought in on creation), the byline user (nobody by default: a profile is a record, not an account), the attorney flag on a law site, and the place on the team page. Step 3 shows the trust checklist on what was gathered and creates the profile as a draft or published, then opens it. A half-finished walkthrough waits a day per operator; leaving early creates nothing. The old "Add a team member" link stays as "Blank profile". Test: `php tools/tests/team-add.php`.
+
 ## 0.1.9.8 (2026-11-04)
 
 - Shared updater: release channels. A site on the stable channel (the default) sees only normal releases, exactly as before. A site on the test channel (Optima Build, Build, Updates, Release channel, or `OPTIMA_HUB_CHANNEL` in wp-config) also sees test releases (GitHub pre-releases) and takes the newest version from either. Without Optima Build a site is always on stable. This release goes out as a normal release so every site gets the channel-aware updater; test releases start with a later release.

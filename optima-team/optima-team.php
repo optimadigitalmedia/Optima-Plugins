@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Optima Team
  * Description:       Team profiles with real credentials: role, photo, short bio, bar admissions, education, memberships, awards, military service, languages and profile links. Each person gets a profile page and Person schema, and a grid shortcode shows the whole team.
- * Version:           0.1.9.8
+ * Version:           0.1.10.0
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Author:            Optima Digital
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OPTIMA_TEAM_VERSION', '0.1.9.8' );
+define( 'OPTIMA_TEAM_VERSION', '0.1.10.0' );
 define( 'OPTIMA_TEAM_FILE', __FILE__ );
 define( 'OPTIMA_TEAM_URL', plugin_dir_url( __FILE__ ) );
 
@@ -39,12 +39,14 @@ require_once __DIR__ . '/includes/class-optima-team-editor.php';
 require_once __DIR__ . '/includes/class-optima-team-front.php';
 require_once __DIR__ . '/includes/class-optima-team-schema.php';
 require_once __DIR__ . '/includes/class-optima-team-admin.php';
+require_once __DIR__ . '/includes/class-optima-team-add.php';
 
 Optima_Team::boot();
 Optima_Team_Editor::boot();
 Optima_Team_Front::boot();
 Optima_Team_Schema::boot();
 Optima_Team_Admin::boot();
+Optima_Team_Add::boot();
 
 register_activation_hook(
 	__FILE__,
