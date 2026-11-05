@@ -25,6 +25,7 @@ final class Optima_Hub_Admin {
 
 	public static function boot(): void {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ), 15 );
+		add_action( 'admin_menu', array( __CLASS__, 'one_address' ), 1001 ); // Before menu.php refuses an address it does not know.
 		add_action( 'admin_init', array( __CLASS__, 'operators_only' ) );
 		add_filter( 'update_plugin_complete_actions', array( __CLASS__, 'back_to_build' ) );
 		add_filter( 'update_theme_complete_actions', array( __CLASS__, 'back_to_build' ) );
@@ -81,6 +82,22 @@ final class Optima_Hub_Admin {
 		$slug = 'site-build' === $parent ? 'site-build' : self::PAGE;
 		if ( get_option( 'optima_hub_page' ) !== $slug ) {
 			update_option( 'optima_hub_page', $slug, false );
+		}
+	}
+
+	/**
+	 * The hub's screens live at site-build (when the hub made the Optima menu) or
+	 * site-build-features (inside another Optima menu). A link to the other one,
+	 * from a bookmark or another site, opens the same tab here.
+	 */
+	public static function one_address(): void {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- reading the screen address only.
+		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+		$tab  = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : '';
+		// phpcs:enable
+		if ( in_array( $page, array( self::PAGE, 'site-build' ), true ) && $page !== self::page_slug() && ! wp_doing_ajax() ) {
+			wp_safe_redirect( self::url( '' !== $tab ? $tab : 'features' ) );
+			exit;
 		}
 	}
 
