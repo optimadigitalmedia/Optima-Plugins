@@ -20,7 +20,7 @@ final class Optima_Forms_Guard_Admin {
 	public static function boot(): void {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ), 20 );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
-		add_action( 'admin_init', array( __CLASS__, 'same_place' ) );
+		add_action( 'admin_menu', array( __CLASS__, 'same_place' ), 1001 ); // Before menu.php refuses an address it does not know.
 	}
 
 	/** With Optima Core on, this address opens Core's Spam protection tab, so it works on every site. */
