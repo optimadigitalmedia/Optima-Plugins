@@ -4,7 +4,7 @@ Status: **Adopted Nov 4, 2026. These rules are binding for every Optima plugin, 
 
 ## 0. Strict rules (read before touching any plugin or theme)
 
-Every rule is a MUST or a NEVER (46 rules). If a task would break one, stop and ask the site owner first.
+Every rule is a MUST or a NEVER (49 rules). If a task would break one, stop and ask the site owner first.
 
 **Who does the work**
 
@@ -22,8 +22,8 @@ Every rule is a MUST or a NEVER (46 rules). If a task would break one, stop and 
 
 **Same everywhere**
 
-9. Every site MUST have one top-level dashboard menu, **Optima**, with the same seven items in the same order (section 4a): Overview, Your business, Content, Search and AI, Site health, Inbox, Build. Build shows only to operators. By default the operators are the administrators on the agency domain (`@optimadigitalmedia.com`, with the right to manage the site's settings); a site can narrow or change that with `OPTIMA_HUB_OPERATORS` in wp-config.
-10. A feature's settings MUST live only on its tab inside one of those seven items (Optima → Your business → Contact buttons). NEVER under Settings, Tools, Appearance or a theme screen. Every existing screen keeps its address; only the sidebar, the home and the words move.
+9. Every site MUST have one top-level dashboard menu, **Optima**, with the same eight items in the same order (section 4a): Overview, People, Your business, Content, Search and AI, Site health, Inbox, Build. The dashboard is for operators: clients never sign in (site owner, 2026-11-05), so no screen carries a client-facing view, and Build shows only to operators. By default the operators are the administrators on the agency domain (`@optimadigitalmedia.com`, with the right to manage the site's settings); a site can narrow or change that with `OPTIMA_HUB_OPERATORS` in wp-config.
+10. A feature's settings MUST live only on its tab inside one of those eight items (Optima → Your business → Contact buttons). NEVER under Settings, Tools, Appearance or a theme screen. Every existing screen keeps its address; only the sidebar, the home and the words move.
 11. A theme MUST NEVER register its own admin menu for features. Design-only settings go under Optima → Build → Design.
 12. Plugin blocks MUST render only through `optima_slot( $name )` in the fixed spots in section 4a, so each feature appears in the same place on every site.
 13. Every theme MUST have the required files in section 4a (`DESIGN.md`, `optima-setup.json`, `inc/fallbacks/`, `inc/slots.php`). Every plugin MUST have the required plugin files.
@@ -82,7 +82,10 @@ Every rule is a MUST or a NEVER (46 rules). If a task would break one, stop and 
 
 44. The sidebar and the screen MUST use the same words: a sidebar item's name is the screen's title, and a tab's name is the tab's title.
 45. A fact (phone, hours, name, address) MUST be typed on one tab only. Every other screen that uses it shows it read-only with a link to that tab.
-46. Optima → Overview MUST answer three things first: is the site all right, what needs the client, and what Optima is doing. Clients never see turn-on buttons; what they want added goes through one line, "Want something added? Ask Optima".
+46. Optima → Overview MUST be one screen an operator reads in a glance and leaves from: one status line (site health, updates waiting, Inbox count), the dashboards row (Recon, analytics, Search Console, Business Profile, host, repo), the queue (Updates, Inbox, Requests, each with its one action), and one row of site facts (theme, Build, features, last release, site lock). No hero band, no second group nav, no client answers. (Amended 2026-11-05; before that: three client questions and a request box.)
+47. **People.** Every site MUST hold one profile per person (optima-team owns it). The team page, bio page, bylines, case results, "reviewed by" lines, the digital card and the Person schema MUST read from that profile and nowhere else. A profile is a record, not an account: it links to a WordPress user only where the person posts under their own login (the agency's own site). Facts on a profile come from `optima-setup.json` (exported from the client's Knowledge Hub) and words from `content/`; WordPress owns only the team-page order, the card switch, the user link and reviewed-by assignments. NEVER type a credential into the profile screen.
+48. **Offboarding.** A person leaves through four steps in this order, never a delete button: review (every page, post, result, photo, approval line, card and schema node that names them, and what happens to each), archive (profile, bio, posts, results and approvals log to the site repo under a former-people folder; photos and the review summary to the client's Drive under Former; the Knowledge Hub row to Former with the leave date), confirm (a link to the site's operator address, 24-hour expiry, opened by a signed-in operator; the starter and the confirmer are two people wherever the site has two operators), remove (everything about the person leaves the public site, every old address gets a 301, reviewed pages lose the name and go on the Inbox for a new reviewer, one removed-log line and one changelog line, staging first). A failed archive stops the flow.
+49. The admin kit MUST draw no group navigation on a screen: the WordPress sidebar is the only group nav. A screen shows its title, one lede, and at most one tab row. (Amended 2026-11-05; release 1 drew the eight groups again as a pill row inside a hero band.)
 
 
 
@@ -261,20 +264,24 @@ When a theme hands its SEO head and JSON-LD to Optima Core (jobs `seo` and `sche
 
 **In the dashboard, every site looks the same:**
 
-- One top-level menu, **Optima**, on every site, with seven items in this order:
+- One top-level menu, **Optima**, on every site, with eight items in this order (release 2; release 1 had seven, without People):
 
   | Item | Who sees it | What it holds |
   |---|---|---|
-  | Overview | Everyone | Status line, Needs you, With Optima, the client's four everyday jobs (bio, post, hours, review), one request box |
-  | Your business | Client, editor | Tabs: Details, Hours, Contact buttons, Team, Case results, Reviews, Cards. Each fact typed once; each tab says where it shows |
-  | Content | Editor | Pages and posts with dates, the site's own types, Approved copy, Redirects, Images |
-  | Search and AI | Client admin | SEO, AI search, Analytics and cookie notice, Accessibility, Spam protection; each tab shows its own checks |
-  | Site health | Everyone | The whole report, one score per group, Copy for Claude |
-  | Inbox | Client, operator | Everything waiting on a person (change requests, chat questions, new reviews, review requests), one count in the sidebar |
-  | Build | Operators only | The update queue (every update, one button each, each returning here), setup file against the site, features, health, theme and key, design tokens, the change log |
+  | Overview | Operators | The glance (rule 46): status line, dashboards row, the queue (Updates, Inbox, Requests), site facts row |
+  | People | Operators | One profile per person (rule 47): list with status and where each profile shows; a profile with tabs Profile, Bio page, Case results, Posts, Reviewed pages, Digital card, Schema; offboarding (rule 48) |
+  | Your business | Operators | Tabs: Details, Hours, Contact buttons, Case results, Reviews, Chat. Each fact typed once; each tab says where it shows and where the fact came from |
+  | Content | Operators | Pages and posts with dates, the site's own types, Approved copy, Redirects, Images |
+  | Search and AI | Operators | SEO, AI search, Analytics and cookie notice, Accessibility, Spam protection; each tab shows its own checks |
+  | Site health | Operators | The whole report, one score per group, Copy for Claude |
+  | Inbox | Operators | Everything waiting on a person (change requests, chat questions, new reviews, review requests, reviewed pages without a reviewer), one count in the sidebar |
+  | Build | Operators | The update queue (every update, one button each, each returning here), setup file against the site, features, health, theme and key, design tokens, the change log |
+
+  The agency's own site carries one more item, **Every site** (release 3): one row per site from the private fleet list plus each site's status endpoint.
 
 - **Only operators edit the site** (site lock, Optima Build, on by default since dashboard release 1). Everyone else sees Overview, Site health and Inbox and sends requests; the lock holds back editing, settings, users and plugin and theme changes without touching roles. Off: the Site lock card on Build or the `optima_build_site_lock` filter. Never applies to WP-CLI, cron or an operator, and waits (applies to nobody) until the site has at least one operator account.
-- **A feature's settings live in one place:** its tab inside one of the seven items. Never under Settings, Tools, Appearance, or a theme page.
+- **A feature's settings live in one place:** its tab inside one of the eight items. Never under Settings, Tools, Appearance, or a theme page.
+- **One nav.** The sidebar is the only group navigation (rule 49). A screen is a slim top bar (the client's logo and name, a search box that opens the WordPress Command Palette, the Optima mark), the title, one lede, and one tab row where the item has tabs.
 - **Themes put no feature settings anywhere.** A theme's own screen (if any) holds design only, under Optima → Build → Design.
 - **Look:** the Optima brand with the client's logo (the admin kit's white-label switch stays). DESIGN.md dresses the site, not the dashboard.
 - Every feature card in Build has the same buttons in the same place: Settings, Turn off, version.
@@ -297,9 +304,9 @@ When a theme hands its SEO head and JSON-LD to Optima Core (jobs `seo` and `sche
 
 **Every plugin has the same files:** `<slug>.php` (header and version), `includes/`, `assets/css/` (variables only), `readme.txt`, and the same settings-page layout from Optima Build's admin kit.
 
-**Checked by a script:** `tools/uniform-check.sh` fails if a theme is missing a required file, a theme registers a menu outside Optima, a plugin hard-codes a color, or a screen's sidebar group does not match the seven items (`tools/uniform-check.sh screens`, added with dashboard release 1: every `add_submenu_page()` address must be listed in `Optima_Admin_UI::SCREENS` in the shared admin kit).
+**Checked by a script:** `tools/uniform-check.sh` fails if a theme is missing a required file, a theme registers a menu outside Optima, a plugin hard-codes a color, or a screen's sidebar group does not match the eight items (`tools/uniform-check.sh screens`, added with dashboard release 1: every `add_submenu_page()` address must be listed in `Optima_Admin_UI::SCREENS` in the shared admin kit).
 
-**Dashboard release 1: built** (2026-11-04, Optima Build 0.7.9.10, admin kit 1.6.0.0): the seven items, Overview, Inbox, Build for operators, the WordPress Dashboard box. Plan and test notes: `docs/dashboard-redesign-plan.md`.
+**Dashboard release 1: built** (2026-11-04, Optima Build 0.7.9.10, admin kit 1.6.0.0): the seven items, Overview, Inbox, Build for operators, the WordPress Dashboard box. **Dashboard release 2: planned** (2026-11-05): operators only, the glance, one nav, People, offboarding. Plan and test notes: `docs/dashboard-redesign-plan.md`.
 
 ## 5. Order (each step on staging, head-and-schema diff before and after)
 
