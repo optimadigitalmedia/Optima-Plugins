@@ -1,0 +1,34 @@
+/* Optima Team: the Add a person walkthrough. Dashboard only; colors come from
+   the shared admin kit's variables, so the look follows the kit. */
+
+.sh .st-add-steps { list-style: none; margin: 16px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.sh .st-add-steps li { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--sh-surface); border: 1px solid var(--sh-border); color: var(--sh-text-3); font-weight: 600; }
+.sh .st-add-steps li.is-current { border: 2px solid var(--sh-accent); color: var(--sh-text); }
+.sh .st-add-steps li.is-done { color: var(--sh-text); }
+.sh .st-add-n { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: var(--sh-surface-2); color: var(--sh-text-2); font-size: 13px; font-weight: 700; flex: none; }
+.sh .st-add-steps li.is-current .st-add-n { background: var(--sh-accent); color: var(--sh-surface); }
+.sh .st-add-steps li.is-done .st-add-n { background: var(--sh-good); color: var(--sh-surface); }
+
+.sh .st-add-choices { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 8px; }
+.sh .st-add-choices label { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; align-items: center; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--sh-border); background: var(--sh-surface); cursor: pointer; margin: 0; font-weight: 400; }
+.sh .st-add-choices label:has(input:checked) { border-color: var(--sh-accent); background: var(--sh-glow); }
+.sh .st-add-choices input { grid-row: 1 / span 3; margin: 0; }
+.sh .st-add-choices strong { color: var(--sh-text); }
+.sh .st-add-choices .sh-note { margin: 0; }
+
+.sh .st-add-new { margin: 0; padding: 12px 14px; border-radius: 12px; border: 1px dashed var(--sh-border-strong); }
+.sh .st-add-new > label { font-weight: 400; margin: 0; }
+.sh .st-add-new p { margin: 8px 0 0; }
+.sh .st-add-new .sh-note { margin-top: 4px; }
+
+.sh .st-thumb { width: 96px; height: 96px; border-radius: 12px; object-fit: cover; display: block; margin-bottom: 8px; }
+
+@media (max-width: 782px) {
+	.sh .st-add-steps { grid-template-columns: 1fr; }
+}
+
+/* Offboarding shares the stepper, with four steps. */
+.sh .st-add-steps-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 782px) {
+	.sh .st-add-steps-4 { grid-template-columns: 1fr; }
+}

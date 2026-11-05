@@ -59,7 +59,7 @@ check_plugins() {
   done
 }
 
-# Every Optima admin screen sits in one of the seven groups of the Optima menu
+# Every Optima admin screen sits in one of the eight groups of the Optima menu
 # (plugin-first rules 9 and 44; dashboard release 1). Reads each add_submenu_page()
 # address from the plugins and checks it against Optima_Admin_UI::SCREENS in the
 # shared admin kit. Screens in a plugin's own top-level menu (Events, Members,
@@ -199,7 +199,7 @@ for slug, where in sorted(seen.items()):
     if g:
         print("ok    screen %s -> %s" % (slug, groups[g]))
     else:
-        print("FAIL  screen %s (%s) is in none of the seven groups: add it to Optima_Admin_UI::SCREENS" % (slug, where))
+        print("FAIL  screen %s (%s) is in none of the eight groups: add it to Optima_Admin_UI::SCREENS" % (slug, where))
         fail = 1
 sys.exit(fail)
 PY

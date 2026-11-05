@@ -17,6 +17,8 @@
  *   "hours":   { "confirmed": true, "days": { "tuesday": [ ["09:00", "17:00"] ] } },
  *   "analytics": { "gtm": "GTM-XXXXXXX" },
  *   "features":  { "use": [ "optima-core", "optima-forms-guard" ], "skip": [ "optima-chat" ] },
+ *   "dashboards": { "recon", "analytics", "search_console", "business_profile", "host" }
+ *                (https addresses; the doors on Optima -> Overview, shown only when named),
  *   "cards":   { "mode", "accent", "font", "name", "phone", "email", "city", "region", "postal",
  *                "footer", "note", "team_intro", "links_intro", "photo", "spot_heading", "spot_text",
  *                "pick_heading", "spot_label", "spot_sub", "spot_url", "logo", "share_card", "share_links",

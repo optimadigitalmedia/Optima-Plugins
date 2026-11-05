@@ -94,3 +94,9 @@
 @media (prefers-reduced-motion: reduce) {
 	.post-type-optima_team * { transition: none !important; animation: none !important; }
 }
+
+/* "This profile feeds" box on the profile editor. */
+.st-feeds { margin: 0; padding: 0; list-style: none; }
+.st-feeds li { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--sh-border, rgba(0,0,0,.08)); }
+.st-feeds li:last-child { border-bottom: 0; }
+.st-feeds-off { margin: 10px 0 0; font-weight: 600; }

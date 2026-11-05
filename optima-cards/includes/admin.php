@@ -1,6 +1,6 @@
 <?php
 /**
- * Dashboard screen: Optima -> Cards & Links (inside Optima Core's menu), or a
+ * Dashboard screen: Optima -> Cards (inside Optima Core's menu), or a
  * top-level "Site Build" section on a site without Optima Core. Everything on the
  * card and links pages is edited here and saved to the `optima_cards_settings` option.
  *
@@ -50,9 +50,9 @@ final class Optima_Cards_Admin {
 		$own = 'site-build' === $parent && ! isset( $admin_page_hooks['site-build'] );
 		if ( $own ) {
 			add_menu_page( 'Site Build', 'Site Build', 'edit_pages', 'site-build', array( __CLASS__, 'render' ), 'dashicons-id-alt', 3 );
-			add_submenu_page( 'site-build', 'Cards & Links', 'Cards & Links', 'edit_pages', 'site-build', array( __CLASS__, 'render' ) );
+			add_submenu_page( 'site-build', 'Cards', 'Cards', 'edit_pages', 'site-build', array( __CLASS__, 'render' ) );
 		}
-		add_submenu_page( $parent, 'Cards & Links', 'Cards & Links', 'edit_pages', self::SLUG, array( __CLASS__, 'render' ) );
+		add_submenu_page( $parent, 'Cards', 'Cards', 'edit_pages', self::SLUG, array( __CLASS__, 'render' ) );
 		if ( $own ) {
 			remove_submenu_page( 'site-build', self::SLUG ); // the section's first item already opens this screen
 		}
@@ -121,7 +121,7 @@ final class Optima_Cards_Admin {
 		$s      = Optima_Cards_Settings::get();
 		$n      = Optima_Cards_Settings::OPTION;
 		$people = Optima_Cards_Settings::people();
-		Optima_Admin_UI::open( 'Cards & Links', 'A digital business card for each person, a QR code to share it, and a link page for your social bios.' );
+		Optima_Admin_UI::open( 'Cards', 'A digital business card for each person, a QR code to share it, and a link page for your social bios.' );
 		if ( isset( $_GET['saved'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			echo '<div class="notice notice-success is-dismissible"><p>Saved. The card and links pages are updated. Clear the site cache if you do not see the change.</p></div>';
 		}

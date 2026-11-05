@@ -25,6 +25,7 @@ final class Optima_Results {
 		'approved'    => '_optima_result_approved',
 		'approver'    => '_optima_result_approver',
 		'approved_on' => '_optima_result_approved_on',
+		'attorney'    => '_optima_result_attorney', // A People profile (optima_team post ID), rule 47.
 	);
 
 	public static function boot(): void {
@@ -171,9 +172,14 @@ final class Optima_Results {
 		$type  = isset( self::types()[ $m['type'] ] ) ? $m['type'] : 'other';
 		$terms = get_the_terms( $post_id, self::TAXONOMY );
 		$area  = ( $terms && ! is_wp_error( $terms ) ) ? $terms[0] : null;
+		// The attorney is a People profile; a profile that is gone (offboarded) names nobody.
+		$attorney_id = (int) $m['attorney'];
+		$attorney    = $attorney_id && 'publish' === get_post_status( $attorney_id ) ? html_entity_decode( wp_strip_all_tags( get_the_title( $attorney_id ) ), ENT_QUOTES, 'UTF-8' ) : '';
 		return array(
 			'id'          => $post_id,
 			'headline'    => get_the_title( $post_id ),
+			'attorney_id' => '' !== $attorney ? $attorney_id : 0,
+			'attorney'    => $attorney,
 			'amount'      => $m['amount'],
 			'type'        => $type,
 			'type_label'  => self::type_label( $type ),

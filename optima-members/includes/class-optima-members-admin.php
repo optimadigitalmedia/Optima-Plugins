@@ -51,10 +51,10 @@ final class Optima_Members_Admin {
 
 	public static function menu(): void {
 		add_menu_page( __( 'Optima Members', 'optima-members' ), __( 'Members', 'optima-members' ), self::CAP, self::SLUG, array( __CLASS__, 'render' ), self::icon(), '3.2' );
-		add_submenu_page( self::SLUG, __( 'Optima Members', 'optima-members' ), __( 'Overview', 'optima-members' ), self::CAP, self::SLUG, array( __CLASS__, 'render' ) );
+		add_submenu_page( self::SLUG, __( 'Overview', 'optima-members' ), __( 'Overview', 'optima-members' ), self::CAP, self::SLUG, array( __CLASS__, 'render' ) );
 		add_submenu_page( self::SLUG, __( 'All members', 'optima-members' ), __( 'All members', 'optima-members' ), self::CAP, self::SLUG . '-members', array( __CLASS__, 'render_members' ) );
-		add_submenu_page( self::SLUG, __( 'Bring members in', 'optima-members' ), __( 'Import', 'optima-members' ), self::CAP, self::SLUG . '-import', array( __CLASS__, 'render_import' ) );
-		add_submenu_page( self::SLUG, __( 'Membership settings', 'optima-members' ), __( 'Settings', 'optima-members' ), self::CAP, self::SLUG . '-settings', array( __CLASS__, 'render_settings' ) );
+		add_submenu_page( self::SLUG, __( 'Import', 'optima-members' ), __( 'Import', 'optima-members' ), self::CAP, self::SLUG . '-import', array( __CLASS__, 'render_import' ) );
+		add_submenu_page( self::SLUG, __( 'Settings', 'optima-members' ), __( 'Settings', 'optima-members' ), self::CAP, self::SLUG . '-settings', array( __CLASS__, 'render_settings' ) );
 	}
 
 	public static function assets( string $hook ): void {
@@ -373,8 +373,14 @@ final class Optima_Members_Admin {
 			return;
 		}
 		$view = in_array( $view, array( 'overview', 'members', 'import', 'settings' ), true ) ? $view : 'overview';
+		$titles = array(
+			'overview' => __( 'Overview', 'optima-members' ),
+			'members'  => __( 'All members', 'optima-members' ),
+			'import'   => __( 'Import', 'optima-members' ),
+			'settings' => __( 'Settings', 'optima-members' ),
+		);
 		Optima_Admin_UI::open(
-			__( 'Your members', 'optima-members' ),
+			$titles[ $view ],
 			__( 'Who has applied, who is a member and when each membership renews. Approve someone here and members-only pages and events open for them.', 'optima-members' ),
 			__( 'Members', 'optima-members' )
 		);

@@ -65,7 +65,7 @@ final class Optima_Sitecheck_Admin {
 		$n      = self::waiting();
 		$bubble = $n ? ' <span class="awaiting-mod">' . (int) $n . '</span>' : '';
 		add_submenu_page( $parent, __( 'Site checks', 'optima-sitecheck' ), __( 'Site checks', 'optima-sitecheck' ) . $bubble, 'edit_posts', 'edit.php?post_type=' . Optima_Sitecheck::CPT );
-		add_submenu_page( $parent, __( 'Site check settings', 'optima-sitecheck' ), __( 'Site check settings', 'optima-sitecheck' ), 'manage_options', self::SLUG, array( __CLASS__, 'render' ) );
+		add_submenu_page( $parent, __( 'Site check', 'optima-sitecheck' ), __( 'Site check', 'optima-sitecheck' ), 'manage_options', self::SLUG, array( __CLASS__, 'render' ) );
 	}
 
 	/** Site checks are leads, so they sit with the business screens. */
@@ -284,7 +284,7 @@ final class Optima_Sitecheck_Admin {
 		$live = $page && 'publish' === $page->post_status;
 		$key  = '' !== Optima_Sitecheck::psi_key();
 		$n    = self::waiting();
-		Optima_Admin_UI::open( __( 'Free site check', 'optima-sitecheck' ), __( 'Visitors enter their web address and get a free check of eight things: speed, security, page titles, business info for Google, phone layout, AI crawlers, the sitemap and photo sizes. They see the result on the page and get the full report by email. Every request lands in Site checks.', 'optima-sitecheck' ), __( 'Site check', 'optima-sitecheck' ) );
+		Optima_Admin_UI::open( __( 'Site check', 'optima-sitecheck' ), __( 'Visitors enter their web address and get a free check of eight things: speed, security, page titles, business info for Google, phone layout, AI crawlers, the sitemap and photo sizes. They see the result on the page and get the full report by email. Every request lands in Site checks.', 'optima-sitecheck' ), __( 'Site check', 'optima-sitecheck' ) );
 		settings_errors( $o );
 		?>
 		<div class="sh-grid sh-grid-3">

@@ -194,6 +194,29 @@ final class Optima_Hub_Inbox {
 			}
 		}
 
+		// Pages whose reviewer left the firm: they keep the date and wait for a new name (rule 48).
+		if ( class_exists( 'Optima_Team_Reviewed' ) ) {
+			$orphans = Optima_Team_Reviewed::orphaned();
+			$rows    = array();
+			foreach ( array_slice( $orphans, 0, self::SHOW ) as $id ) {
+				$rows[] = array(
+					'title' => get_the_title( (int) $id ),
+					/* translators: %s: date */
+					'note'  => sprintf( __( 'Last reviewed %s · needs a new reviewer', 'optima-build' ), (string) get_post_meta( (int) $id, Optima_Team_Reviewed::META_WHEN, true ) ),
+					'url'   => (string) get_edit_post_link( (int) $id, 'raw' ),
+				);
+			}
+			$kinds['reviewers'] = array(
+				'label' => __( 'Pages waiting for a reviewer', 'optima-build' ),
+				'who'   => 'optima',
+				'count' => count( $orphans ),
+				'url'   => admin_url( 'edit.php?post_type=page&optima_reviewed_by=0' ),
+				'link'  => __( 'Open the pages', 'optima-build' ),
+				'cap'   => 'edit_pages',
+				'rows'  => $rows,
+			);
+		}
+
 		self::$kinds = $kinds;
 		return $kinds;
 	}

@@ -80,7 +80,7 @@ final class Optima_Events_Directory {
 
 	/** Events, Topics: right after Speakers. */
 	public static function menu(): void {
-		add_submenu_page( Optima_Events_Admin::SLUG, __( 'Speaker topics', 'optima-events' ), __( 'Topics', 'optima-events' ), 'manage_categories', 'edit-tags.php?taxonomy=' . self::TOPIC . '&post_type=' . Optima_Events::SPEAKER );
+		add_submenu_page( Optima_Events_Admin::SLUG, __( 'Topics', 'optima-events' ), __( 'Topics', 'optima-events' ), 'manage_categories', 'edit-tags.php?taxonomy=' . self::TOPIC . '&post_type=' . Optima_Events::SPEAKER );
 		global $submenu;
 		$slug = Optima_Events_Admin::SLUG;
 		if ( empty( $submenu[ $slug ] ) ) {

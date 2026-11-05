@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.10.0 (2026-11-05)
+
+- Overview is the operator glance (rule 46): one status line (health, updates waiting, Inbox count, last version check), the dashboards row (Recon, Analytics, Search Console, Business Profile and the host from a new optional "dashboards" section of the theme's setup file, plus the site's repo and the site itself), the queue (Updates, Inbox, Requests, each a short list with one action), and the site facts row (theme, Optima Build and channel, features on, last change, site lock). The client answers, everyday-job links and request box left this screen; the request form stays under Inbox, Request a change. An operator who signs in with no deep link lands on Overview.
+- Inbox: a new kind, "Pages waiting for a reviewer", for pages whose reviewer was offboarded (Optima Team 0.1.11.0).
+- Sidebar order follows the eight groups; the hub's rename map is empty now that every plugin names its screen the way the sidebar does (rule 44).
+- Optima admin kit 1.7.0.0, one nav (plugin-first rule 49): the WordPress sidebar is the only group navigation. A screen is a slim top bar (the client's logo and name, a Find box that opens the WordPress Command Palette, the Optima mark), the title with its group as the eyebrow, the lede, and one row of tabs. The hero band and the row of groups are gone. The Optima menu has eight items; People sits after Overview and holds the profiles and Cards.
+
 ## 0.7.9.15 (2026-11-05)
 
 - Build → Updates: every section (Features and Optima Build, Release channel, Approved copy, Theme setup, Site lock) is a padded box with space between, like the Theme box. They used the feature-card style, which drew them dashed and touching.

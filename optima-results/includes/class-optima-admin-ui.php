@@ -12,12 +12,15 @@
  *   ... screen content in .sh-box sections ...
  *   Optima_Admin_UI::close();
  *
- * open() also prints the section nav, read live from WordPress's own menu: a
- * row of the seven groups (Overview, Your business, Content, Search and AI,
- * Site health, Inbox, Build) with the open group's screens as tabs underneath.
- * Every Optima screen shows the same nav. Each screen's group comes from its
- * address in SCREENS, so a label change never moves a screen; a new screen is
- * added to SCREENS (tools/uniform-check.sh fails until it is), and the
+ * open() prints a slim top bar (the client's logo and name, a Find box that
+ * opens the WordPress Command Palette, the Optima mark), the title with its
+ * group as the eyebrow, the lede, and one row of tabs: the open group's
+ * screens, read live from WordPress's own menu. The WordPress sidebar is the
+ * only group navigation (plugin-first rule 49; release 2); no screen repeats
+ * the eight groups (Overview, People, Your business, Content, Search and AI,
+ * Site health, Inbox, Build). Each screen's group comes from its address in
+ * SCREENS, so a label change never moves a screen; a new screen is added to
+ * SCREENS (tools/uniform-check.sh fails until it is), and the
  * optima_admin_nav_group filter can still move one.
  *
  * The Optima sidebar menu shows one link per group, named after the group, so
@@ -41,7 +44,7 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 
 	final class Optima_Admin_UI {
 
-		const VERSION = '1.6.0.0';
+		const VERSION = '1.7.0.0';
 
 		/** Show the Optima mark and sign-off. */
 		public static function branded(): bool {
@@ -63,10 +66,36 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 				$url = plugins_url( 'assets/optima-admin.css', __DIR__ );
 			}
 			wp_enqueue_style( 'optima-admin-kit', $url, array(), self::VERSION );
+			// The Find box opens WordPress's own Command Palette (6.3+); on an older
+			// WordPress the script is not registered and the box hides itself.
+			if ( wp_script_is( 'wp-commands', 'registered' ) ) {
+				wp_enqueue_script( 'wp-commands' );
+				wp_enqueue_style( 'wp-commands' );
+			}
+			add_action( 'admin_print_footer_scripts', array( __CLASS__, 'find_script' ), 20 );
+		}
+
+		/** The few lines behind the Find box, printed once. */
+		public static function find_script(): void {
+			?>
+			<script>
+			( function () {
+				var box = document.querySelector( '.sh-find' );
+				if ( ! box ) { return; }
+				var open = window.wp && wp.data && wp.data.dispatch && wp.data.select && wp.data.select( 'core/commands' ) ? function () { wp.data.dispatch( 'core/commands' ).open(); } : null;
+				if ( ! open ) { box.hidden = true; return; }
+				box.addEventListener( 'click', open );
+				document.addEventListener( 'keydown', function ( e ) {
+					if ( ( e.metaKey || e.ctrlKey ) && 'k' === e.key.toLowerCase() && ! e.defaultPrevented ) { e.preventDefault(); open(); }
+				} );
+			} )();
+			</script>
+			<?php
 		}
 
 		/**
-		 * Open a screen: eyebrow, title, Optima mark, short description.
+		 * Open a screen: top bar (whose site, Find, the mark), eyebrow, title,
+		 * short description, and the open group's tabs.
 		 *
 		 * @param string $title   Screen name, e.g. "AI search".
 		 * @param string $lede    One or two sentences on what the screen is for.
@@ -81,21 +110,34 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 				$section = self::GROUPS[ $group ];
 			}
 			echo '<div class="wrap sh">';
-			echo '<div class="sh-hero"><header class="sh-head"><div>';
+			echo '<div class="sh-top">';
+			self::lockup();
+			self::finder();
+			if ( self::branded() ) {
+				echo '<p class="sh-brand"><span class="sh-mark" aria-hidden="true"></span>Optima</p>';
+			}
+			echo '</div>';
+			echo '<header class="sh-head"><div>';
 			echo '<p class="sh-eyebrow">' . esc_html( $brand . ' · ' . ( '' !== $section ? $section : $title ) ) . '</p>';
 			echo '<h1>' . esc_html( $title ) . '</h1>';
 			if ( '' !== $lede ) {
 				echo '<p class="sh-lede">' . esc_html( $lede ) . '</p>';
 			}
-			echo '</div>';
-			self::lockup();
-			echo '</header>';
+			echo '</div></header>';
 			if ( ! self::$nav_printed ) {
 				self::nav( $nav );
 			}
-			echo '</div>';
 			// WordPress prints admin notices right after the first heading in .wrap.
 			echo '<hr class="wp-header-end" style="display:none">';
+		}
+
+		/** The Find box: one place to jump to any screen, through the Command Palette. */
+		private static function finder(): void {
+			echo '<button type="button" class="sh-find" aria-label="Find a screen or setting">';
+			echo '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="20" y1="20" x2="16.5" y2="16.5"></line></svg>';
+			echo '<span>Find anything: a screen, a setting, a page</span>';
+			echo '<kbd aria-hidden="true">&#8984;K</kbd>';
+			echo '</button>';
 		}
 
 		/**
@@ -119,16 +161,13 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 				echo '<img src="' . esc_url( $logo ) . '" alt="' . esc_attr( $name ) . '">';
 			}
 			echo '<span class="sh-client-name">' . esc_html( $name ) . '</span></a>';
-			if ( self::branded() ) {
-				echo '<span class="sh-lockup-x" aria-hidden="true"></span>';
-				echo '<p class="sh-brand"><span class="sh-mark" aria-hidden="true"></span>Optima</p>';
-			}
 			echo '</div>';
 		}
 
-		/** The seven groups of the Optima menu, in the order they show (plugin-first rule 9). */
+		/** The eight groups of the Optima menu, in the order they show (plugin-first rule 9). */
 		const GROUPS = array(
 			'overview' => 'Overview',
+			'people'   => 'People',
 			'business' => 'Your business',
 			'content'  => 'Content',
 			'search'   => 'Search and AI',
@@ -145,18 +184,16 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 		 */
 		const SCREENS = array(
 			'overview' => array( 'optima-overview' ),
+			'people'   => array( 'optima-team', 'edit.php?post_type=optima_team', 'optima-cards' ),
 			'business' => array(
 				'optima',
 				'optima&tab=business',
 				'optima-contact',
 				'optima-hours',
-				'optima-team',
-				'edit.php?post_type=optima_team',
 				'optima-results',
 				'edit.php?post_type=optima_result',
 				'edit.php?post_type=optima_review',
 				'optima-reviews-settings',
-				'optima-cards',
 				'optima-chat',
 			),
 			'content'  => array( 'optima&tab=sync', 'optima-redirects', 'optima-optimize', 'optima-optimize-sweep' ),
@@ -214,7 +251,7 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 		private static $screen_slug = '';
 
 		/**
-		 * Shorten the Optima sidebar menu to one link per group (Overview, Your
+		 * Shorten the Optima sidebar menu to one link per group (Overview, People, Your
 		 * business, Content, Search and AI, Site health, Inbox, Build). Every screen stays registered and
 		 * reachable; the others are hidden from the sidebar only, and the
 		 * section nav on each screen leads to them.
@@ -374,7 +411,7 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 		}
 
 		/**
-		 * Which of the seven groups a screen belongs to, read from its address in
+		 * Which of the eight groups a screen belongs to, read from its address in
 		 * SCREENS. Plugins can move a screen with the optima_admin_nav_group
 		 * filter (group key, slug, label). A screen not listed sits in Content, and
 		 * tools/uniform-check.sh fails until it is listed.
@@ -444,9 +481,9 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 		}
 
 		/**
-		 * The section nav: every screen in this screen's sidebar menu, sorted into
-		 * the seven groups. The open group's screens show as tabs underneath.
-		 * Empty groups never show.
+		 * The tab row: the screens of this screen's group, read from its sidebar
+		 * menu. The groups themselves are the sidebar's job (rule 49), so nothing
+		 * here repeats them. A group with one screen shows no tabs.
 		 *
 		 * @param string $current Sidebar slug to highlight; defaults to the screen being viewed.
 		 */
@@ -533,23 +570,15 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 				);
 			};
 			self::$nav_printed = true;
-			echo '<nav class="sh-nav" aria-label="' . esc_attr( self::branded() ? 'Optima' : 'Site Build' ) . '">';
-			if ( count( $groups ) > 1 ) {
-				echo '<div class="sh-nav-groups">';
-				foreach ( $groups as $key => $entries ) {
-					// A one-screen group links straight to it and carries its hint.
-					$solo = 1 === count( $entries );
-					$link( $entries[0], self::GROUPS[ $key ], $key === $open, $solo ? $entries[0]['hint'] : '' );
-				}
-				echo '</div>';
+			if ( count( $groups[ $open ] ?? array() ) < 2 ) {
+				return;
 			}
-			if ( count( $groups[ $open ] ?? array() ) > 1 || 1 === count( $groups ) ) {
-				echo '<div class="sh-nav-sub">';
-				foreach ( $groups[ $open ] as $entry ) {
-					$link( $entry, $entry['label'], $entry['on'], $entry['hint'] );
-				}
-				echo '</div>';
+			echo '<nav class="sh-nav" aria-label="' . esc_attr( self::GROUPS[ $open ] ?? ( self::branded() ? 'Optima' : 'Site Build' ) ) . '">';
+			echo '<div class="sh-nav-sub">';
+			foreach ( $groups[ $open ] as $entry ) {
+				$link( $entry, $entry['label'], $entry['on'], $entry['hint'] );
 			}
+			echo '</div>';
 			echo '</nav>';
 		}
 

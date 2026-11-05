@@ -38,14 +38,14 @@ final class Optima_Team_Admin {
 	}
 
 	public static function menu(): void {
-		add_submenu_page( self::parent(), __( 'Team settings', 'optima-team' ), __( 'Team settings', 'optima-team' ), 'manage_options', self::SLUG, array( __CLASS__, 'render' ) );
+		add_submenu_page( self::parent(), __( 'People', 'optima-team' ), __( 'People', 'optima-team' ), 'manage_options', self::SLUG, array( __CLASS__, 'render' ) );
 		// The list sits in the Build menu too, so the sidebar keeps one Optima section.
 		if ( 'options-general.php' !== self::parent() ) {
 			$list = 'edit.php?post_type=' . Optima_Team::POST_TYPE;
 			global $submenu;
 			remove_menu_page( $list );
 			unset( $submenu[ $list ] ); // Its leftover sub-list would otherwise claim the screen.
-			add_submenu_page( self::parent(), __( 'Team members', 'optima-team' ), __( 'Team members', 'optima-team' ), 'edit_posts', $list );
+			add_submenu_page( self::parent(), __( 'Profiles', 'optima-team' ), __( 'Profiles', 'optima-team' ), 'edit_posts', $list );
 		}
 	}
 
@@ -90,6 +90,15 @@ final class Optima_Team_Admin {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
+		// The Add a person walkthrough is a tab of this screen (no sidebar address of its own).
+		if ( Optima_Team_Add::is_open() ) {
+			Optima_Team_Add::render();
+			return;
+		}
+		if ( Optima_Team_Offboard::is_open() ) {
+			Optima_Team_Offboard::render();
+			return;
+		}
 		$s      = Optima_Team::settings();
 		$o      = Optima_Team::OPTION;
 		$people = get_posts(
@@ -116,9 +125,9 @@ final class Optima_Team_Admin {
 		$add_url = admin_url( 'post-new.php?post_type=' . Optima_Team::POST_TYPE );
 
 		Optima_Admin_UI::open(
-			__( 'Team', 'optima-team' ),
-			__( 'A profile page for each person, with their credentials, plus a grid for the About page. Real people with real credentials are what visitors and search engines look for first.', 'optima-team' ),
-			__( 'Team', 'optima-team' )
+			__( 'People', 'optima-team' ),
+			__( 'One profile per person. It feeds the team page, the profile page, bylines and the Person schema, so a name, title or photo changes in one place. Real people with real credentials are what visitors and search engines look for first.', 'optima-team' ),
+			__( 'People', 'optima-team' )
 		);
 		settings_errors( $o );
 		?>
@@ -150,7 +159,7 @@ final class Optima_Team_Admin {
 			<p><?php esc_html_e( 'People show in order of the Order number on each profile, lowest first, then by name. Open a person to fill in their credentials.', 'optima-team' ); ?></p>
 			<?php if ( $people ) : ?>
 				<table class="widefat striped">
-					<thead><tr><th scope="col"><?php esc_html_e( 'Name', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Role', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Trust signals', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Status', 'optima-team' ); ?></th></tr></thead>
+					<thead><tr><th scope="col"><?php esc_html_e( 'Name', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Role', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Feeds', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Trust signals', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Status', 'optima-team' ); ?></th></tr></thead>
 					<tbody>
 					<?php foreach ( $people as $person ) : ?>
 						<?php
@@ -162,10 +171,22 @@ final class Optima_Team_Admin {
 								$todo[] = $check[0];
 							}
 						}
+						$c     = Optima_Team_Links::counts( (int) $person->ID );
+						$u     = Optima_Team_Links::urls( (int) $person->ID );
+						$feeds = array();
+						/* translators: %d: posts */
+						$feeds[] = '' !== $u['posts'] ? '<a href="' . esc_url( $u['posts'] ) . '">' . esc_html( sprintf( _n( '%d post', '%d posts', $c['posts'], 'optima-team' ), $c['posts'] ) ) . '</a>' : esc_html__( 'no byline', 'optima-team' );
+						if ( post_type_exists( 'optima_result' ) ) {
+							/* translators: %d: case results */
+							$feeds[] = '<a href="' . esc_url( $u['results'] ) . '">' . esc_html( sprintf( _n( '%d result', '%d results', $c['results'], 'optima-team' ), $c['results'] ) ) . '</a>';
+						}
+						/* translators: %d: reviewed pages */
+						$feeds[] = '<a href="' . esc_url( $u['reviewed'] ) . '">' . esc_html( sprintf( _n( '%d reviewed page', '%d reviewed pages', $c['reviewed'], 'optima-team' ), $c['reviewed'] ) ) . '</a>';
 						?>
 						<tr>
 							<td><a href="<?php echo esc_url( (string) get_edit_post_link( $person->ID ) ); ?>"><strong><?php echo esc_html( '' !== $person->post_title ? $person->post_title : __( '(no name)', 'optima-team' ) ); ?></strong></a></td>
 							<td><?php echo esc_html( Optima_Team::profile( (int) $person->ID )['role'] ); ?></td>
+							<td><?php echo wp_kses_post( implode( ' · ', $feeds ) ); ?></td>
 							<td>
 								<span class="sh-pill <?php echo $done === count( $checks ) ? 'is-done' : 'is-received'; ?>">
 									<?php
@@ -184,12 +205,15 @@ final class Optima_Team_Admin {
 				</table>
 			<?php endif; ?>
 			<p class="sh-actions" style="margin-top:14px">
-				<a class="button button-primary" href="<?php echo esc_url( $add_url ); ?>"><?php esc_html_e( 'Add a team member', 'optima-team' ); ?></a>
+				<a class="button button-primary" href="<?php echo esc_url( Optima_Team_Add::url() ); ?>"><?php esc_html_e( 'Add a person', 'optima-team' ); ?></a>
+				<a class="button sh-quiet" href="<?php echo esc_url( $add_url ); ?>"><?php esc_html_e( 'Blank profile', 'optima-team' ); ?></a>
 				<?php if ( $people && $archive ) : ?>
 					<a class="button sh-quiet" href="<?php echo esc_url( $archive ); ?>"><?php esc_html_e( 'View the team page', 'optima-team' ); ?></a>
 				<?php endif; ?>
 			</p>
 		</section>
+
+		<?php Optima_Team_Offboard::former_box(); ?>
 
 		<form method="post" action="options.php" class="sh-box">
 			<h2 class="sh-title"><?php esc_html_e( 'Settings', 'optima-team' ); ?></h2>
