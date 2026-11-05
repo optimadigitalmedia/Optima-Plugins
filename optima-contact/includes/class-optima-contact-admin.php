@@ -16,7 +16,7 @@ final class Optima_Contact_Admin {
 	public static function boot(): void {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ), 30 );
 		add_action( 'admin_init', array( __CLASS__, 'register' ) );
-		add_action( 'admin_init', array( 'Optima_Contact', 'migrate' ) ); // Release 3: the phone moves to Details once.
+		add_action( 'admin_init', array( 'Optima_Contact', 'migrate' ), 1 ); // Release 3: the phone moves to Details once.
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
 		add_filter( 'plugin_action_links_' . plugin_basename( OPTIMA_CONTACT_FILE ), array( __CLASS__, 'action_link' ) );
 	}

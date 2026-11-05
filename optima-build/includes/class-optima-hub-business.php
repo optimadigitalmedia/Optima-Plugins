@@ -91,6 +91,7 @@ final class Optima_Hub_Business {
 			delete_transient( 'optima_hub_notice_' . get_current_user_id() );
 			printf( '<div class="notice notice-success is-dismissible"><p>%s</p></div>', esc_html( $notice['message'] ) );
 		}
+		Optima_Admin_UI::old_facts_box();
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="sh-box">';
 		echo '<input type="hidden" name="action" value="' . esc_attr( self::ACTION ) . '">';
 		wp_nonce_field( self::ACTION );

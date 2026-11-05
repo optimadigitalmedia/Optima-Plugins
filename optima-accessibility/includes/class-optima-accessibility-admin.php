@@ -19,7 +19,7 @@ final class Optima_Accessibility_Admin {
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
 		add_filter( 'plugin_action_links_' . plugin_basename( OPTIMA_ACCESSIBILITY_FILE ), array( __CLASS__, 'action_link' ) );
 		add_filter( 'optima_admin_nav_hint', array( __CLASS__, 'nav_hint' ), 10, 2 );
-		add_action( 'admin_init', array( 'Optima_Accessibility', 'migrate' ) ); // Release 3: the phone moves to Details once.
+		add_action( 'admin_init', array( 'Optima_Accessibility', 'migrate' ), 3 ); // Release 3: the phone moves to Details once.
 		foreach ( array( 'statement', 'run', 'launch', 'footer', 'menu_add' ) as $action ) {
 			add_action( 'admin_post_optima_a11y_' . $action, array( __CLASS__, 'handle_' . $action ) );
 		}

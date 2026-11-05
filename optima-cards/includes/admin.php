@@ -20,7 +20,7 @@ final class Optima_Cards_Admin {
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
 		add_action( 'admin_post_optima_cards_save', array( __CLASS__, 'save' ) );
 		add_action( 'admin_post_optima_cards_reset', array( __CLASS__, 'reset' ) );
-		add_action( 'admin_init', array( 'Optima_Cards_Settings', 'migrate' ) ); // Release 3: facts to Details, slots to People.
+		add_action( 'admin_init', array( 'Optima_Cards_Settings', 'migrate' ), 2 ); // Release 3: facts to Details, slots to People.
 		add_filter( 'plugin_action_links_' . plugin_basename( OPTIMA_CARDS_FILE ), array( __CLASS__, 'action_link' ) );
 	}
 

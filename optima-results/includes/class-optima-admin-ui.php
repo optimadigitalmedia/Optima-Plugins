@@ -771,6 +771,54 @@ if ( ! class_exists( 'Optima_Admin_UI', false ) ) :
 			echo '<a href="' . esc_url( $url ) . '">' . esc_html( sprintf( 'Change in %s', $tab ) ) . ' &rsaquo;</a></div>';
 		}
 
+		/**
+		 * Facts typed on other screens before release 3 that differ from Details.
+		 * The release 3 migrations moved the first one found into Details (Call
+		 * buttons, then Cards, then Accessibility) and kept every old value where it
+		 * was; this lists the rest so an operator can check them. Nothing changes here.
+		 *
+		 * @return array<int, array{fact:string, value:string, where:string}>
+		 */
+		public static function old_facts(): array {
+			$biz  = self::business();
+			$out  = array();
+			$opt  = static function ( string $name ): array {
+				$v = get_option( $name, array() );
+				return is_array( $v ) ? $v : array();
+			};
+			$seen = array(
+				array( 'phone', 'Phone', (string) ( $opt( 'optima_contact' )['phone'] ?? '' ), 'Call buttons' ),
+				array( 'phone', 'Phone', (string) ( $opt( 'optima_accessibility' )['phone'] ?? '' ), 'Accessibility' ),
+				array( 'name', 'Business name', (string) ( $opt( 'optima_reviews_requests' )['business'] ?? '' ), 'Ask for reviews' ),
+			);
+			$cards = $opt( 'optima_cards_settings' );
+			foreach ( array( 'name' => 'Business name', 'phone' => 'Phone', 'email' => 'Email', 'city' => 'City', 'region' => 'State', 'postal' => 'ZIP code' ) as $key => $label ) {
+				$seen[] = array( $key, $label, (string) ( $cards[ $key ] ?? '' ), 'Cards' );
+			}
+			foreach ( $seen as $row ) {
+				$old = trim( $row[2] );
+				$now = trim( (string) ( $biz[ $row[0] ] ?? '' ) );
+				if ( '' !== $old && 0 !== strcasecmp( $old, $now ) ) {
+					$out[] = array( 'fact' => $row[1], 'value' => $old, 'where' => $row[3] );
+				}
+			}
+			return $out;
+		}
+
+		/** The old_facts() list as a box on Details, or nothing when every old value matches. */
+		public static function old_facts_box(): void {
+			$rows = self::old_facts();
+			if ( ! $rows ) {
+				return;
+			}
+			echo '<section class="sh-box"><h2>Typed on other screens before</h2>';
+			echo '<p class="sh-note">These were typed on other screens before every fact moved to Details, and they differ from what Details holds. Details is what the site shows. Check each one; copy the right value into Details if it is not there already. The old values are kept, never deleted.</p>';
+			foreach ( $rows as $r ) {
+				echo '<div class="sh-fact"><span class="sh-label">' . esc_html( $r['fact'] ) . '</span><strong>' . esc_html( $r['value'] ) . '</strong><span class="sh-note">' . esc_html( 'On ' . $r['where'] ) . '</span></div>';
+			}
+			echo '</section>';
+		}
+
 		/** Open the collapsed "For developers" box (shortcodes, constants, event names). */
 		public static function dev_open( string $summary = 'For developers' ): void {
 			echo '<details class="sh-dev"><summary>' . esc_html( $summary ) . '</summary><div class="sh-dev-body">';

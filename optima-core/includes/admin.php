@@ -338,6 +338,7 @@ final class Optima_Core_Admin {
 			$groups['Hours'] = array( 'fields' => array( 'hours' ), 'shows' => 'Shows where the theme places it. Turn on Hours for structured hours, holiday closures and the schema.' );
 		}
 		$labels = Optima_Core_Business::fields();
+		Optima_Admin_UI::old_facts_box();
 		echo '<form method="post" action="options.php" class="sh-box">';
 		settings_fields( 'optima_business_group' );
 		echo '<table class="form-table" role="presentation"><tbody>';
