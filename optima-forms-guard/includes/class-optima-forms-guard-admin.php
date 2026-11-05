@@ -20,6 +20,16 @@ final class Optima_Forms_Guard_Admin {
 	public static function boot(): void {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ), 20 );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
+		add_action( 'admin_init', array( __CLASS__, 'same_place' ) );
+	}
+
+	/** With Optima Core on, this address opens Core's Spam protection tab, so it works on every site. */
+	public static function same_place(): void {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- reading the screen address only.
+		if ( self::PAGE === sanitize_key( wp_unslash( (string) ( $_GET['page'] ?? '' ) ) ) && class_exists( 'Optima_Core_Admin' ) ) {
+			wp_safe_redirect( admin_url( 'admin.php?page=optima&tab=protect' ) );
+			exit;
+		}
 	}
 
 	/** Only inside an Optima menu, and only when Optima Core does not carry the tab. */
