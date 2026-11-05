@@ -445,3 +445,23 @@ html:has(.wrap.sh), body.wp-admin:has(.wrap.sh), body:has(.wrap.sh) #wpcontent, 
 .sh-waiting .sh-pill { flex: none; }
 .sh-ask textarea { width: 100%; }
 .sh-ask .button { margin-top: 10px; }
+
+/* ---- Overview, the glance (release 2) ---- */
+.sh .sh-glance-line .sh-value { font-family: var(--sh-display); font-size: 20px; font-weight: 800; letter-spacing: -.02em; color: var(--sh-navy); }
+.sh .sh-glance-doors { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 10px; }
+.sh .sh-glance-doors .sh-link-card { padding: 14px 16px; }
+.sh .sh-glance-doors .sh-link-card h2 { font-size: 14px; margin: 0 0 2px; }
+.sh .sh-glance-doors .sh-link-card p { margin: 0; font-size: 12.5px; color: var(--sh-text-3); overflow-wrap: anywhere; }
+.sh .sh-section-head .sh-label { margin: 0; }
+.sh .sh-section-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.sh .sh-section-row h2 { margin: 0; font-size: 15px; }
+.sh .sh-section-row a { font-size: 13px; font-weight: 600; text-decoration: none; color: var(--sh-accent-text); }
+.sh .sh-count { font-family: var(--sh-body); font-weight: 600; color: var(--sh-text-3); margin-left: 4px; }
+.sh .sh-glance-queue .sh-waiting li { align-items: center; }
+.sh .sh-glance-queue .sh-ver { font-family: var(--sh-mono); font-size: 12px; color: var(--sh-text-3); white-space: nowrap; }
+.sh .sh-glance-queue .sh-actions { margin-top: 12px; }
+.sh .sh-glance-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px 18px; padding: 14px 18px; }
+.sh .sh-glance-facts a { display: flex; flex-direction: column; gap: 2px; text-decoration: none; color: var(--sh-navy); min-width: 0; }
+.sh .sh-glance-facts a .sh-label { margin: 0; }
+.sh .sh-glance-facts a strong { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
+.sh .sh-glance-facts a:hover strong { color: var(--sh-accent-text); }
