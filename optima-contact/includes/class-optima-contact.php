@@ -61,7 +61,41 @@ final class Optima_Contact {
 
 	public static function settings(): array {
 		$saved = get_option( self::OPTION, array() );
-		return array_merge( self::defaults(), is_array( $saved ) ? $saved : array() );
+		$s     = array_merge( self::defaults(), is_array( $saved ) ? $saved : array() );
+		// The phone is typed once, on Your business, Details (rule 45). The number this
+		// screen saved before release 3 stays in the option and is used only while
+		// Details has none.
+		$biz = self::business_phone();
+		if ( '' !== $biz ) {
+			$s['phone'] = $biz;
+		}
+		return $s;
+	}
+
+	/** The phone from Your business, Details (the optima_business option), or ''. */
+	public static function business_phone(): string {
+		$biz = get_option( 'optima_business', array() );
+		return is_array( $biz ) ? trim( (string) ( $biz['phone'] ?? '' ) ) : '';
+	}
+
+	/**
+	 * Once (release 3): a phone typed on Call buttons and missing from Details
+	 * moves to Details, so it is typed in one place from now on. The old value
+	 * stays in this plugin's option; nothing is deleted.
+	 */
+	public static function migrate(): void {
+		if ( get_option( 'optima_contact_r3_phone' ) ) {
+			return;
+		}
+		$saved = get_option( self::OPTION, array() );
+		$old   = is_array( $saved ) ? trim( (string) ( $saved['phone'] ?? '' ) ) : '';
+		if ( '' !== $old && '' === self::business_phone() ) {
+			$biz          = get_option( 'optima_business', array() );
+			$biz          = is_array( $biz ) ? $biz : array();
+			$biz['phone'] = $old;
+			update_option( 'optima_business', $biz );
+		}
+		update_option( 'optima_contact_r3_phone', time(), false );
 	}
 
 	/** A dialable number: digits only, with +1 added to ten-digit US numbers. */
