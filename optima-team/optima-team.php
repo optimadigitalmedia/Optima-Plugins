@@ -42,6 +42,7 @@ require_once __DIR__ . '/includes/class-optima-team-admin.php';
 require_once __DIR__ . '/includes/class-optima-team-add.php';
 require_once __DIR__ . '/includes/class-optima-team-links.php';
 require_once __DIR__ . '/includes/class-optima-team-reviewed.php';
+require_once __DIR__ . '/includes/class-optima-team-offboard.php';
 
 Optima_Team::boot();
 Optima_Team_Editor::boot();
@@ -51,6 +52,7 @@ Optima_Team_Admin::boot();
 Optima_Team_Add::boot();
 Optima_Team_Links::boot();
 Optima_Team_Reviewed::boot();
+Optima_Team_Offboard::boot();
 
 register_activation_hook(
 	__FILE__,

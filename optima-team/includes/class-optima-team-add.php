@@ -65,7 +65,7 @@ final class Optima_Team_Add {
 
 	/** The walkthrough's few styles, and the media picker for the photo step. */
 	public static function assets( string $hook ): void {
-		if ( false === strpos( $hook, Optima_Team_Admin::SLUG ) || ! self::is_open() ) {
+		if ( false === strpos( $hook, Optima_Team_Admin::SLUG ) || ( ! self::is_open() && ! Optima_Team_Offboard::is_open() ) ) {
 			return;
 		}
 		wp_enqueue_style( 'optima-team-add', OPTIMA_TEAM_URL . 'assets/optima-team-add.css', array( 'optima-admin-kit' ), OPTIMA_TEAM_VERSION );

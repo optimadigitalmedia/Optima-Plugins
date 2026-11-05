@@ -94,5 +94,11 @@ final class Optima_Team_Links {
 		}
 		echo '</ul>';
 		echo '<p class="description">' . esc_html__( 'Everything that names this person reads from this profile. Facts come from the setup file; words from the site repo.', 'optima-team' ) . '</p>';
+		if ( current_user_can( 'manage_options' ) && ( ! class_exists( 'Optima_Hub_Access' ) || Optima_Hub_Access::is_operator() ) ) {
+			$state = Optima_Team_Offboard::state( $post->ID );
+			echo '<p class="st-feeds-off"><a href="' . esc_url( Optima_Team_Offboard::url( $post->ID ) ) . '">'
+				. esc_html( $state['step'] ? __( 'Offboarding in progress ›', 'optima-team' ) : __( 'Leaving the firm? Start offboarding ›', 'optima-team' ) )
+				. '</a></p>';
+		}
 	}
 }

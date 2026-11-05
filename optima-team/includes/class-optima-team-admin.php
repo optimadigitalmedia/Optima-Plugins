@@ -95,6 +95,10 @@ final class Optima_Team_Admin {
 			Optima_Team_Add::render();
 			return;
 		}
+		if ( Optima_Team_Offboard::is_open() ) {
+			Optima_Team_Offboard::render();
+			return;
+		}
 		$s      = Optima_Team::settings();
 		$o      = Optima_Team::OPTION;
 		$people = get_posts(
@@ -208,6 +212,8 @@ final class Optima_Team_Admin {
 				<?php endif; ?>
 			</p>
 		</section>
+
+		<?php Optima_Team_Offboard::former_box(); ?>
 
 		<form method="post" action="options.php" class="sh-box">
 			<h2 class="sh-title"><?php esc_html_e( 'Settings', 'optima-team' ); ?></h2>
