@@ -23,3 +23,7 @@ The plugin suite behind every Optima client site. Before changing any plugin, re
   same folders in every repo, words only in `content/*.md`, delivered only through the theme
   release plus Optima → Build → Approved copy. Same SOP for every site, any size.
 - Optima names only in code, comments and docs.
+
+## Design system
+
+`design-system/` holds the Optima design tokens (`tokens.css`, `tokens.json`) and rules (`CORE.md`, `BRAND.md`). Generated from the private master `sean-the-builder/GoogleWorkspace` › `design-system/unified/`; never edit them here. Plugins read the role tokens (`--surface`, `--text`, `--accent-fill`, `--on-accent`, `--r-card`) with fallbacks; the `--optima-*` contract maps onto them (`--optima-accent-ink` = `--on-accent`). See `design-system/CORE.md` §6.
