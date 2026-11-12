@@ -377,7 +377,7 @@ final class Optima_Results_Editor {
 		} elseif ( 'sr_year' === $col ) {
 			echo esc_html( '' !== $r['date'] ? substr( $r['date'], 0, 4 ) : '' );
 		} elseif ( 'sr_threshold' === $col ) {
-			echo esc_html( Optima_Results::above_threshold( $r['amount'] ) ? __( 'Yes', 'optima-results' ) : __( 'No', 'optima-results' ) );
+			echo esc_html( Optima_Results::threshold_label( $r['amount'] ) );
 		} elseif ( 'sr_type' === $col ) {
 			echo esc_html( $r['type_label'] );
 		} elseif ( 'sr_attorney' === $col ) {
