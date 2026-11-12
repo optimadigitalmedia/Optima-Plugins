@@ -103,7 +103,8 @@ final class Optima_Optimize_Delivery {
 			return false;
 		}
 		$settings = get_option( 'optima_optimize_settings', array() );
-		return ! empty( $settings['rewrite_picture'] );
+		// NitroPack serves its own image formats; never run two optimizers on one site.
+		return ! empty( $settings['rewrite_picture'] ) && ! Optima_Optimize::images_paused();
 	}
 
 	/**
