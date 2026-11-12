@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.7.11.2 (2026-11-12)
+
+- The feature catalog now comes from the version-list branch, not from main: catalog-test.json on the test channel, catalog.json (sent out by Promote) on stable. A catalog change reaches the test site first, like a release. The bundled catalog.json is still the fallback.
+- Turn on and Go back install only a zip from the Optima Plugins releases, and check it against the sha256 in the version list before installing, whichever plugin's updater copy loaded first. A mismatch installs nothing and shows an error.
+- Go back says plainly when the earlier release is no longer listed, instead of failing inside the installer.
+- Site health's checks of the site's own pages now verify the HTTPS certificate on live sites and host staging addresses. Only a copy on someone's own computer (localhost, .local, .test, a private IP, or the environment set to local or development) skips the check. Core's https_local_ssl_verify filter can still change it for one site.
+- Deleting the plugin also clears the test channel's cached catalog.
+- Updates install only from the Optima Plugins release downloads (https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/). A release listed at any other address is skipped, and an update of an Optima plugin from any other address is refused with an error.
+- Every download is checked against the sha256 published in the version list before WordPress unpacks it. A mismatch deletes the file, stops the install with an error and writes a line to the PHP error log.
+- A release listed without a sha256 (one published before checksums were recorded) still installs as before, with a line in the PHP error log saying no checksum was checked.
+- Automatic updates run only for a package from the Optima Plugins releases.
+- The GitHub API fallback reads each asset's digest as its sha256, so the check works on that path too.
+
 ## 0.7.11.1 (2026-11-05)
 
 - Updates polish: Site setup and Content updates leave the Build tab row (they are blocks on Updates); their tab shows only while that screen is open.

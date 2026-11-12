@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.6.0.13 (2026-11-12)
+
+- **No star rating built from testimonials.** The business entry in the schema no longer carries a star rating or Review entries made from the site's own testimonials. Hand-picked quotes are not a platform's full count, Google does not show self-serving review markup, and on a law-firm site they read as a rating the firm gave itself. Testimonials and how they show on pages do not change.
+- A plugin that holds a review platform's real totals can still add a rating through the `optima_schema_aggregate_rating` filter, which now starts empty. The `optima_schema_review_limit` filter is gone with the Review entries. The old rating cache is still cleared on save, so a leftover copy goes away.
+- **Safer schema output.** The JSON-LD block is encoded with `JSON_HEX_TAG`, so a `<` or `>` in any field (a page title, an excerpt, a business name) can never close the script tag early.
+- Updates install only from the Optima Plugins release downloads (https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/). A release listed at any other address is skipped, and an update of an Optima plugin from any other address is refused with an error.
+- Every download is checked against the sha256 published in the version list before WordPress unpacks it. A mismatch deletes the file, stops the install with an error and writes a line to the PHP error log.
+- A release listed without a sha256 (one published before checksums were recorded) still installs as before, with a line in the PHP error log saying no checksum was checked.
+- Automatic updates run only for a package from the Optima Plugins releases.
+- The GitHub API fallback reads each asset's digest as its sha256, so the check works on that path too.
+
 ## 1.6.0.12 (2026-11-05)
 
 - No em dash in visible text: the empty choice in a select reads Select one.

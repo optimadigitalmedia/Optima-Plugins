@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.15.10 (2026-11-12)
+
+- Clicks now report the seven standard event names (rule 50): call_click, text_click, email_click, form_submit, booking_click, directions_click, chat_start, each with location and method. People's team_call and team_email links report as call_click and email_click from the team card.
+- Gravity Forms confirmations send form_submit once per submission with the form ID only: on gform_confirmation_loaded for AJAX forms, from a hidden marker for forms that reload, and from a five-minute form-ID cookie for forms that redirect.
+- Phone, text and email links no longer send their number or address to the dataLayer; link_url goes out for web links only.
+- New opt-in for sites whose Tag Manager still listens for the old names: define OPTIMA_ANALYTICS_LEGACY_EVENTS as true (or the optima_analytics_legacy_events filter) and each click also sends its old name. Off by default; the Analytics screen shows its state and README.md lists the old-to-new map.
+- Updates install only from the Optima Plugins release downloads (https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/). A release listed at any other address is skipped, and an update of an Optima plugin from any other address is refused with an error.
+- Every download is checked against the sha256 published in the version list before WordPress unpacks it. A mismatch deletes the file, stops the install with an error and writes a line to the PHP error log.
+- A release listed without a sha256 (one published before checksums were recorded) still installs as before, with a line in the PHP error log saying no checksum was checked.
+- Automatic updates run only for a package from the Optima Plugins releases.
+- The GitHub API fallback reads each asset's digest as its sha256, so the check works on that path too.
+
 ## 0.1.15.9 (2026-11-05)
 
 - Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).
