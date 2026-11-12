@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.0.14 (2026-11-12)
+
+- Schema: Review and AggregateRating on the `#business` node are off by default. Google's review snippet policy calls reviews a business marks up about itself "self-serving" (LocalBusiness, Organization and LegalService included), and for a law firm the markup can also raise state-bar advertising concerns. Testimonials still show on the page; only their schema is held back. A site with a legitimate case opts in with the `optima_schema_business_reviews` filter (return true).
+
 ## 1.6.0.13 (2026-11-12)
 
 - Site health, Page descriptions: a page whose description comes from the theme's `optima-setup.json` (`seo.pages`) no longer counts as missing one. Core already prints that description; the check only read the SEO box and the excerpt, so a site on the standard showed every page as a gap (RMN staging: 56).

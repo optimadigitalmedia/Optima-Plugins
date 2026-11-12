@@ -5,11 +5,13 @@
  * The graph is one connected entity model, not a pile of disconnected blobs:
  *
  *   #business  LocalBusiness (or the subtype set in Optima Business) — the NAP,
- *              geo, profiles, and an aggregateRating computed from real
- *              testimonials. Stable @id: home_url( '/#business' ).
+ *              geo and profiles. Stable @id: home_url( '/#business' ).
+ *              An aggregateRating from testimonials is added only when
+ *              the optima_schema_business_reviews filter returns true.
  *   #website   WebSite, publisher -> #business.
  *   FAQPage    on the FAQ hub page / archive, from the FAQ post type.
- *   Review     from testimonials, itemReviewed -> #business.
+ *   Review     from testimonials, itemReviewed -> #business, opt-in only
+ *              (same filter; off by default, see build_graph()).
  *   BlogPosting on single posts, publisher -> #business.
  *
  * Everything references #business by @id, which is what makes Google (and AI
@@ -122,14 +124,27 @@ final class Optima_Schema {
 			'website'  => self::website_node(),
 		);
 
-		list( $aggregate, $reviews ) = self::reviews();
+		/*
+		 * Review and AggregateRating about the business itself are off by default.
+		 * Google's review snippet policy treats reviews a LocalBusiness or
+		 * Organization (LegalService included) marks up about itself as
+		 * "self-serving" and does not show them; the markup can draw a manual
+		 * action, and for a law firm it can raise state-bar advertising concerns.
+		 * https://developers.google.com/search/docs/appearance/structured-data/review-snippet
+		 * Testimonials still show on the page. A site with a legitimate case (for
+		 * example reviews gathered and shown by an independent third party) can
+		 * opt in: add_filter( 'optima_schema_business_reviews', '__return_true' );
+		 */
+		if ( apply_filters( 'optima_schema_business_reviews', false ) ) {
+			list( $aggregate, $reviews ) = self::reviews();
 
-		$aggregate = apply_filters( 'optima_schema_aggregate_rating', $aggregate );
-		if ( ! empty( $aggregate ) ) {
-			$graph['business']['aggregateRating'] = $aggregate;
-		}
-		foreach ( $reviews as $i => $review ) {
-			$graph[ 'review_' . $i ] = $review;
+			$aggregate = apply_filters( 'optima_schema_aggregate_rating', $aggregate );
+			if ( ! empty( $aggregate ) ) {
+				$graph['business']['aggregateRating'] = $aggregate;
+			}
+			foreach ( $reviews as $i => $review ) {
+				$graph[ 'review_' . $i ] = $review;
+			}
 		}
 
 		if ( self::is_faq_context() ) {
