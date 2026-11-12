@@ -168,6 +168,106 @@ final class Optima_AEO {
 		return defined( 'OPTIMA_SEO_META_NOINDEX' ) && '1' === (string) get_post_meta( $id, OPTIMA_SEO_META_NOINDEX, true );
 	}
 
+	/** A path below the site's home, with a trailing slash ("/", "/about/"). */
+	private static function site_path( string $url ): string {
+		$path = (string) wp_parse_url( $url, PHP_URL_PATH );
+		$base = rtrim( (string) wp_parse_url( home_url( '/' ), PHP_URL_PATH ), '/' );
+		if ( '' !== $base && 0 === strpos( $path, $base ) ) {
+			$path = substr( $path, strlen( $base ) );
+		}
+		$path = '/' . ltrim( $path, '/' );
+		return '/' === $path ? '/' : trailingslashit( $path );
+	}
+
+	/**
+	 * True when the theme's seo section (Optima Core) marks this address
+	 * noindex: its exact path entry, or the longest "/prefix/*" pattern.
+	 */
+	private static function setup_noindex( string $url ): bool {
+		if ( ! class_exists( 'Optima_SEO_Setup' ) || ! method_exists( 'Optima_SEO_Setup', 'active' ) || ! Optima_SEO_Setup::active() ) {
+			return false;
+		}
+		$pages = (array) ( Optima_SEO_Setup::data()['pages'] ?? array() );
+		$path  = self::site_path( $url );
+		$entry = isset( $pages[ $path ] ) && is_array( $pages[ $path ] ) ? $pages[ $path ] : null;
+		if ( null === $entry ) {
+			$best = -1;
+			foreach ( $pages as $key => $value ) {
+				$key = (string) $key;
+				if ( '*' !== substr( $key, -1 ) || ! is_array( $value ) ) {
+					continue;
+				}
+				$prefix = substr( $key, 0, -1 );
+				if ( 0 === strpos( $path, $prefix ) && strlen( $prefix ) > $best && $path !== $prefix ) {
+					$best  = strlen( $prefix );
+					$entry = $value;
+				}
+			}
+		}
+		$robots = is_array( $entry ) ? strtolower( (string) ( $entry['robots'] ?? '' ) ) : '';
+		return '' !== $robots && (bool) preg_match( '/(^|[\s,])noindex([\s,]|$)/', $robots );
+	}
+
+	/**
+	 * True when Optima Redirects holds a stored redirect for this address, so a
+	 * visitor asking for it is sent somewhere else. Reads the stored rules only;
+	 * no request is made.
+	 */
+	private static function redirected( string $url ): bool {
+		if ( ! class_exists( 'Optima_Redirects' ) || ! class_exists( 'Optima_Redirects_Store' )
+			|| ! method_exists( 'Optima_Redirects', 'normalize_source' ) || ! method_exists( 'Optima_Redirects_Store', 'find' ) ) {
+			return false;
+		}
+		if ( method_exists( 'Optima_Redirects_Store', 'count' ) && Optima_Redirects_Store::count() < 1 ) {
+			return false;
+		}
+		$source = Optima_Redirects::normalize_source( $url );
+		if ( '' === $source || '/' === $source ) {
+			return false;
+		}
+		$row = Optima_Redirects_Store::find( $source );
+		if ( ! $row ) {
+			return false;
+		}
+		// A rule that points back at the same address does not send anyone away.
+		$target = (string) ( $row->target ?? '' );
+		return ! ( '' !== $target && '/' === $target[0] && Optima_Redirects::normalize_source( $target ) === $source );
+	}
+
+	/**
+	 * The address /llms.txt lists for a post, or '' when it should not be
+	 * listed: not published, password protected, not public, noindexed (the
+	 * post's own switch or the theme's seo section), canonical to another
+	 * address, or redirected by Optima Redirects. Only stored settings are read.
+	 *
+	 * Filter `optima_aeo_llms_url` to drop ('') or change an address, for
+	 * example when a theme redirects a page on its own.
+	 */
+	public static function listed_url( $post ): string {
+		$p = get_post( $post );
+		if ( ! $p instanceof WP_Post || 'publish' !== $p->post_status || '' !== (string) $p->post_password ) {
+			return '';
+		}
+		if ( function_exists( 'is_post_publicly_viewable' ) && ! is_post_publicly_viewable( $p ) ) {
+			return '';
+		}
+		$url = (string) get_permalink( $p );
+		if ( '' === $url || self::noindexed( (int) $p->ID ) || self::setup_noindex( $url ) ) {
+			$url = '';
+		}
+		if ( '' !== $url && defined( 'OPTIMA_SEO_META_CANONICAL' ) ) {
+			$canonical = trim( (string) get_post_meta( (int) $p->ID, OPTIMA_SEO_META_CANONICAL, true ) );
+			$canonical = '' !== $canonical && '/' === $canonical[0] && '/' !== ( $canonical[1] ?? '' ) ? home_url( $canonical ) : $canonical;
+			if ( '' !== $canonical && untrailingslashit( $canonical ) !== untrailingslashit( $url ) ) {
+				$url = '';
+			}
+		}
+		if ( '' !== $url && self::redirected( $url ) ) {
+			$url = '';
+		}
+		return (string) apply_filters( 'optima_aeo_llms_url', $url, $p );
+	}
+
 	/** The pages listed under "Pages": the chosen ones, or the top-level pages. */
 	public static function featured_pages(): array {
 		$s = self::settings();
@@ -199,7 +299,7 @@ final class Optima_AEO {
 			$pages = array_slice( $pages, 0, 30 );
 		}
 		$skip_ids = array( (int) get_option( 'wp_page_for_privacy_policy' ) );
-		return array_values( array_filter( (array) apply_filters( 'optima_aeo_llms_pages', $pages ), static fn( $p ) => ! in_array( (int) $p->ID, $skip_ids, true ) && ! self::noindexed( (int) $p->ID ) && '' === $p->post_password ) );
+		return array_values( array_filter( (array) apply_filters( 'optima_aeo_llms_pages', $pages ), static fn( $p ) => $p instanceof WP_Post && ! in_array( (int) $p->ID, $skip_ids, true ) && '' !== self::listed_url( $p ) ) );
 	}
 
 	/** Text without HTML entities (WordPress curls quotes into &#8220; and friends). */
@@ -234,28 +334,34 @@ final class Optima_AEO {
 		if ( $pages ) {
 			$lines[] = '## Pages';
 			foreach ( $pages as $p ) {
-				$lines[] = '- [' . self::plain( get_the_title( $p ) ) . '](' . get_permalink( $p ) . ')' . self::describe( $p );
+				$lines[] = '- [' . self::plain( get_the_title( $p ) ) . '](' . self::listed_url( $p ) . ')' . self::describe( $p );
 			}
 			$lines[] = '';
 		}
 
 		$count = self::settings()['posts'];
 		$posts = $count ? get_posts( array( 'numberposts' => $count, 'post_status' => 'publish', 'has_password' => false ) ) : array();
-		$posts = array_filter( $posts, static fn( $p ) => ! self::noindexed( (int) $p->ID ) );
+		$posts = array_filter( $posts, static fn( $p ) => '' !== self::listed_url( $p ) );
 		if ( $posts ) {
 			$lines[] = '## Articles';
 			foreach ( $posts as $p ) {
-				$lines[] = '- [' . self::plain( get_the_title( $p ) ) . '](' . get_permalink( $p ) . ')' . self::describe( $p );
+				$lines[] = '- [' . self::plain( get_the_title( $p ) ) . '](' . self::listed_url( $p ) . ')' . self::describe( $p );
 			}
 			$lines[] = '';
 		}
 
-		$faq = Optima_AEO_FAQ::pages_with_answers( 30 );
+		$faq = array();
+		foreach ( Optima_AEO_FAQ::pages_with_answers( 30 ) as $id ) {
+			$url = self::listed_url( $id );
+			if ( '' !== $url ) {
+				$faq[ $id ] = $url;
+			}
+		}
 		if ( $faq ) {
 			$lines[] = '## Questions answered on this site';
-			foreach ( $faq as $id ) {
+			foreach ( $faq as $id => $url ) {
 				foreach ( Optima_AEO_FAQ::get( $id ) as $qa ) {
-					$lines[] = '- [' . $qa['q'] . '](' . get_permalink( $id ) . '#answers)';
+					$lines[] = '- [' . $qa['q'] . '](' . $url . '#answers)';
 				}
 			}
 			$lines[] = '';
