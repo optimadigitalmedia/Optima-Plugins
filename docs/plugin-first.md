@@ -4,7 +4,7 @@ Status: **Adopted Nov 4, 2026. These rules are binding for every Optima plugin, 
 
 ## 0. Strict rules (read before touching any plugin or theme)
 
-Every rule is a MUST or a NEVER (49 rules). If a task would break one, stop and ask the site owner first.
+Every rule is a MUST or a NEVER (54 rules). If a task would break one, stop and ask the site owner first.
 
 **Who does the work**
 
@@ -35,6 +35,7 @@ Every rule is a MUST or a NEVER (49 rules). If a task would break one, stop and 
 16. Moving a job from a theme to a plugin MUST be checked with the head-and-schema diff (section 4): every tag and schema node present before is present after.
 17. Every move lands on staging first, one site at a time, in the order in section 5.
 18. Every plugin and theme change bumps its version and adds a changelog line, as today.
+19. Every site MUST run the same security baseline, set by Optima Build and listed on Site health: XML-RPC off, file editing off in the dashboard, user listing closed, login attempts limited, the staging copy never emails customers or calls outside services. A site that needs one of these on records why in its decisions log.
 
 **Load the same way**
 
@@ -86,6 +87,11 @@ Every rule is a MUST or a NEVER (49 rules). If a task would break one, stop and 
 47. **People.** Every site MUST hold one profile per person (optima-team owns it). The team page, bio page, bylines, case results, "reviewed by" lines, the digital card and the Person schema MUST read from that profile and nowhere else. A profile is a record, not an account: it links to a WordPress user only where the person posts under their own login (the agency's own site). Facts on a profile come from `optima-setup.json` (exported from the client's Knowledge Hub) and words from `content/`; WordPress owns only the team-page order, the card switch, the user link and reviewed-by assignments. NEVER type a credential into the profile screen.
 48. **Offboarding.** A person leaves through four steps in this order, never a delete button (Optima Team, from the profile): review (every page, post, result, photo, approval line, card and schema node that names them, and what happens to each), archive (a bundle written on the server, closed to visitors, with a zip the operator puts in the site repo under `content/people/former/` and in the client's Drive under Former, and the Knowledge Hub row moved to Former with the leave date), confirm (one link emailed to every operator, 24-hour expiry, opened by a signed-in operator; the starter and the confirmer are two people wherever the site has two operators), remove (everything about the person leaves the public site, every old address gets a 301, reviewed pages lose the name and go on the Inbox for a new reviewer, the former-people record on the People screen keeps the line, staging first). A failed archive stops the flow.
 49. The admin kit MUST draw no group navigation on a screen: the WordPress sidebar is the only group nav. A screen shows its title, one lede, and at most one tab row. (Amended 2026-11-05; release 1 drew the eight groups again as a pill row inside a hero band.)
+50. Every site MUST send the same event names so Recon reads every site the same way: `call_click`, `form_submit`, `chat_open`, `email_click`, `directions_click`, as Optima Analytics sends them. A theme or plugin never invents a new name; a new event is added to this list first. (Final list confirmed with the attribution plugin: QUESTIONS Q11 in the internal repo.)
+51. Outside plugins by exception: Gravity Forms is the only plugin outside this suite installed by default. Any other is listed in the theme's `optima-setup.json` under `approved_plugins` with a dated reason in the site's decisions log, and Site health lists everything else as outside the standard.
+52. Every Optima screen MUST open on what needs doing: problems and waiting items first, then the rest. A screen with nothing to do says so in one line.
+53. Setup, import, export, sync and migrate screens MUST file under Optima → Build, for operators only; they never appear under another item.
+54. NEVER put a copy of a plugin's screen in the Optima menu. A theme or companion plugin links to the plugin's own screen.
 
 
 
