@@ -1,0 +1,8 @@
+# Intentional client or partner name mentions, for tools/client-names.py.
+#
+# One path glob per line, optionally followed by the deny-list entry ids it
+# allows (every id when none are listed). Put a dated reason in a comment above
+# each line. Optima Plugins is public and holds platform code and docs only, so
+# an allowance is a deviation and ends when its reason does. Find an entry's id
+# locally with:
+#   python3 tools/client-names.py --which "the text"
