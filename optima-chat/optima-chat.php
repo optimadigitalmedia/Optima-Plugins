@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Optima Chat
  * Description:       A chat assistant in the corner of the site. Answers the common questions, books calls, takes change requests, and saves every visitor question to an inbox. Gives AI answers once it is connected to an AI server.
- * Version:           0.2.4.10
+ * Version:           0.2.4.11
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Author:            Optima Digital
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OPTIMA_CHAT_VERSION', '0.2.4.10' );
+define( 'OPTIMA_CHAT_VERSION', '0.2.4.11' );
 define( 'OPTIMA_CHAT_FILE', __FILE__ );
 define( 'OPTIMA_CHAT_URL', plugin_dir_url( __FILE__ ) );
 
@@ -36,6 +36,11 @@ add_action(
 require_once __DIR__ . '/includes/class-optima-admin-ui.php';
 require_once __DIR__ . '/includes/class-optima-chat.php';
 require_once __DIR__ . '/includes/class-optima-chat-admin.php';
+require_once __DIR__ . '/includes/class-optima-chat-privacy.php';
 
 Optima_Chat::boot();
 Optima_Chat_Admin::boot();
+Optima_Chat_Privacy::boot();
+
+// Switched off: the daily clean-up job goes with it (it comes back on the next page load after switching on).
+register_deactivation_hook( __FILE__, array( 'Optima_Chat_Privacy', 'deactivate' ) );

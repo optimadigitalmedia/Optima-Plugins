@@ -97,6 +97,9 @@ final class Optima_Optimize_Batch {
 			wp_die( esc_html__( 'You do not have permission to do this.', 'optima-optimize' ) );
 		}
 		check_admin_referer( 'optima_optimize_sweep' );
+		if ( Optima_Optimize::images_paused() ) {
+			$this->redirect(); // The screen says why: NitroPack optimizes this site's images.
+		}
 
 		update_option( self::RUNNING_OPTION, time() );
 		$this->schedule_next();
@@ -129,6 +132,11 @@ final class Optima_Optimize_Batch {
 	 */
 	public function run_batch(): void {
 		if ( ! get_option( self::RUNNING_OPTION ) ) {
+			return;
+		}
+		if ( Optima_Optimize::images_paused() ) {
+			// NitroPack arrived mid-sweep: stop instead of running two optimizers.
+			delete_option( self::RUNNING_OPTION );
 			return;
 		}
 
@@ -318,8 +326,12 @@ final class Optima_Optimize_Batch {
 		$running = (bool) get_option( self::RUNNING_OPTION );
 		$percent = $stats['total'] > 0 ? (int) round( ( $stats['optimized'] / $stats['total'] ) * 100 ) : 0;
 		$action  = admin_url( 'admin-post.php' );
+		$paused  = Optima_Optimize::images_paused();
 		?>
 		<?php Optima_Admin_UI::open( __( 'Optimize existing images', 'optima-optimize' ), __( 'Runs the optimizer over images uploaded before it was turned on.', 'optima-optimize' ), __( 'Images', 'optima-optimize' ), 'optima-optimize' ); ?>
+			<?php if ( $paused ) : ?>
+				<div class="notice notice-warning inline"><p><?php esc_html_e( 'Image optimization is paused because NitroPack already optimizes this site\'s images, so the library sweep does not run.', 'optima-optimize' ); ?></p></div>
+			<?php endif; ?>
 			<section class="sh-box">
 				<h2><?php esc_html_e( 'Your media library', 'optima-optimize' ); ?></h2>
 				<p><?php esc_html_e( 'This runs in the background in small batches and backs up each original first. New uploads are handled automatically, so this is only for the library you already have.', 'optima-optimize' ); ?></p>
@@ -337,12 +349,14 @@ final class Optima_Optimize_Batch {
 							<input type="hidden" name="action" value="optima_optimize_sweep_stop" />
 							<button type="submit" class="button"><?php esc_html_e( 'Stop', 'optima-optimize' ); ?></button>
 						</form>
-					<?php elseif ( $stats['remaining'] > 0 ) : ?>
+					<?php elseif ( $stats['remaining'] > 0 && ! $paused ) : ?>
 						<form method="post" action="<?php echo esc_url( $action ); ?>" class="sh-inline" onsubmit="return confirm('This backs up every original (roughly doubling image storage) and optimizes the library in the background. Continue?');">
 							<?php wp_nonce_field( 'optima_optimize_sweep' ); ?>
 							<input type="hidden" name="action" value="optima_optimize_sweep_start" />
 							<button type="submit" class="button button-primary"><?php esc_html_e( 'Start', 'optima-optimize' ); ?></button>
 						</form>
+					<?php elseif ( $stats['remaining'] > 0 ) : ?>
+						<span class="sh-tag"><?php esc_html_e( 'Paused while NitroPack runs', 'optima-optimize' ); ?></span>
 					<?php else : ?>
 						<span class="sh-tag is-current"><?php esc_html_e( 'Every image has been optimized', 'optima-optimize' ); ?></span>
 					<?php endif; ?>

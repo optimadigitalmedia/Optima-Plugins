@@ -259,7 +259,7 @@ final class Optima_Results_Admin {
 			0 === $line
 				? __( 'This firm has no threshold: every result may show.', 'optima-results' )
 				/* translators: %s: amount */
-				: sprintf( __( 'Threshold: %s. A result below it stays in the Knowledge Hub and is not published.', 'optima-results' ), '$' . number_format_i18n( $line ) )
+				: sprintf( __( 'Threshold: %s. A result below it stays in the Knowledge Hub and the site never shows it, even when approved. A result with no figure in its amount shows once approved.', 'optima-results' ), '$' . number_format_i18n( $line ) )
 		) . '</p>';
 		if ( $rows ) {
 			echo '<div class="sh-scroll"><table class="widefat striped"><thead><tr>';
@@ -274,8 +274,8 @@ final class Optima_Results_Admin {
 				echo '<td>' . esc_html( $r['type_label'] ) . '</td>';
 				echo '<td>' . esc_html( '' !== $r['date'] ? substr( $r['date'], 0, 4 ) : '' ) . '</td>';
 				echo '<td>' . esc_html( '' !== $r['attorney'] ? $r['attorney'] : __( 'Not named', 'optima-results' ) ) . '</td>';
-				$above = Optima_Results::above_threshold( $r['amount'] );
-				echo '<td><span class="sh-pill ' . ( $above ? 'is-done' : 'is-received' ) . '">' . esc_html( $above ? __( 'Yes', 'optima-results' ) : __( 'No', 'optima-results' ) ) . '</span></td>';
+				$status = Optima_Results::threshold_status( $r['amount'] );
+				echo '<td><span class="sh-pill ' . ( 'below' === $status ? 'is-received' : ( 'unknown' === $status ? 'is-needs' : 'is-done' ) ) . '">' . esc_html( Optima_Results::threshold_label( $r['amount'] ) ) . '</span></td>';
 				echo '<td>' . esc_html( Optima_Results::is_approved( $r['approved'], $r['approver'] ) ? __( 'Approved', 'optima-results' ) : __( 'Waiting', 'optima-results' ) ) . '</td></tr>';
 			}
 			echo '</tbody></table></div>';

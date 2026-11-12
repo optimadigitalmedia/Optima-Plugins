@@ -159,6 +159,57 @@ final class Optima_Results {
 		return 0 === $line || self::dollars( $amount ) >= $line;
 	}
 
+	/**
+	 * Where a result stands against the firm's threshold:
+	 * 'none'    the firm has no threshold (0 or empty), every result may show;
+	 * 'above'   the amount reads as a number at or above the line;
+	 * 'below'   the amount reads as a number under the line;
+	 * 'unknown' no number could be read from the amount ("Confidential
+	 *           settlement", a non-money result, or the field left empty).
+	 */
+	public static function threshold_status( string $amount ): string {
+		$line = self::settings()['threshold'];
+		if ( 0 === $line ) {
+			return 'none';
+		}
+		$dollars = self::dollars( $amount );
+		if ( $dollars <= 0 ) {
+			return 'unknown';
+		}
+		return $dollars >= $line ? 'above' : 'below';
+	}
+
+	/** The dashboard's word for threshold_status(), so the list says what the site does. */
+	public static function threshold_label( string $amount ): string {
+		switch ( self::threshold_status( $amount ) ) {
+			case 'below':
+				return __( 'No, not shown on the site', 'optima-results' );
+			case 'unknown':
+				return __( 'No amount to check', 'optima-results' );
+			default:
+				return __( 'Yes', 'optima-results' );
+		}
+	}
+
+	/**
+	 * May this result appear on the site? It needs the firm's approval with
+	 * the approver's name, and it must not be known to sit under the firm's
+	 * threshold. A result whose amount has no number in it is not known to be
+	 * under the line, so it follows the approval alone: the threshold is about
+	 * the size of a figure, and a result without a figure prints none.
+	 *
+	 * Every visitor-facing output (the grid, a single result, anything added
+	 * later) goes through this one check.
+	 */
+	public static function may_publish( array $r ): bool {
+		if ( ! self::is_approved( (bool) ( $r['approved'] ?? false ), (string) ( $r['approver'] ?? '' ) ) ) {
+			return false;
+		}
+		$ok = 'below' !== self::threshold_status( (string) ( $r['amount'] ?? '' ) );
+		/** Filter whether an approved result may appear on the site. */
+		return (bool) apply_filters( 'optima_results_may_publish', $ok, $r );
+	}
+
 	/** The disclaimer printed next to every result. Never empty. */
 	public static function disclaimer(): string {
 		$s    = self::settings();

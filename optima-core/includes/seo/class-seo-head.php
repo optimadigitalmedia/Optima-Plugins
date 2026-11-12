@@ -41,8 +41,9 @@ final class Optima_SEO_Head {
 		}
 		// The theme's per-URL title from optima-setup.json (seo.pages), used as written.
 		// A title that uses %page% is applied once WordPress has built that part (Optima_SEO_Setup::format_title).
+		// A title naming %title% (itself) is ignored: WordPress builds the title instead.
 		$setup = (string) Optima_SEO_Setup::page( 'title' );
-		if ( '' !== $setup && false === strpos( $setup, '%page%' ) ) {
+		if ( '' !== $setup && false === strpos( $setup, '%page%' ) && false === strpos( $setup, '%title%' ) ) {
 			return Optima_SEO_Setup::tokens( $setup );
 		}
 		return $title;
@@ -246,9 +247,11 @@ final class Optima_SEO_Head {
 			if ( false === $setup ) {
 				return '';
 			}
-			$setup = Optima_SEO_Setup::tokens( (string) $setup );
+			// %link% is this very address, so a canonical naming it means the default below.
+			// Resolving it here would call canonical_url() again, without end.
+			$setup = (string) $setup;
 			if ( '' !== $setup && false === strpos( $setup, '%link%' ) ) {
-				return Optima_SEO_Setup::resolve( $setup );
+				return Optima_SEO_Setup::resolve( Optima_SEO_Setup::tokens( $setup ) );
 			}
 		}
 		if ( is_singular() ) {

@@ -10,15 +10,27 @@
  * Forms sit below the first screen, so none of that has to load first.
  *
  *  - Gravity Forms stylesheets (and any handle in optima_async_styles) load at
- *    low priority and apply when they arrive, with a <noscript> copy.
- *  - Every queued script that needs jQuery or wp-a11y moves to the footer with
- *    everything it depends on, so nothing pulls jQuery back into <head>.
- *  - Forms on the page are enqueued up front, so Gravity Forms does not print
- *    its scripts in the middle of the page.
+ *    low priority and apply when they arrive, with a <noscript> copy. On by
+ *    default.
+ *  - When the jQuery move is on: every queued script that needs jQuery or
+ *    wp-a11y moves to the footer with everything it depends on, so nothing
+ *    pulls jQuery back into <head>, and forms on the page are enqueued up front
+ *    so Gravity Forms does not print its scripts in the middle of the page.
  *
- * Off switches: filter optima_optimize_speed to false for the whole module,
- * optima_jquery_in_footer to false for the script move alone, or define
- * OPTIMA_OPTIMIZE_SPEED as false in wp-config.php.
+ * The jQuery move is off unless a site turns it on (Image optimizer screen,
+ * "Move jQuery to the end of the page"), and it never runs on a site with
+ * Elementor or NitroPack: Elementor HTML widgets and third-party embeds call
+ * jQuery inline in the page body, and NitroPack defers and reorders scripts
+ * itself. Moving jQuery there breaks those inline calls.
+ *
+ * Switches, strongest first:
+ *  - OPTIMA_OPTIMIZE_SPEED false in wp-config.php, or the optima_optimize_speed
+ *    filter returning false: the whole module is off.
+ *  - The optima_jquery_in_footer filter has the last word on the jQuery move
+ *    (it receives the decision and the reason), so a site can force it on or
+ *    off in code, even over the Elementor and NitroPack checks.
+ *  - OPTIMA_JQUERY_IN_FOOTER true or false in wp-config.php forces the move on
+ *    or off over the screen setting and the checks.
  *
  * Moved here from two client themes (the same fix, copied per
  * theme). A theme that still carries its own copy is harmless: each filter
@@ -49,7 +61,66 @@ final class Optima_Optimize_Speed {
 	}
 
 	private static function scripts_on(): bool {
-		return self::on() && (bool) apply_filters( 'optima_jquery_in_footer', true );
+		return self::jquery_state()['move'];
+	}
+
+	/** True when Elementor (or Elementor Pro) is active on this site. */
+	public static function elementor(): bool {
+		return defined( 'ELEMENTOR_VERSION' ) || defined( 'ELEMENTOR_PRO_VERSION' ) || did_action( 'elementor/loaded' ) > 0 || class_exists( '\Elementor\Plugin', false );
+	}
+
+	/** True when NitroPack is active on this site. */
+	public static function nitropack(): bool {
+		$on = defined( 'NITROPACK_VERSION' ) || defined( 'NITROPACK_HOME_URL' ) || function_exists( 'get_nitropack' ) || function_exists( 'nitropack_get_instance' )
+			|| class_exists( '\NitroPack\WordPress\NitroPack', false ) || class_exists( '\NitroPack\SDK\NitroPack', false );
+		/**
+		 * Filters whether Optima Optimize treats NitroPack as active.
+		 *
+		 * @param bool $on True when a NitroPack marker was found.
+		 */
+		return (bool) apply_filters( 'optima_optimize_nitropack_active', $on );
+	}
+
+	/**
+	 * Whether jQuery moves to the footer on this site, and why.
+	 *
+	 * @return array{move:bool,why:string} why is one of: off (module off),
+	 *               constant, elementor, nitropack, setting, default, filter.
+	 */
+	public static function jquery_state(): array {
+		if ( ! self::on() || ( defined( 'OPTIMA_OPTIMIZE_SPEED' ) && ! OPTIMA_OPTIMIZE_SPEED ) ) {
+			return array(
+				'move' => false,
+				'why'  => 'off',
+			);
+		}
+		if ( defined( 'OPTIMA_JQUERY_IN_FOOTER' ) ) {
+			$move = (bool) OPTIMA_JQUERY_IN_FOOTER;
+			$why  = 'constant';
+		} elseif ( self::elementor() ) {
+			$move = false;
+			$why  = 'elementor';
+		} elseif ( self::nitropack() ) {
+			$move = false;
+			$why  = 'nitropack';
+		} else {
+			$settings = class_exists( 'Optima_Optimize' ) ? Optima_Optimize::settings() : array();
+			$move     = ! empty( $settings['jquery_footer'] );
+			$why      = $move ? 'setting' : 'default';
+		}
+		/**
+		 * Filters whether jQuery and the scripts that need it print in the footer.
+		 * Has the last word, over the screen setting and the Elementor and
+		 * NitroPack checks.
+		 *
+		 * @param bool   $move True to move them.
+		 * @param string $why  Why: constant, elementor, nitropack, setting or default.
+		 */
+		$filtered = (bool) apply_filters( 'optima_jquery_in_footer', $move, $why );
+		return array(
+			'move' => $filtered,
+			'why'  => $filtered === $move ? $why : 'filter',
+		);
 	}
 
 	/** Gravity Forms and listed stylesheets load without blocking the first paint. */

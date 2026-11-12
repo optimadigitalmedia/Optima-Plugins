@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.4.11 (2026-11-12)
+
+- The speed test no longer holds a visitor's request for up to 90 seconds: it waits at most 20, then finishes in a scheduled job while the page checks back every few seconds. After two and a half minutes with no answer, speed is left out of the score so the report still goes out.
+- New limit of six checks a day from one visitor address (kept only as a salted hash), checked before the site's 40-a-day cap, so one visitor can no longer use up the site's allowance.
+- Saved checks are deleted after 90 days by a daily job (a site can keep them only with a written reason), are reachable from WordPress's Export and Erase Personal Data tools by email, and are deleted with the plugin.
+- Switching the plugin off clears its scheduled finishing, speed and clean-up jobs.
+- Updates install only from the Optima Plugins release downloads (https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/). A release listed at any other address is skipped, and an update of an Optima plugin from any other address is refused with an error.
+- Every download is checked against the sha256 published in the version list before WordPress unpacks it. A mismatch deletes the file, stops the install with an error and writes a line to the PHP error log.
+- A release listed without a sha256 (one published before checksums were recorded) still installs as before, with a line in the PHP error log saying no checksum was checked.
+- Automatic updates run only for a package from the Optima Plugins releases.
+- The GitHub API fallback reads each asset's digest as its sha256, so the check works on that path too.
+
 ## 0.2.4.10 (2026-11-05)
 
 - Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).

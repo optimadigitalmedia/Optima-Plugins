@@ -133,6 +133,6 @@ final class Optima_Hours_Schema {
 			),
 			$props
 		);
-		echo "\n<script type=\"application/ld+json\" id=\"optima-hours-schema\">" . wp_json_encode( $node, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . "</script>\n";
+		echo "\n<script type=\"application/ld+json\" id=\"optima-hours-schema\">" . wp_json_encode( $node, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG ) . "</script>\n";
 	}
 }

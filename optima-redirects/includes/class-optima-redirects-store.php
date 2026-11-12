@@ -3,12 +3,18 @@
  * Storage for redirects and the missing-page log.
  *
  * Two small custom tables rather than one option. A redirect is looked up on
- * every front-end request and its hit count is written each time it is used.
- * In an option, every hit would rewrite (and autoload) the whole list, which
- * gets slow and racy once a rebuild imports a few hundred old addresses. A
- * table gives a single indexed lookup by a hash of the old path and a
- * one-row update per hit. The missing-page log works the same way and is
- * capped, so it never grows past a few hundred rows.
+ * every front-end request. In an option, every change would rewrite (and
+ * autoload) the whole list, which gets slow and racy once a rebuild imports a
+ * few hundred old addresses. A table gives a single indexed lookup by a hash
+ * of the old path.
+ *
+ * Writes are kept off the visitor's request where they can be. On a site with
+ * a persistent object cache, redirect uses are counted in the cache and
+ * written to the table in one pass (every OPTIMA_REDIRECTS_HIT_BATCH uses, on
+ * the hourly tidy-up, and when the Redirects screen opens); without one, each
+ * use is a single update by primary key, as before. A missing page is one
+ * insert-or-update. The missing-page log is held to its cap by the hourly
+ * tidy-up rather than by a count on every new address.
  *
  * @package Optima_Redirects
  */
@@ -23,6 +29,7 @@ final class Optima_Redirects_Store {
 	const DB_OPTION    = 'optima_redirects_db';
 	const COUNT_OPTION = 'optima_redirects_count';
 	const CACHE_GROUP  = 'optima_redirects';
+	const HITS_GROUP   = 'optima_redirects_hits';
 
 	public static function table(): string {
 		global $wpdb;
@@ -253,54 +260,105 @@ final class Optima_Redirects_Store {
 		self::flush_cache();
 	}
 
-	/** Count one use of a redirect. */
+	/** Uses counted in the cache before they are written: OPTIMA_REDIRECTS_HIT_BATCH, or the optima_redirects_hit_batch filter. */
+	private static function hit_batch(): int {
+		$n = defined( 'OPTIMA_REDIRECTS_HIT_BATCH' ) ? (int) OPTIMA_REDIRECTS_HIT_BATCH : 100;
+		return max( 1, (int) apply_filters( 'optima_redirects_hit_batch', $n ) );
+	}
+
+	/**
+	 * Count one use of a redirect.
+	 *
+	 * With a persistent object cache the use is added to a counter in the cache
+	 * and written later by flush_hits(); a cache eviction can lose a few counts,
+	 * which only affects the Hits column. Without one, it is one update by
+	 * primary key. The cached lookup is left alone either way: it holds the
+	 * target and type, which a use does not change.
+	 */
 	public static function hit( object $row ): void {
 		global $wpdb;
+		$id = (int) $row->id;
+		if ( $id < 1 ) {
+			return;
+		}
+		if ( wp_using_ext_object_cache() ) {
+			wp_cache_add( 'n:' . $id, 0, self::HITS_GROUP );
+			if ( false !== wp_cache_incr( 'n:' . $id, 1, self::HITS_GROUP ) ) {
+				wp_cache_set( 't:' . $id, self::now(), self::HITS_GROUP );
+				wp_cache_add( 'pending', 0, self::HITS_GROUP );
+				if ( (int) wp_cache_incr( 'pending', 1, self::HITS_GROUP ) >= self::hit_batch() ) {
+					self::flush_hits();
+				}
+				return;
+			}
+		}
 		$table = self::table();
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$wpdb->query( $wpdb->prepare( "UPDATE {$table} SET hits = hits + 1, last_hit = %s WHERE id = %d", self::now(), (int) $row->id ) );
-		wp_cache_delete( self::cache_key( (string) $row->source_hash ), self::CACHE_GROUP );
+		$wpdb->query( $wpdb->prepare( "UPDATE {$table} SET hits = hits + 1, last_hit = %s WHERE id = %d", self::now(), $id ) );
+	}
+
+	/**
+	 * Write the uses counted in the cache to the table: one update per redirect
+	 * that was used, none for the rest. Safe to call any time; a lock in the
+	 * cache keeps two runs from writing the same counts twice.
+	 */
+	public static function flush_hits(): void {
+		global $wpdb;
+		if ( ! wp_using_ext_object_cache() || ! wp_cache_add( 'lock', 1, self::HITS_GROUP, MINUTE_IN_SECONDS ) ) {
+			return;
+		}
+		wp_cache_set( 'pending', 0, self::HITS_GROUP );
+		$table = self::table();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$ids = array_map( 'intval', (array) $wpdb->get_col( "SELECT id FROM {$table}" ) );
+		foreach ( array_chunk( $ids, 200 ) as $chunk ) {
+			$keys = array();
+			foreach ( $chunk as $id ) {
+				$keys[] = 'n:' . $id;
+			}
+			$counts = wp_cache_get_multiple( $keys, self::HITS_GROUP );
+			foreach ( $chunk as $id ) {
+				$n = (int) ( $counts[ 'n:' . $id ] ?? 0 );
+				if ( $n < 1 ) {
+					continue;
+				}
+				// Take away only what is written, so uses counted meanwhile are kept.
+				wp_cache_decr( 'n:' . $id, $n, self::HITS_GROUP );
+				$last = wp_cache_get( 't:' . $id, self::HITS_GROUP );
+				$last = is_string( $last ) && '' !== $last ? $last : self::now();
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$wpdb->query( $wpdb->prepare( "UPDATE {$table} SET hits = hits + %d, last_hit = %s WHERE id = %d", $n, $last, $id ) );
+			}
+		}
+		wp_cache_delete( 'lock', self::HITS_GROUP );
 	}
 
 	/* ---------------------------------------------------------------- */
 	/* Missing pages                                                     */
 	/* ---------------------------------------------------------------- */
 
-	/** Record one request for a missing page, keeping the log under its cap. */
-	public static function log_404( string $path, string $referrer, bool $internal, int $cap ): void {
+	/**
+	 * Record one request for a missing page: a single insert, or an update when
+	 * the address is already listed. The log is held to its cap by the hourly
+	 * tidy-up (log_trim), not on every new address.
+	 *
+	 * Once a missing page is linked from the site, it stays flagged and keeps
+	 * that page as its referrer, so the broken link can be found.
+	 *
+	 * @param int $cap Unused; kept so older callers still work.
+	 */
+	public static function log_404( string $path, string $referrer, bool $internal, int $cap = 0 ): void {
 		global $wpdb;
-		$log  = self::log_table();
-		$hash = self::hash( $path );
-		$now  = self::now();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$log} WHERE path_hash = %s", $hash ) );
-		if ( $id ) {
-			if ( '' !== $referrer ) {
-				// Once a missing page is linked from the site, it stays flagged and
-				// keeps that page as its referrer, so the broken link can be found.
-				$set = $internal ? 'referrer = %s, internal = 1' : 'referrer = CASE WHEN internal = 1 THEN referrer ELSE %s END';
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				$wpdb->query( $wpdb->prepare( "UPDATE {$log} SET hits = hits + 1, last_seen = %s, {$set} WHERE id = %d", $now, $referrer, $id ) );
-			} else {
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				$wpdb->query( $wpdb->prepare( "UPDATE {$log} SET hits = hits + 1, last_seen = %s WHERE id = %d", $now, $id ) );
-			}
-			return;
-		}
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$wpdb->insert(
-			$log,
-			array(
-				'path'       => $path,
-				'path_hash'  => $hash,
-				'hits'       => 1,
-				'referrer'   => $referrer,
-				'internal'   => $internal ? 1 : 0,
-				'first_seen' => $now,
-				'last_seen'  => $now,
-			)
-		);
-		self::log_trim( $cap );
+		unset( $cap );
+		$log = self::log_table();
+		$now = self::now();
+		// Columns update left to right, so the referrer CASE still reads the stored internal flag.
+		$sql = "INSERT INTO {$log} (path, path_hash, hits, referrer, internal, first_seen, last_seen) VALUES (%s, %s, 1, %s, %d, %s, %s)
+			ON DUPLICATE KEY UPDATE hits = hits + 1, last_seen = VALUES(last_seen),
+			referrer = CASE WHEN VALUES(referrer) = '' THEN referrer WHEN VALUES(internal) = 1 THEN VALUES(referrer) WHEN internal = 1 THEN referrer ELSE VALUES(referrer) END,
+			internal = GREATEST(internal, VALUES(internal))";
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.NotPrepared
+		$wpdb->query( $wpdb->prepare( $sql, $path, self::hash( $path ), $referrer, $internal ? 1 : 0, $now, $now ) );
 	}
 
 	/** Drop the oldest, least visited rows once the log passes its cap. */
@@ -323,7 +381,7 @@ final class Optima_Redirects_Store {
 	/**
 	 * Missing pages, most visited first.
 	 *
-	 * @param bool $internal_only Only the ones linked from the site's own pages.
+	 * @param bool $internal_only Only the ones a link on the site's own pages leads to.
 	 */
 	public static function log_list( int $limit, bool $internal_only = false ): array {
 		global $wpdb;
@@ -360,6 +418,21 @@ final class Optima_Redirects_Store {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$wpdb->delete( self::log_table(), array( 'path_hash' => self::hash( $path ) ) );
+	}
+
+	/** True when a path is on the missing-page list. */
+	public static function log_has( string $path ): bool {
+		global $wpdb;
+		$log = self::log_table();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		return (bool) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$log} WHERE path_hash = %s", self::hash( $path ) ) );
+	}
+
+	/** Keep a missing page on the list but stop calling it a broken link on the site. */
+	public static function log_unflag( int $id ): void {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->update( self::log_table(), array( 'internal' => 0 ), array( 'id' => $id ) );
 	}
 
 	public static function log_clear(): void {

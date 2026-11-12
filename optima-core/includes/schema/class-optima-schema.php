@@ -4,12 +4,15 @@
  *
  * The graph is one connected entity model, not a pile of disconnected blobs:
  *
- *   #business  LocalBusiness (or the subtype set in Optima Business) — the NAP,
- *              geo, profiles, and an aggregateRating computed from real
- *              testimonials. Stable @id: home_url( '/#business' ).
+ *   #business  LocalBusiness (or the subtype set in Optima Business): the NAP,
+ *              geo and profiles. Stable @id: home_url( '/#business' ). No star
+ *              rating and no Review entries are built from testimonials: those
+ *              are hand-picked quotes, not a platform's full count, and Google
+ *              treats a business's own review markup as self-serving. A plugin
+ *              with real platform totals adds a rating through the
+ *              `optima_schema_aggregate_rating` filter.
  *   #website   WebSite, publisher -> #business.
  *   FAQPage    on the FAQ hub page / archive, from the FAQ post type.
- *   Review     from testimonials, itemReviewed -> #business.
  *   BlogPosting on single posts, publisher -> #business.
  *
  * Everything references #business by @id, which is what makes Google (and AI
@@ -25,6 +28,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class Optima_Schema {
 
+	/**
+	 * The old testimonial rating cache. Nothing is cached under it any more;
+	 * clear_cache() still deletes it so a leftover copy goes away.
+	 */
 	const CACHE_KEY = 'optima_schema_reviews';
 
 	/**
@@ -65,7 +72,7 @@ final class Optima_Schema {
 		echo "\n";
 		foreach ( $blocks as $data ) {
 			echo '<script type="application/ld+json">'
-				. wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE )
+				. wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG )
 				. "</script>\n";
 		}
 	}
@@ -122,14 +129,17 @@ final class Optima_Schema {
 			'website'  => self::website_node(),
 		);
 
-		list( $aggregate, $reviews ) = self::reviews();
-
-		$aggregate = apply_filters( 'optima_schema_aggregate_rating', $aggregate );
-		if ( ! empty( $aggregate ) ) {
+		/**
+		 * A star rating for the business node. Empty by default: Optima Core
+		 * never builds one from testimonials. A plugin that holds a platform's
+		 * real totals (rating value and review count) can return an
+		 * AggregateRating array here.
+		 *
+		 * @param array $aggregate Empty array.
+		 */
+		$aggregate = apply_filters( 'optima_schema_aggregate_rating', array() );
+		if ( ! empty( $aggregate ) && is_array( $aggregate ) ) {
 			$graph['business']['aggregateRating'] = $aggregate;
-		}
-		foreach ( $reviews as $i => $review ) {
-			$graph[ 'review_' . $i ] = $review;
 		}
 
 		if ( self::is_faq_context() ) {
@@ -229,87 +239,6 @@ final class Optima_Schema {
 				'query-input' => 'required name=search_term_string',
 			),
 		);
-	}
-
-	/**
-	 * Compute the aggregate rating and review nodes from testimonials.
-	 * Cached for an hour; cleared on testimonial save/delete.
-	 *
-	 * @return array{0:?array,1:array}
-	 */
-	public static function reviews() {
-		$cached = get_transient( self::CACHE_KEY );
-		if ( is_array( $cached ) ) {
-			return $cached;
-		}
-
-		$limit   = (int) apply_filters( 'optima_schema_review_limit', 10 );
-		$ratings = array();
-		$reviews = array();
-
-		$query = new WP_Query(
-			array(
-				'post_type'      => 'testimonial',
-				'post_status'    => 'publish',
-				'posts_per_page' => -1,
-				'no_found_rows'  => true,
-			)
-		);
-
-		foreach ( $query->posts as $post ) {
-			$rating = get_post_meta( $post->ID, optima_core_meta_key( 'rating' ), true );
-			if ( is_numeric( $rating ) ) {
-				$ratings[] = (float) $rating;
-			}
-
-			// Google's review snippet needs a star rating on every Review. Testimonials
-			// without one stay on the page but are left out of the markup, which
-			// a client site Rich Results test flagged as 10 invalid items (Oct 15).
-			if ( count( $reviews ) >= $limit || ! is_numeric( $rating ) ) {
-				continue;
-			}
-
-			$node = array(
-				'@type'        => 'Review',
-				'@id'          => home_url( '/#review-' . $post->ID ),
-				'itemReviewed' => array( '@id' => home_url( '/#business' ) ),
-				'author'       => array(
-					'@type' => 'Person',
-					'name'  => get_the_title( $post ),
-				),
-			);
-
-			$body = trim( wp_strip_all_tags( $post->post_content ) );
-			if ( '' !== $body ) {
-				$node['reviewBody'] = $body;
-			}
-			$node['reviewRating'] = array(
-				'@type'       => 'Rating',
-				'ratingValue' => (string) ( 0 + $rating ),
-				'bestRating'  => '5',
-			);
-			$date = get_post_meta( $post->ID, optima_core_meta_key( 'date' ), true );
-			if ( '' !== $date ) {
-				$node['datePublished'] = $date;
-			}
-
-			$reviews[] = $node;
-		}
-		wp_reset_postdata();
-
-		$aggregate = null;
-		if ( $ratings ) {
-			$aggregate = array(
-				'@type'       => 'AggregateRating',
-				'ratingValue' => (string) round( array_sum( $ratings ) / count( $ratings ), 1 ),
-				'reviewCount' => (string) count( $ratings ),
-				'bestRating'  => '5',
-			);
-		}
-
-		$result = array( $aggregate, $reviews );
-		set_transient( self::CACHE_KEY, $result, HOUR_IN_SECONDS );
-		return $result;
 	}
 
 	public static function clear_cache() {
