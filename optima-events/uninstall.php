@@ -3,7 +3,7 @@
  * Optima Events uninstall cleanup. Runs only when the plugin is deleted.
  *
  * Deleting the plugin always removes its settings, its reminder job and its
- * cached lookups. Events, sessions, speakers, vendors and partners are the
+ * cached lookups. Events, sessions, speakers and vendors are the
  * client's content and always stay in the database, so putting the plugin
  * back brings every page back as it was.
  *
