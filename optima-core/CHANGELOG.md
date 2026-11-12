@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.0.13 (2026-11-12)
+
+- Sitemap agrees with noindex: when Core prints the head, whatever the theme's `seo.pages` robots rules noindex leaves WordPress's sitemap too. `:category`, `:tag` or `:archive` drops that taxonomy's sitemap, `:author` or `:archive` the author sitemap, a term's path drops that term, and a page's path, pattern or `:posts` drops that page (the SEO box's noindex already did). Before, a theme that handed its head to Core kept its noindexed category archive in wp-sitemap.xml.
+- A `canonical` of `"%link%"` no longer crashes the page (it named itself, so working it out never ended); it now means the default canonical. A token whose value names itself (`%title%` in a title) gives nothing instead of looping, and a per-URL title naming `%title%` is ignored, so WordPress builds the title.
+
 ## 1.6.0.12 (2026-11-05)
 
 - No em dash in visible text: the empty choice in a select reads Select one.

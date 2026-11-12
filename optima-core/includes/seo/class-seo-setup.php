@@ -131,15 +131,24 @@ final class Optima_SEO_Setup {
 		if ( ! self::active() ) {
 			return array();
 		}
-		$pages = (array) ( self::data()['pages'] ?? array() );
-		$path  = self::current_path();
-		$keys  = self::special_keys();
-		$ckey  = $path . '|' . implode( ',', $keys );
+		$path = self::current_path();
+		$keys = self::special_keys();
+		$ckey = $path . '|' . implode( ',', $keys );
 		if ( isset( $cache[ $ckey ] ) ) {
 			return $cache[ $ckey ];
 		}
+		$cache[ $ckey ] = self::entry_for( ( is_search() || is_404() ) ? '' : $path, $keys );
+		return $cache[ $ckey ];
+	}
+
+	/**
+	 * The seo.pages entry for any path and special keys (most specific first),
+	 * looked up as current_page() does. An empty path matches no path entry.
+	 */
+	public static function entry_for( string $path, array $keys ): array {
+		$pages = (array) ( self::data()['pages'] ?? array() );
 		$found = array();
-		if ( ! is_search() && ! is_404() ) {
+		if ( '' !== $path ) {
 			if ( isset( $pages[ $path ] ) && is_array( $pages[ $path ] ) ) {
 				$found = $pages[ $path ];
 			} else {
@@ -163,8 +172,45 @@ final class Optima_SEO_Setup {
 				$found = array_merge( $found, $pages[ $key ] );
 			}
 		}
-		$cache[ $ckey ] = $found;
 		return $found;
+	}
+
+	/**
+	 * True when the theme's robots rules (site-wide, then this entry's) end in
+	 * noindex. The off-production noindex is not counted: it is about the host,
+	 * not the page.
+	 */
+	public static function noindexed( array $entry ): bool {
+		if ( ! self::active() ) {
+			return false;
+		}
+		$robots = array();
+		foreach ( array( self::site( 'robots' ), $entry['robots'] ?? '' ) as $rule ) {
+			if ( is_string( $rule ) && '' !== $rule ) {
+				$robots = self::apply_robots( $robots, $rule );
+			}
+		}
+		return ! empty( $robots['noindex'] );
+	}
+
+	/**
+	 * True when some robots rule in the data can noindex a single page: the
+	 * site-wide one, any path entry's, or the posts page's (":posts").
+	 */
+	public static function has_page_noindex(): bool {
+		if ( ! self::active() ) {
+			return false;
+		}
+		if ( self::noindexed( array() ) ) {
+			return true;
+		}
+		foreach ( (array) ( self::data()['pages'] ?? array() ) as $key => $entry ) {
+			$key = (string) $key;
+			if ( is_array( $entry ) && ( ':posts' === $key || ':' !== substr( $key, 0, 1 ) ) && self::noindexed( $entry ) ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/** The special page keys that apply to this request, most specific first. */
@@ -207,6 +253,11 @@ final class Optima_SEO_Setup {
 			$url = (string) get_permalink( (int) get_option( 'page_for_posts' ) );
 		}
 		$path = '' !== $url ? (string) wp_parse_url( $url, PHP_URL_PATH ) : (string) wp_parse_url( (string) wp_unslash( $_SERVER['REQUEST_URI'] ?? '/' ), PHP_URL_PATH ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- path only, compared as a key.
+		return self::path_below_home( $path );
+	}
+
+	/** A URL path as a page key: below the site's home, with a trailing slash. */
+	public static function path_below_home( string $path ): string {
 		$base = (string) wp_parse_url( home_url( '/' ), PHP_URL_PATH );
 		if ( '' !== $base && '/' !== $base && 0 === strpos( $path, rtrim( $base, '/' ) ) ) {
 			$path = substr( $path, strlen( rtrim( $base, '/' ) ) );
@@ -341,7 +392,24 @@ final class Optima_SEO_Setup {
 		return strtr( $value, $map );
 	}
 
+	/**
+	 * One token's value. A token met again while its own value is being worked
+	 * out (a value that names itself) gives '', so it can never loop.
+	 */
 	private static function token_value( string $token ): string {
+		static $busy = array();
+		if ( isset( $busy[ $token ] ) ) {
+			return '';
+		}
+		$busy[ $token ] = true;
+		try {
+			return self::compute_token( $token );
+		} finally {
+			unset( $busy[ $token ] );
+		}
+	}
+
+	private static function compute_token( string $token ): string {
 		$id = is_singular() ? (int) get_queried_object_id() : 0;
 		switch ( $token ) {
 			case '%site%':
@@ -389,7 +457,7 @@ final class Optima_SEO_Setup {
 	 */
 	public static function format_title( $title ) {
 		$own     = (string) self::page( 'title' );
-		$use_own = false !== strpos( $own, '%page%' );
+		$use_own = false !== strpos( $own, '%page%' ) && false === strpos( $own, '%title%' );
 		$format  = $use_own ? $own : (string) self::site( 'title_format' );
 		if ( '' === $format || ( ! $use_own && ( is_front_page() || '' === self::$page_part ) ) ) {
 			return $title;
