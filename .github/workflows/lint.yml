@@ -89,6 +89,16 @@ jobs:
           done
           exit $status
 
+  uniform-check:
+    name: Uniform check (plugin-first rule 15)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Every plugin has the required files and every screen files under one
+      # of the eight Optima menu items (docs/plugin-first.md, rules 6 to 15).
+      - name: Every plugin and every screen's menu group
+        run: bash tools/uniform-check.sh plugins .
+
   release-tests:
     name: Release channel tests
     runs-on: ubuntu-latest
