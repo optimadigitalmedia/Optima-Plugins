@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.2.7 (2026-11-12)
+
+- **Refuses List answers that carry hidden code.** Gravity Forms 3.1.2 and earlier has a reported critical flaw (CVE-2026-103039, rated 9.8): a List field headed for a Post Custom Field is handed to PHP's unserialize, which can run code on the site if another plugin or theme supplies a way to use it. Forms Guard now checks every List field before Gravity Forms saves anything, and refuses a submission whose answer is serialized PHP (an object, a class or an array in PHP's storage format). Nobody types that into a List field, so real visitors lose nothing. A refusal adds to the monthly blocked count. The real fix is to update Gravity Forms (3.2.2 is out), and this keeps a site safe until it has. Turn it off with the `optima_forms_guard_block_serialized` filter.
+- Security release ahead of the next full plugin round: only this check changes. Carried from upstream 0.3.7; the next round brings the rest of 0.3.3 to 0.3.7.
+
 ## 0.3.2.6 (2026-11-05)
 
 - Now carries the Optima admin kit 1.8.0.0. Search and AI, Spam protection on a site without Optima Core shows the guard's status and what it blocked; with Core the address opens Core's Spam protection tab. Listed as Spam protection for forms in the catalog.

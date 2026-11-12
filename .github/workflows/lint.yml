@@ -100,6 +100,10 @@ jobs:
         run: php tools/tests/fleet-checks.php
       - name: Promote dry run with made-up releases
         run: bash tools/tests/promote-dry-run.sh
+      - name: Forms Guard content check (layer 4)
+        run: php tools/tests/forms-guard-content.php
+      - name: Forms Guard List-field check (layer 5, CVE-2026-103039)
+        run: php tools/tests/forms-guard-serialized.php
 
   slop-check:
     name: Code slop check

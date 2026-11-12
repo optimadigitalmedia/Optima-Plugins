@@ -19,7 +19,7 @@ a theme never orphans content.
 | `optima-core` | 1.6.0.12 |
 | `optima-crm` | 0.1.1.5 |
 | `optima-events` | 0.14.3.10 |
-| `optima-forms-guard` | 0.3.2.6 |
+| `optima-forms-guard` | 0.3.2.7 |
 | `optima-hours` | 0.1.8.11 |
 | `optima-members` | 0.3.3.10 |
 | `optima-optimize` | 0.9.3.9 |
