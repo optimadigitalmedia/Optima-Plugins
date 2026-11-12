@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.0.14 (2026-11-12)
+
+- Schema: the business node no longer carries an `aggregateRating`, and testimonials no longer print as `Review` nodes, unless a site opts in with the `optima_schema_self_reviews` filter. Google does not show review stars for a business's reviews of itself (self-serving reviews), and on a law-firm site a review in the markup is a testimonial under the bar's advertising rules. Sites that printed them lose only those nodes; everything else in the graph is unchanged.
+
 ## 1.6.0.13 (2026-11-12)
 
 - Site health, Page descriptions: a page whose address has a description in the theme's setup data (`optima-setup.json`, `seo.pages`) no longer counts as missing one. Core already prints that description; the old check told people to type one into the SEO box, which would have overridden the approved words. Found on a client staging site that listed 16 such pages.

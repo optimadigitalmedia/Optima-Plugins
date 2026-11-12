@@ -5,11 +5,12 @@
  * The graph is one connected entity model, not a pile of disconnected blobs:
  *
  *   #business  LocalBusiness (or the subtype set in Optima Business) — the NAP,
- *              geo, profiles, and an aggregateRating computed from real
- *              testimonials. Stable @id: home_url( '/#business' ).
+ *              geo and profiles. Stable @id: home_url( '/#business' ).
+ *              (aggregateRating and Review nodes from testimonials print only
+ *              when a site opts in with the optima_schema_self_reviews filter.)
  *   #website   WebSite, publisher -> #business.
  *   FAQPage    on the FAQ hub page / archive, from the FAQ post type.
- *   Review     from testimonials, itemReviewed -> #business.
+ *   Review     from testimonials, itemReviewed -> #business (opt-in only).
  *   BlogPosting on single posts, publisher -> #business.
  *
  * Everything references #business by @id, which is what makes Google (and AI
@@ -122,7 +123,10 @@ final class Optima_Schema {
 			'website'  => self::website_node(),
 		);
 
-		list( $aggregate, $reviews ) = self::reviews();
+		// Self-serving reviews: Google does not show review stars for a business's
+		// own reviews of itself, and on a law-firm site a review in the markup is a
+		// testimonial under bar rules. Off unless a site opts in on purpose.
+		list( $aggregate, $reviews ) = apply_filters( 'optima_schema_self_reviews', false ) ? self::reviews() : array( array(), array() );
 
 		$aggregate = apply_filters( 'optima_schema_aggregate_rating', $aggregate );
 		if ( ! empty( $aggregate ) ) {
