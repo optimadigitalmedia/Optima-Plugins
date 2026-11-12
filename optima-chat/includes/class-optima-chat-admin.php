@@ -140,6 +140,10 @@ final class Optima_Chat_Admin {
 		if ( $page ) {
 			echo '<p>' . esc_html__( 'Asked on', 'optima-chat' ) . ' <a href="' . esc_url( $page ) . '" target="_blank" rel="noopener">' . esc_html( $page ) . '</a></p>';
 		}
+		$told = (string) get_post_meta( $post->ID, '_optima_chat_disclosure', true );
+		if ( '' !== $told ) {
+			echo '<p class="description">' . esc_html__( 'Shown at the start of the chat:', 'optima-chat' ) . ' ' . esc_html( $told ) . '</p>';
+		}
 		echo '<div style="white-space:pre-wrap;line-height:1.6">' . esc_html( $post->post_content ) . '</div>';
 	}
 
@@ -183,6 +187,30 @@ final class Optima_Chat_Admin {
 		if ( ! empty( $in['ai_key_clear'] ) ) {
 			$key = '';
 		}
+
+		// The disclosure. Saving it on this screen as an operator is what lets the
+		// chat show on a law-firm site; a fill from the theme's setup file or any
+		// other update_option() keeps the earlier stamp.
+		$old        = Optima_Chat::settings();
+		$disclosure = trim( mb_substr( sanitize_textarea_field( (string) ( $in['disclosure'] ?? $old['disclosure'] ) ), 0, 400 ) );
+		$saved      = $old['disclosure_saved'];
+		$by         = $old['disclosure_by'];
+		$from_form  = isset( $_POST['option_page'] ) && 'optima_chat_group' === sanitize_key( wp_unslash( $_POST['option_page'] ) ) && array_key_exists( 'disclosure', $in ); // phpcs:ignore WordPress.Security.NonceVerification -- options.php checked the nonce.
+		$operator   = class_exists( 'Optima_Hub_Access' ) ? Optima_Hub_Access::is_operator() : current_user_can( 'manage_options' );
+		if ( $from_form && $operator && ( 0 === $saved || $disclosure !== $old['disclosure'] ) ) {
+			$saved = time();
+			$by    = get_current_user_id();
+		}
+
+		// Retention: one of the offered lengths, or keep (0) with a reason.
+		$days   = isset( $in['retention'] ) ? (int) $in['retention'] : $old['retention'];
+		$days   = in_array( $days, self::RETENTION_CHOICES, true ) ? $days : Optima_Chat::RETENTION_DAYS;
+		$reason = trim( sanitize_text_field( (string) ( $in['retention_reason'] ?? '' ) ) );
+		if ( 0 === $days && '' === $reason ) {
+			add_settings_error( Optima_Chat::OPTION, 'retention', __( 'To keep conversations, write down why. Until then they are deleted after 90 days.', 'optima-chat' ) );
+			$days = Optima_Chat::RETENTION_DAYS;
+		}
+
 		return array(
 			'enabled'   => ! empty( $in['enabled'] ) ? 1 : 0,
 			'name'      => sanitize_text_field( (string) ( $in['name'] ?? '' ) ),
@@ -198,8 +226,16 @@ final class Optima_Chat_Admin {
 			'photo_2'   => esc_url_raw( (string) ( $in['photo_2'] ?? '' ) ),
 			'ai_url'    => $url,
 			'ai_key'    => sanitize_text_field( $key ),
+			'disclosure'       => $disclosure,
+			'disclosure_saved' => $saved,
+			'disclosure_by'    => $by,
+			'retention'        => $days,
+			'retention_reason' => 0 === $days ? $reason : '',
 		);
 	}
+
+	/** Days a conversation can be kept for; 0 keeps it (with a reason). */
+	const RETENTION_CHOICES = array( 30, 60, 90, 180, 365, 0 );
 
 	private static function row( string $label, string $field, string $help = '' ): void {
 		echo '<tr><th scope="row">' . esc_html( $label ) . '</th><td>' . $field . ( $help ? '<p class="description">' . esc_html( $help ) . '</p>' : '' ) . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput -- fields escaped by caller.
@@ -219,6 +255,7 @@ final class Optima_Chat_Admin {
 		'work_url'  => 'Our work page',
 		'ai_url'    => 'AI server address',
 		'ai_key'    => 'Connection key',
+		'retention_reason' => 'Why they are kept',
 	);
 
 	private static function text( string $key, string $value, string $placeholder = '', string $type = 'text' ): string {
@@ -233,14 +270,23 @@ final class Optima_Chat_Admin {
 		$o  = Optima_Chat::OPTION;
 		$ai = Optima_Chat::ai_connected();
 		$n  = self::unanswered();
+		$need = Optima_Chat::needs_disclosure();
+		$law  = Optima_Chat::is_law();
 		Optima_Admin_UI::open( __( 'Chat', 'optima-chat' ), __( 'A chat in the corner of the site. It answers the common questions, books calls and takes change requests, and saves every visitor question to Chat questions.', 'optima-chat' ), __( 'Chat', 'optima-chat' ) );
 		settings_errors( $o );
 		?>
+		<?php if ( $need ) : ?>
+		<section class="sh-box sh-check is-needs">
+			<p class="sh-label"><?php esc_html_e( 'To do', 'optima-chat' ); ?></p>
+			<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php esc_html_e( 'Save the line visitors see first', 'optima-chat' ); ?></p>
+			<p class="sh-note"><?php esc_html_e( 'This is a law-firm site, so the chat stays off the site until the disclosure below has been saved once. Start from the wording given, have the firm approve the exact text, then paste it in and save.', 'optima-chat' ); ?> <a href="#optima-chat-disclosure"><?php esc_html_e( 'Go to the disclosure', 'optima-chat' ); ?> &rsaquo;</a></p>
+		</section>
+		<?php endif; ?>
 		<div class="sh-grid sh-grid-3">
-			<section class="sh-box sh-check is-<?php echo $s['enabled'] ? 'good' : 'off'; ?>">
+			<section class="sh-box sh-check is-<?php echo $s['enabled'] ? ( $need ? 'needs' : 'good' ) : 'off'; ?>">
 				<p class="sh-label"><?php esc_html_e( 'On the site', 'optima-chat' ); ?></p>
-				<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php echo $s['enabled'] ? esc_html__( 'Showing', 'optima-chat' ) : esc_html__( 'Hidden', 'optima-chat' ); ?></p>
-				<p class="sh-note"><?php echo $s['enabled'] ? esc_html__( 'Visitors see the chat button on every page.', 'optima-chat' ) : esc_html__( 'Fill in the details below, then tick Show the chat on the site.', 'optima-chat' ); ?></p>
+				<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php echo $s['enabled'] ? ( $need ? esc_html__( 'Waiting on the disclosure', 'optima-chat' ) : esc_html__( 'Showing', 'optima-chat' ) ) : esc_html__( 'Hidden', 'optima-chat' ); ?></p>
+				<p class="sh-note"><?php echo $s['enabled'] ? ( $need ? esc_html__( 'Switched on, but hidden from visitors until the disclosure is saved.', 'optima-chat' ) : esc_html__( 'Visitors see the chat button on every page.', 'optima-chat' ) ) : esc_html__( 'Fill in the details below, then tick Show the chat on the site.', 'optima-chat' ); ?></p>
 			</section>
 			<section class="sh-box sh-check is-<?php echo $ai ? 'good' : 'off'; ?>">
 				<p class="sh-label"><?php esc_html_e( 'Answers', 'optima-chat' ); ?></p>
@@ -256,6 +302,29 @@ final class Optima_Chat_Admin {
 
 		<form method="post" action="options.php">
 			<?php settings_fields( 'optima_chat_group' ); ?>
+			<div class="sh-box" id="optima-chat-disclosure-box">
+				<h2 class="sh-title"><?php esc_html_e( 'What visitors see first', 'optima-chat' ); ?></h2>
+				<p><?php esc_html_e( 'One line at the top of the chat, shown before the visitor types anything, and saved with every conversation.', 'optima-chat' ); ?></p>
+				<table class="form-table" role="presentation">
+					<?php
+					$by   = $s['disclosure_by'] ? get_userdata( $s['disclosure_by'] ) : false;
+					$when = $s['disclosure_saved']
+						? sprintf(
+							/* translators: 1: person, 2: date */
+							__( 'Saved by %1$s on %2$s.', 'optima-chat' ),
+							$by ? $by->display_name : __( 'an operator', 'optima-chat' ),
+							wp_date( get_option( 'date_format' ), $s['disclosure_saved'] )
+						)
+						: ( $law ? __( 'Not saved yet. The chat stays off this law-firm site until it is.', 'optima-chat' ) : __( 'Not saved yet. The starting wording shows until it is.', 'optima-chat' ) );
+					self::row(
+						__( 'Disclosure', 'optima-chat' ),
+						'<textarea class="large-text" rows="3" id="optima-chat-disclosure" aria-label="' . esc_attr__( 'Disclosure', 'optima-chat' ) . '" name="' . esc_attr( $o ) . '[disclosure]">' . esc_textarea( Optima_Chat::disclosure() ) . '</textarea>'
+							. '<p class="description"><strong>' . esc_html__( 'Starting wording: the firm approves the exact text.', 'optima-chat' ) . '</strong> ' . esc_html__( 'The starting wording says the visitor is talking to an automated assistant, that it can\'t give legal advice, and that chatting doesn\'t make them a client. Blank goes back to it.', 'optima-chat' ) . '</p>',
+						$when
+					);
+					?>
+				</table>
+			</div>
 			<div class="sh-box">
 				<h2 class="sh-title"><?php esc_html_e( 'How it looks', 'optima-chat' ); ?></h2>
 				<table class="form-table" role="presentation">
@@ -279,6 +348,26 @@ final class Optima_Chat_Admin {
 					self::row( __( 'Our work page', 'optima-chat' ), self::text( 'work_url', $s['work_url'], 'https://', 'url' ), __( 'Blank hides "Show me your work".', 'optima-chat' ) );
 					?>
 				</table>
+			</div>
+			<div class="sh-box">
+				<h2 class="sh-title"><?php esc_html_e( 'How long conversations are kept', 'optima-chat' ); ?></h2>
+				<table class="form-table" role="presentation">
+					<?php
+					$choices = '';
+					foreach ( self::RETENTION_CHOICES as $d ) {
+						/* translators: %d: days */
+						$label    = 0 === $d ? __( 'Keep them (write down why)', 'optima-chat' ) : sprintf( _n( '%d day', '%d days', $d, 'optima-chat' ), $d );
+						$choices .= '<option value="' . esc_attr( (string) $d ) . '"' . selected( $s['retention'], $d, false ) . '>' . esc_html( $label ) . '</option>';
+					}
+					self::row(
+						__( 'Delete saved conversations after', 'optima-chat' ),
+						'<select id="optima-chat-retention" aria-label="' . esc_attr__( 'Delete saved conversations after', 'optima-chat' ) . '" name="' . esc_attr( $o ) . '[retention]">' . $choices . '</select>',
+						__( 'Each conversation holds a visitor\'s name, email or phone and what they wrote. A daily job deletes the older ones. 90 days matches how long form entries are kept.', 'optima-chat' )
+					);
+					self::row( __( 'Why they are kept', 'optima-chat' ), self::text( 'retention_reason', $s['retention_reason'], __( 'Only when keeping them', 'optima-chat' ) ), __( 'Needed to keep them. Record the same reason in the site\'s decisions log.', 'optima-chat' ) );
+					?>
+				</table>
+				<p class="sh-note"><?php esc_html_e( 'Tools, Export Personal Data and Erase Personal Data find a visitor\'s conversations by the email they gave. A conversation left with only a phone number is deleted by hand from Chat questions.', 'optima-chat' ); ?></p>
 			</div>
 			<div class="sh-box">
 				<h2 class="sh-title"><?php esc_html_e( 'AI connection', 'optima-chat' ); ?></h2>

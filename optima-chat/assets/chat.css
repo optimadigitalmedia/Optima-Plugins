@@ -108,6 +108,8 @@
 .oc-composer:focus-within { border-color: var(--oc-accent); }
 .oc-composer input { flex: 1; min-width: 0; height: 40px; border: 0; background: none; color: var(--oc-text); outline: none; font-size: 16px; }
 .oc-send { width: 40px; height: 40px; flex: none; border-radius: 50%; border: 0; background: var(--oc-accent); color: var(--optima-accent-ink); display: grid; place-items: center; cursor: pointer; }
+.oc-disclosure { margin: 0; padding: 9px 14px; font-size: 12.5px; line-height: 1.45; color: var(--oc-text-2); background: var(--oc-surface-2); border-bottom: 1px solid var(--oc-line); text-wrap: pretty; }
+.oc-disclosure[hidden] { display: none; }
 .oc-foot { margin: 8px 16px 12px; text-align: center; font-size: 12px; color: var(--oc-text-3); text-wrap: balance; }
 
 @media (max-width: 480px) {

@@ -22,4 +22,3 @@ wp_unschedule_hook( 'optima_chat_purge' );
 $wpdb->query( $wpdb->prepare( "DELETE pm FROM {$wpdb->postmeta} pm INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id WHERE p.post_type = %s", 'optima_chat_q' ) );
 $wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->posts} WHERE post_type = %s", 'optima_chat_q' ) );
 // phpcs:enable WordPress.DB.DirectDatabaseQuery
-wp_cache_flush();

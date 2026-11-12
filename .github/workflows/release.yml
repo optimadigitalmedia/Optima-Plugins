@@ -12,7 +12,14 @@ name: Release
 # By hand, as a backup: Actions tab -> Release -> "Run workflow" -> pick the
 # plugin. Or push a tag: git tag optima-core-v1.0.2 && git push origin optima-core-v1.0.2
 #
-# Each release builds <slug>.zip from the plugin folder and attaches it.
+# Each release builds <slug>.zip from the plugin folder and attaches it, and
+# the version list records the zip's sha256; sites check every download
+# against it before installing.
+#
+# Nothing ships until the checks pass: the uniform check, the Optima Core
+# contract, the client-names check on every tracked file, the updater and
+# catalog copies, the "Run workflow" list, and every test in tools/tests that
+# runs without WordPress (tools/tests/run-all.sh).
 #
 # Test channel: .github/release-channel decides how a release is published.
 #   stable  a normal release. Every site takes it within a few hours.
@@ -34,28 +41,66 @@ on:
         description: Which plugin to release (version comes from its header)
         required: true
         type: choice
+        # Written by tools/release/dispatch-list.py from the plugin folders;
+        # the Lint workflow fails when it drifts.
         options:
+          - optima-core
+          - optima-accessibility
           - optima-aeo
           - optima-analytics
           - optima-build
           - optima-cards
           - optima-chat
-          - optima-core
-          - optima-events
-          - optima-members
-          - optima-partners
+          - optima-contact
           - optima-crm
+          - optima-events
           - optima-forms-guard
+          - optima-hours
+          - optima-members
           - optima-optimize
+          - optima-partners
+          - optima-redirects
+          - optima-results
           - optima-reviews
           - optima-sitecheck
+          - optima-team
 
 permissions:
   contents: write
 
 jobs:
+  checks:
+    name: Checks before anything ships
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Uniform check (plugin-first rule 15)
+        run: bash tools/uniform-check.sh plugins .
+
+      - name: Optima Core contract
+        run: bash tools/core-contract.sh
+
+      - name: No client names in any tracked file
+        run: python3 -I tools/client-names.py --all
+
+      - name: Every plugin's updater copy matches tools/updater
+        run: bash tools/updater/sync.sh --check
+
+      - name: catalog.json and optima-build/catalog.json are identical, valid JSON
+        run: |
+          python3 -m json.tool catalog.json > /dev/null
+          cmp catalog.json optima-build/catalog.json || { echo "::error::optima-build/catalog.json differs from catalog.json. Copy the root file over."; exit 1; }
+
+      - name: The "Run workflow" list names every plugin
+        run: python3 -I tools/release/dispatch-list.py --check
+
+      - name: Every test that runs without WordPress
+        run: bash tools/tests/run-all.sh
+
   plan:
     name: Find versions that have not shipped
+    needs: checks
     runs-on: ubuntu-latest
     outputs:
       targets: ${{ steps.plan.outputs.targets }}
@@ -161,10 +206,12 @@ jobs:
           # Zip the plugin folder itself so it unpacks to wp-content/plugins/<slug>/.
           zip -r "${slug}.zip" "${slug}" -x '*.DS_Store' -x '*/.git/*' >/dev/null
           unzip -l "${slug}.zip"
+          sha256sum "${slug}.zip"
 
       - name: Publish the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           CHANNEL: ${{ needs.plan.outputs.channel }}
         run: |
           slug="${{ matrix.target.slug }}"
@@ -196,6 +243,34 @@ jobs:
             echo "Published ${tag}"
           fi
 
+      - name: Record the zip's sha256 for the version list
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          slug="${{ matrix.target.slug }}"
+          tag="${{ matrix.target.tag }}"
+          built="$(sha256sum "${slug}.zip" | cut -d' ' -f1)"
+          url="https://github.com/${GH_REPO}/releases/download/${tag}/${slug}.zip"
+          # GitHub's own digest of the uploaded asset must match the zip built here.
+          digest="$(gh api "repos/${GH_REPO}/releases/tags/${tag}" --jq ".assets[] | select(.name == \"${slug}.zip\") | .digest // \"\"")"
+          digest="${digest#sha256:}"
+          if [ -n "${digest}" ] && [ "${digest}" != "${built}" ]; then
+            echo "::error::${tag}: GitHub's digest ${digest} differs from the built zip ${built}. The version list will not be published."
+            exit 1
+          fi
+          mkdir -p sha256
+          echo "${url} ${built}" > "sha256/${tag}.sha256"
+          echo "${tag}: sha256 ${built}"
+
+      - name: Hand the sha256 to the version list job
+        uses: actions/upload-artifact@v4
+        with:
+          name: sha256-${{ matrix.target.tag }}
+          path: sha256/${{ matrix.target.tag }}.sha256
+          retention-days: 7
+
   feed:
     # Sites read this one file to learn every version, instead of GitHub's API.
     # The API allows 60 calls an hour per server address, and shared hosts
@@ -212,8 +287,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build releases.json and publish it on the version-list branch
+      - name: Collect the sha256 of each zip released in this run
+        if: needs.plan.outputs.any == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sha256-*
+          merge-multiple: true
+          path: sha256
+
+      # The catalog is written beside the list: catalog-test.json from this
+      # commit, catalog.json only on the stable switch (Promote sends it out
+      # on the test switch). Optima Build reads it from here, never from main.
+      - name: Build releases.json and the catalog, publish them on the version-list branch
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
+          CHANNEL: ${{ needs.plan.outputs.channel }}
+          SHA256_DIR: sha256
         run: bash tools/release/publish-feed.sh

@@ -36,6 +36,11 @@ require_once __DIR__ . '/includes/class-optima-sitecheck.php';
 require_once __DIR__ . '/includes/class-optima-sitecheck-checks.php';
 require_once __DIR__ . '/includes/class-optima-sitecheck-report.php';
 require_once __DIR__ . '/includes/class-optima-sitecheck-admin.php';
+require_once __DIR__ . '/includes/class-optima-sitecheck-privacy.php';
 
 Optima_Sitecheck::boot();
 Optima_Sitecheck_Admin::boot();
+Optima_Sitecheck_Privacy::boot();
+
+// Switched off: the daily clean-up and any finishing or speed jobs go with it.
+register_deactivation_hook( __FILE__, array( 'Optima_Sitecheck_Privacy', 'deactivate' ) );

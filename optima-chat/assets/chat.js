@@ -28,7 +28,10 @@
     return c;
   }
 
-  function track(name, params) { if (typeof window.optimaTrack === 'function') window.optimaTrack(name, params || {}); }
+  /* Events (docs/plugin-first.md rule 50): chat_start, booking_click and form_submit, reported by Optima
+     Analytics. The other moments (chip taps, handoff, reopening the panel, links) are not standard events,
+     so they send only their old name, and only on sites with old event names turned on. Never personal data. */
+  function track(name, params, legacy) { if (typeof window.optimaTrack === 'function') window.optimaTrack(name, params || {}, legacy); }
   function save() { try { sessionStorage.setItem(KEY, JSON.stringify({ msgs: state.msgs.slice(-40), mode: state.mode, kind: state.kind, pending: state.pending, done: state.done })); } catch (e) {} }
   function load() { try { var s = JSON.parse(sessionStorage.getItem(KEY) || 'null'); if (s && s.msgs) { state.msgs = s.msgs; state.mode = s.mode; state.kind = s.kind; state.pending = s.pending; state.done = s.done; } } catch (e) {} }
   function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
@@ -69,6 +72,10 @@
   minBtn.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
   head.appendChild(personBtn); head.appendChild(minBtn);
 
+  /* The disclosure: on screen from the moment the panel opens, before the visitor types. */
+  var disclose = el('p', 'oc-disclosure', C.disclose || ''); disclose.setAttribute('role', 'note');
+  disclose.id = 'oc-disclosure';
+  if (C.disclose) panel.setAttribute('aria-describedby', disclose.id); else disclose.hidden = true;
   var stream = el('div', 'oc-stream');
   var live = el('div', 'oc-sr'); live.setAttribute('aria-live', 'polite');
   var form = el('form', 'oc-composer');
@@ -78,7 +85,7 @@
   form.appendChild(input); form.appendChild(send);
   var foot = el('p', 'oc-foot', C.ai ? 'AI answers, reviewed by ' + TEAM + '. A person is one tap away.' : 'A strategist reads every question. A person is one tap away.');
 
-  panel.appendChild(head); panel.appendChild(stream); panel.appendChild(form); panel.appendChild(foot); panel.appendChild(live);
+  panel.appendChild(head); panel.appendChild(disclose); panel.appendChild(stream); panel.appendChild(form); panel.appendChild(foot); panel.appendChild(live);
   root.appendChild(teaser); root.appendChild(panel); root.appendChild(launcher);
   document.body.appendChild(root);
 
@@ -104,7 +111,9 @@
       row.appendChild(card);
     } else if (m.kind === 'link') {
       row = el('div', 'oc-msg oc-bot');
-      var a = el('a', 'oc-linkbtn', m.label); a.href = m.url; a.setAttribute('data-optima-track', m.track || 'chat_link'); row.appendChild(a);
+      var a = el('a', 'oc-linkbtn', m.label); a.href = m.url; a.setAttribute('data-optima-location', 'chat');
+      if (m.event) a.setAttribute('data-optima-track', m.event);
+      a.setAttribute('data-optima-legacy', m.track || 'chat_link'); row.appendChild(a);
     } else if (m.kind === 'form') {
       row = el('div', 'oc-msg oc-bot'); row.appendChild(leadForm(m));
     } else if (m.kind === 'done') {
@@ -126,7 +135,7 @@
     var w = el('div', 'oc-chips');
     m.chips.forEach(function (label) {
       var b = el('button', 'oc-chip', label); b.type = 'button';
-      b.addEventListener('click', function () { track('chip_click', { link_label: label }); clearChips(); user(label); route(label); });
+      b.addEventListener('click', function () { track('', { link_label: label, location: 'chat' }, 'chip_click'); clearChips(); user(label); route(label); });
       w.appendChild(b);
     });
     stream.appendChild(w); scroll();
@@ -169,7 +178,7 @@
     } else if (label === CHIPS.work) {
       bot([{ text: 'These are partner results, described by market and practice. We never name a partner firm.' }, { kind: 'link', label: 'See the results', url: C.workUrl, track: 'chat_work' }, { text: 'Anything else I can help with?', chips: [CHIPS.book, CHIPS.other] }]);
     } else if (label === CHIPS.book) {
-      bot([{ text: 'Pick a time that works for you. You will talk with ' + TEAM + ' directly, and we come with a first read on your market.' }, { kind: 'link', label: 'See open times', url: C.bookUrl, track: 'chat_book' }]);
+      bot([{ text: 'Pick a time that works for you. You will talk with ' + TEAM + ' directly, and we come with a first read on your market.' }, { kind: 'link', label: 'See open times', url: C.bookUrl, track: 'chat_book', event: 'booking_click' }]);
     } else if (label === CHIPS.client) {
       bot([{ text: 'Good to see you. What do you need today?', chips: [CHIPS.change, CHIPS.person] }]);
     } else if (label === CHIPS.change) {
@@ -182,7 +191,7 @@
   }
 
   function handoff(note) {
-    track('handoff');
+    track('', { location: 'chat' }, 'handoff');
     state.kind = 'person';
     bot([{ text: (note || 'Happy to bring in ' + TEAM + '.') + ' Where should they reach you?' }, { kind: 'form' }]);
   }
@@ -254,7 +263,7 @@
       b.disabled = true; b.textContent = 'Sending';
       post('/lead', { name: n.value.trim(), phone: t.value.trim(), email: e.value.trim(), website: hp.value, kind: state.kind, history: history(), page: location.href }).then(function (r) {
         if (r.error) { err.textContent = r.error; b.disabled = false; b.textContent = 'Send'; return; }
-        track('lead_submit', { link_label: state.kind });
+        track('form_submit', { form_id: 'chat', link_label: state.kind, location: 'chat', method: 'chat' }, 'lead_submit');
         f.querySelectorAll('input,button').forEach(function (x) { x.disabled = true; }); b.textContent = 'Sent';
         state.done = true;
         bot([{ kind: 'done', title: 'Sent', text: 'Thanks, ' + n.value.trim().split(' ')[0] + '. ' + Team + (digits ? ' will text you at ' + t.value.trim() : ' will reply to ' + mail) + ', usually within one business day.' },
@@ -270,7 +279,9 @@
     if (state.open) return;
     state.open = true; panel.hidden = false; teaser.hidden = true; launcher.setAttribute('aria-expanded', 'true'); root.classList.add('is-open');
     try { sessionStorage.setItem(KEY + 'Teaser', '1'); } catch (e) {}
-    track('chat_open');
+    /* chat_start once per visit (the first time the panel opens); the old chat_open on every open. */
+    var started = false; try { started = !!sessionStorage.getItem(KEY + 'Started'); sessionStorage.setItem(KEY + 'Started', '1'); } catch (e) {}
+    track(started ? '' : 'chat_start', { location: 'chat', method: C.ai ? 'ai' : 'collect' }, 'chat_open');
     if (!stream.childNodes.length) {
       if (state.msgs.length) { state.msgs.forEach(function (m) { if (m.kind !== 'form') render(m, false); }); }
       else bot([{ text: 'Hi, I\'m ' + C.name + '. I can answer common questions right away, and ' + TEAM + ' is a tap away whenever you want a person.' },
