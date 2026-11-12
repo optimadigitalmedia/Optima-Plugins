@@ -39,6 +39,8 @@ require_once __DIR__ . '/includes/class-optima-redirects.php';
 require_once __DIR__ . '/includes/class-optima-redirects-admin.php';
 
 register_activation_hook( __FILE__, array( 'Optima_Redirects_Store', 'install' ) );
+// Writes the counted redirect uses and takes the hourly tidy-up off the schedule.
+register_deactivation_hook( __FILE__, array( 'Optima_Redirects', 'deactivate' ) );
 
 Optima_Redirects::boot();
 Optima_Redirects_Admin::boot();

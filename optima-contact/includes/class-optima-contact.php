@@ -18,6 +18,17 @@ final class Optima_Contact {
 
 	const OPTION = 'optima_contact';
 
+	/**
+	 * The event each tap sends (docs/plugin-first.md rule 50), reported by
+	 * Optima Analytics. The old contact_* name goes out too only on sites that
+	 * turn on OPTIMA_ANALYTICS_LEGACY_EVENTS.
+	 */
+	const EVENTS = array(
+		'call' => 'call_click',
+		'text' => 'text_click',
+		'book' => 'booking_click',
+	);
+
 	public static function boot(): void {
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'assets' ) );
 		// Plugin first: render in the theme's body-end slot; themes without slots still get the bar from wp_footer.
@@ -199,10 +210,10 @@ final class Optima_Contact {
 <div class="scc" data-scc>
 	<nav class="odc-bar" aria-label="<?php esc_attr_e( 'Contact', 'optima-contact' ); ?>">
 		<?php if ( '' !== $a['call'] ) : ?>
-		<a class="odc-btn" href="<?php echo esc_attr( 'tel:' . $a['call'] ); ?>" data-optima-track="contact_call" data-optima-label="Call bar"><?php echo self::icon( 'call' ); // phpcs:ignore WordPress.Security.EscapeOutput ?><span><?php esc_html_e( 'Call', 'optima-contact' ); ?></span></a>
+		<a class="odc-btn" href="<?php echo esc_attr( 'tel:' . $a['call'] ); ?>" data-optima-track="call_click" data-optima-location="call_bar" data-optima-legacy="contact_call" data-optima-label="Call bar"><?php echo self::icon( 'call' ); // phpcs:ignore WordPress.Security.EscapeOutput ?><span><?php esc_html_e( 'Call', 'optima-contact' ); ?></span></a>
 		<?php endif; ?>
 		<?php if ( '' !== $a['text'] ) : ?>
-		<a class="odc-btn" href="<?php echo esc_attr( 'sms:' . $a['text'] ); ?>" data-optima-track="contact_text" data-optima-label="Call bar"><?php echo self::icon( 'text' ); // phpcs:ignore WordPress.Security.EscapeOutput ?><span><?php esc_html_e( 'Text', 'optima-contact' ); ?></span></a>
+		<a class="odc-btn" href="<?php echo esc_attr( 'sms:' . $a['text'] ); ?>" data-optima-track="text_click" data-optima-location="call_bar" data-optima-legacy="contact_text" data-optima-label="Call bar"><?php echo self::icon( 'text' ); // phpcs:ignore WordPress.Security.EscapeOutput ?><span><?php esc_html_e( 'Text', 'optima-contact' ); ?></span></a>
 		<?php endif; ?>
 		<button class="odc-main" type="button" aria-haspopup="dialog" aria-controls="odc-sheet" data-odc-open><?php echo esc_html( (string) $s['label'] ); ?></button>
 	</nav>
@@ -222,7 +233,7 @@ final class Optima_Contact {
 		</div>
 		<ol class="odc-opts">
 			<?php foreach ( $options as $i => $opt ) : ?>
-			<li><a class="odc-opt<?php echo 'book' === $opt[0] ? ' is-book' : ''; ?>" href="<?php echo 'book' === $opt[0] ? esc_url( $opt[1] ) : esc_attr( $opt[1] ); ?>" data-optima-track="contact_<?php echo esc_attr( $opt[0] ); ?>" data-optima-label="Lets talk sheet">
+			<li><a class="odc-opt<?php echo 'book' === $opt[0] ? ' is-book' : ''; ?>" href="<?php echo 'book' === $opt[0] ? esc_url( $opt[1] ) : esc_attr( $opt[1] ); ?>" data-optima-track="<?php echo esc_attr( self::EVENTS[ $opt[0] ] ); ?>" data-optima-location="lets_talk_sheet" data-optima-legacy="contact_<?php echo esc_attr( $opt[0] ); ?>" data-optima-label="Lets talk sheet">
 				<span class="odc-n" aria-hidden="true"><?php echo esc_html( sprintf( '%02d', $i + 1 ) ); ?></span>
 				<span class="odc-txt"><strong><?php echo esc_html( $opt[2] ); ?></strong><span><?php echo esc_html( $opt[3] ); ?></span></span>
 			</a></li>

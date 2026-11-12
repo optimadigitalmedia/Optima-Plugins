@@ -28,3 +28,5 @@ $wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '\\_transient
 
 delete_option( 'optima_redirects_settings' );
 delete_option( 'optima_redirects_count' );
+delete_option( 'optima_redirects_noise_swept' );
+wp_clear_scheduled_hook( 'optima_redirects_maintenance' );

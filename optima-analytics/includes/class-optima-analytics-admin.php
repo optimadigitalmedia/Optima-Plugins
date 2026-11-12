@@ -166,11 +166,26 @@ final class Optima_Analytics_Admin {
 
 		<?php Optima_Admin_UI::dev_open(); ?>
 		<section class="sh-box">
+			<h2 class="sh-title"><?php esc_html_e( 'Event names on every site', 'optima-analytics' ); ?></h2>
+			<p><?php esc_html_e( 'Call buttons, Chat, People and Gravity Forms send the same seven names on every site, so Recon reads every site the same way. Make one Custom Event trigger per name in Tag Manager.', 'optima-analytics' ); ?></p>
+			<p><code>call_click</code> <code>text_click</code> <code>email_click</code> <code>form_submit</code> <code>booking_click</code> <code>directions_click</code> <code>chat_start</code></p>
+			<p class="description"><?php esc_html_e( 'Each carries location (call_bar, lets_talk_sheet, team_card, chat or form) and method (tel, sms, mailto, link, gravity_forms or chat). form_submit carries form_id. Phone numbers, email addresses and anything a visitor typed are never sent.', 'optima-analytics' ); ?></p>
+			<p class="sh-note">
+				<?php
+				echo esc_html(
+					Optima_Analytics::legacy_events()
+						? __( 'Old event names: on. Each click also sends its old name (contact_call, team_call, chat_open, lead_submit and the rest) for Tag Manager triggers that still listen for them. Turn it off once the container uses the new names.', 'optima-analytics' )
+						: __( 'Old event names: off. A container whose triggers still listen for contact_call, team_call, chat_open or lead_submit needs define( \'OPTIMA_ANALYTICS_LEGACY_EVENTS\', true ); in wp-config.php until its triggers move to the new names.', 'optima-analytics' )
+				);
+				?>
+			</p>
+		</section>
+		<section class="sh-box">
 			<h2 class="sh-title"><?php esc_html_e( 'Events other Optima features send', 'optima-analytics' ); ?></h2>
 			<p><?php esc_html_e( 'The digital business cards and the link page report their views and taps here. In Tag Manager, one Custom Event trigger catches them all: event name ^(card|links)_ with "Use regex matching" ticked, feeding a GA4 Event tag whose event name is {{Event}}.', 'optima-analytics' ); ?></p>
 			<p><code>card_view</code> <code>card_save_contact</code> <code>card_call</code> <code>card_email</code> <code>card_book</code> <code>card_links_click</code> <code>links_click</code> <code>links_post_click</code> <code>links_card_click</code></p>
 			<p class="description"><?php esc_html_e( 'optima_consent_update fires when a visitor answers the cookie notice. It is for Tag Manager only; leave it out of GA4.', 'optima-analytics' ); ?></p>
-			<p class="description"><?php esc_html_e( 'Each event carries link_label, and link_url when it is a link. In Tag Manager, add both as Data Layer Variables and send them as event parameters.', 'optima-analytics' ); ?></p>
+			<p class="description"><?php esc_html_e( 'Each event carries link_label, and link_url when it is a web link (never for phone, text or email links). In Tag Manager, add them as Data Layer Variables and send them as event parameters.', 'optima-analytics' ); ?></p>
 		</section>
 		<?php Optima_Admin_UI::dev_close(); ?>
 		<?php

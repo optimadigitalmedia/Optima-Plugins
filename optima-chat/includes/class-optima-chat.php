@@ -16,6 +16,12 @@
  * with "Authorization: Bearer <connection key>", answering
  * {"answer": "...", "handoff": false}.
  *
+ * Disclosure: the panel opens on one line saying the visitor is talking to an
+ * automated assistant (and, by default, that it gives no legal advice and
+ * makes no one a client). The wording is a setting, and the text shown is
+ * saved with every lead. On a law-firm site the chat stays off the site until
+ * an operator has saved that wording at least once (the firm approves it).
+ *
  * @package Optima_Chat
  */
 
@@ -53,7 +59,64 @@ final class Optima_Chat {
 			'photo_2'   => (string) ( $s['photo_2'] ?? '' ),
 			'ai_url'    => (string) ( $s['ai_url'] ?? '' ),
 			'ai_key'    => (string) ( $s['ai_key'] ?? '' ),
+			// The line visitors see first. Blank means the starting wording.
+			'disclosure'       => (string) ( $s['disclosure'] ?? '' ),
+			// When an operator last saved the disclosure on the Chat screen (0: never), and who.
+			'disclosure_saved' => (int) ( $s['disclosure_saved'] ?? 0 ),
+			'disclosure_by'    => (int) ( $s['disclosure_by'] ?? 0 ),
+			// Days a saved conversation is kept; 0 keeps them, with a reason.
+			'retention'        => isset( $s['retention'] ) ? max( 0, (int) $s['retention'] ) : self::RETENTION_DAYS,
+			'retention_reason' => (string) ( $s['retention_reason'] ?? '' ),
 		);
+	}
+
+	/** The suite's form-entry policy: personal details go after 90 days unless the site records why it keeps them. */
+	const RETENTION_DAYS = 90;
+
+	/** Days to keep saved conversations, or 0 to keep them (only with a recorded reason). */
+	public static function retention_days(): int {
+		$s = self::settings();
+		if ( 0 === $s['retention'] && '' === trim( $s['retention_reason'] ) ) {
+			return self::RETENTION_DAYS;
+		}
+		return $s['retention'];
+	}
+
+	/** The starting wording. The firm approves the exact text before launch. */
+	public static function default_disclosure(): string {
+		return __( 'You are chatting with an automated assistant. It can\'t give legal advice, and chatting doesn\'t make you a client of the firm.', 'optima-chat' );
+	}
+
+	/** The disclosure shown at the top of the chat and saved with each lead. */
+	public static function disclosure(): string {
+		$text = trim( self::settings()['disclosure'] );
+		return '' !== $text ? $text : self::default_disclosure();
+	}
+
+	/**
+	 * Is this a law-firm site? Optima People's setting when it is on (it reads
+	 * the Optima Core business type in "auto"), else the business type itself
+	 * (LegalService, Attorney or a law firm). Filter: optima_chat_is_law.
+	 */
+	public static function is_law(): bool {
+		$law = false;
+		if ( class_exists( 'Optima_Team' ) && method_exists( 'Optima_Team', 'is_law' ) ) {
+			$law = Optima_Team::is_law();
+		} elseif ( function_exists( 'optima_core_business' ) ) {
+			$type = (string) ( ( (array) optima_core_business() )['business_type'] ?? '' );
+			$law  = (bool) preg_match( '/legal|attorney|lawyer|law ?firm/i', $type );
+		}
+		return (bool) apply_filters( 'optima_chat_is_law', $law );
+	}
+
+	/** True while a law-firm site's disclosure has never been saved by an operator: the chat stays hidden. */
+	public static function needs_disclosure(): bool {
+		return self::is_law() && 0 === self::settings()['disclosure_saved'];
+	}
+
+	/** Switched on, and (on a law-firm site) the disclosure has been saved. */
+	public static function visible(): bool {
+		return self::settings()['enabled'] && ! self::needs_disclosure();
 	}
 
 	/** The connection key: wp-config's OPTIMA_CHAT_AI_KEY wins over the setting. */
@@ -97,7 +160,7 @@ final class Optima_Chat {
 	/** On every public page while the chat is switched on. */
 	public static function assets(): void {
 		$s = self::settings();
-		if ( ! $s['enabled'] || is_admin() || ! (bool) apply_filters( 'optima_chat_show', true ) ) {
+		if ( ! self::visible() || is_admin() || ! (bool) apply_filters( 'optima_chat_show', true ) ) {
 			return;
 		}
 		wp_enqueue_style( 'optima-chat', OPTIMA_CHAT_URL . 'assets/chat.css', array(), OPTIMA_CHAT_VERSION );
@@ -119,6 +182,7 @@ final class Optima_Chat {
 				'bookUrl'  => esc_url_raw( $book ),
 				'workUrl'  => esc_url_raw( $s['work_url'] ),
 				'ai'       => self::ai_connected(),
+				'disclose' => self::disclosure(),
 			)
 		);
 	}
@@ -183,6 +247,9 @@ final class Optima_Chat {
 
 	/** Save a conversation with contact details, and email the team. */
 	public static function lead( WP_REST_Request $req ) {
+		if ( ! self::visible() ) { // Off, or a law-firm site whose disclosure is not saved yet.
+			return new WP_Error( 'optima_chat_off', __( 'The chat is not available right now. Please call or email us instead.', 'optima-chat' ), array( 'status' => 403 ) );
+		}
 		if ( '' !== (string) $req->get_param( 'website' ) ) { // Honeypot: people never fill it.
 			return array( 'ok' => true );
 		}
@@ -241,6 +308,8 @@ final class Optima_Chat {
 		update_post_meta( $id, '_optima_chat_kind', $kind );
 		update_post_meta( $id, '_optima_chat_page', $page );
 		update_post_meta( $id, '_optima_chat_answered', 0 );
+		// What the visitor was told at the start: the wording on the site when they wrote.
+		update_post_meta( $id, '_optima_chat_disclosure', self::disclosure() );
 
 		$contact = trim( ( '' !== $phone ? __( 'Text back:', 'optima-chat' ) . ' ' . self::pretty_phone( $phone ) . ' ' : '' ) . ( '' !== $email ? '<' . $email . '>' : '' ) );
 		$to      = sanitize_email( self::settings()['notify'] );
@@ -276,7 +345,7 @@ final class Optima_Chat {
 	/** Pass a free-text question to the AI server. Falls back to collecting. */
 	public static function ask( WP_REST_Request $req ) {
 		$question = trim( wp_strip_all_tags( mb_substr( (string) $req->get_param( 'question' ), 0, 1000 ) ) );
-		if ( '' === $question || ! self::ai_connected() ) {
+		if ( '' === $question || ! self::ai_connected() || ! self::visible() ) {
 			return array( 'answer' => '', 'collect' => true );
 		}
 		if ( self::too_many( 'ask', 20 ) ) {

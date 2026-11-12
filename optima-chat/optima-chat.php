@@ -36,6 +36,11 @@ add_action(
 require_once __DIR__ . '/includes/class-optima-admin-ui.php';
 require_once __DIR__ . '/includes/class-optima-chat.php';
 require_once __DIR__ . '/includes/class-optima-chat-admin.php';
+require_once __DIR__ . '/includes/class-optima-chat-privacy.php';
 
 Optima_Chat::boot();
 Optima_Chat_Admin::boot();
+Optima_Chat_Privacy::boot();
+
+// Switched off: the daily clean-up job goes with it (it comes back on the next page load after switching on).
+register_deactivation_hook( __FILE__, array( 'Optima_Chat_Privacy', 'deactivate' ) );

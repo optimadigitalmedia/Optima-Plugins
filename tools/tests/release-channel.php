@@ -19,7 +19,24 @@ function delete_transient( $k ) { unset( $GLOBALS['t_tr'][ $k ] ); return true; 
 function add_filter() {}
 function add_action() {}
 function plugin_basename( $f ) { return basename( dirname( $f ) ) . '/' . basename( $f ); }
-function is_wp_error( $x ) { return false; }
+class WP_Error {
+	public $code;
+	public function __construct( $code = '', $message = '' ) { $this->code = $code; }
+}
+function is_wp_error( $x ) { return $x instanceof WP_Error; }
+function do_action( $h, ...$a ) { $GLOBALS['t_log'][] = $a[0] ?? ''; }
+function wp_delete_file( $f ) { @unlink( $f ); }
+// The zip a site would download: written to a temp file, as core's download_url() does.
+function download_url( $url, $timeout = 300 ) {
+	$GLOBALS['t_dl'][] = $url;
+	$f = tempnam( sys_get_temp_dir(), 'optima-test' );
+	file_put_contents( $f, $GLOBALS['t_zip'] );
+	return $f;
+}
+$GLOBALS['t_log'] = array();
+$GLOBALS['t_dl']  = array();
+$GLOBALS['t_zip'] = 'the zip the release workflow built';
+ini_set( 'error_log', '/dev/null' );
 function wp_remote_retrieve_response_code( $r ) { return $r['code']; }
 function wp_remote_retrieve_body( $r ) { return $r['body']; }
 function wp_remote_get( $url, $args = array() ) {
@@ -35,16 +52,22 @@ function ok( $cond, $msg ) {
 		$fail++;
 	}
 }
-function rel( $tag, $pre = false, $draft = false, $zip = true ) {
-	$slug = preg_replace( '/-v[0-9].*$/', '', $tag );
+define( 'T_PREFIX', 'https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/' );
+function rel( $tag, $pre = false, $draft = false, $zip = true, $url = null, $sha = null ) {
+	$slug  = preg_replace( '/-v[0-9].*$/', '', $tag );
+	$asset = array( 'name' => $slug . '.zip', 'browser_download_url' => $url ?? ( T_PREFIX . $tag . '/' . $slug . '.zip' ) );
+	if ( null !== $sha ) {
+		$asset['sha256'] = $sha;
+	}
 	return array(
 		'tag_name'   => $tag,
 		'draft'      => $draft,
 		'prerelease' => $pre,
 		'body'       => 'notes for ' . $tag,
-		'assets'     => $zip ? array( array( 'name' => $slug . '.zip', 'browser_download_url' => 'https://example.invalid/' . $tag . '/' . $slug . '.zip' ) ) : array(),
+		'assets'     => $zip ? array( $asset ) : array(),
 	);
 }
+$good_sha = hash( 'sha256', $GLOBALS['t_zip'] );
 
 $GLOBALS['t_feed'] = array(
 	rel( 'optima-core-v1.6.0.9' ),
@@ -57,6 +80,10 @@ $GLOBALS['t_feed'] = array(
 	rel( 'optima-hours-v0.1.8.8' ),
 	rel( 'optima-cards-v1.0.21.8', true ),           // Only a test release so far.
 	rel( 'optima-core-extra-v9.0.0' ),               // Another plugin whose name starts the same.
+	rel( 'optima-aeo-v2.0.0', false, false, true, 'https://example.invalid/optima-aeo-v2.0.0/optima-aeo.zip' ), // Zip listed off the repo's releases.
+	rel( 'optima-aeo-v1.9.0', false, false, true, null, $good_sha ),
+	rel( 'optima-aeo-v1.8.0', false, false, true, null, str_repeat( 'a', 64 ) ), // Wrong checksum.
+	rel( 'optima-aeo-v1.7.0' ),                      // Old release, no checksum.
 );
 
 require dirname( __DIR__, 2 ) . '/tools/updater/class-optima-plugin-updater.php';
@@ -78,6 +105,18 @@ ok( null === Optima_Plugin_Updater::pick( $feed, 'optima-cards', false ), 'stabl
 ok( '1.0.21.8' === Optima_Plugin_Updater::pick( $feed, 'optima-cards', true )['version'], 'test: the only test release is offered (cards 1.0.21.8)' );
 ok( '1.6.0.9' === Optima_Plugin_Updater::pick( $feed, 'optima-core', false )['version'], 'another plugin\'s tags never count (optima-core-extra-v9.0.0 ignored)' );
 
+// 1b. Download addresses are pinned to the repo's releases.
+$p = Optima_Plugin_Updater::pick( $feed, 'optima-aeo', false );
+ok( '1.9.0' === $p['version'], 'a release whose zip is listed anywhere else is skipped (aeo 2.0.0 ignored, 1.9.0 offered)' );
+ok( $good_sha === $p['sha256'], 'pick() carries the sha256 from the version list' );
+ok( Optima_Plugin_Updater::is_release_url( T_PREFIX . 'optima-aeo-v1.9.0/optima-aeo.zip' ), 'a release download address is accepted' );
+ok( ! Optima_Plugin_Updater::is_release_url( 'https://github.com/someone-else/Optima-Plugins/releases/download/optima-aeo-v1.9.0/optima-aeo.zip' ), 'another owner is refused' );
+ok( ! Optima_Plugin_Updater::is_release_url( T_PREFIX . '../../evil/releases/download/x/optima-aeo.zip' ), 'dot segments are refused' );
+ok( ! Optima_Plugin_Updater::is_release_url( T_PREFIX . 'optima-aeo-v1.9.0/optima-aeo.zip?x=1' ), 'a query string is refused' );
+ok( ! Optima_Plugin_Updater::is_release_url( 'http://github.com/optimadigitalmedia/Optima-Plugins/releases/download/optima-aeo-v1.9.0/optima-aeo.zip' ), 'plain http is refused' );
+$api = array( 'name' => 'optima-aeo.zip', 'browser_download_url' => T_PREFIX . 'x/optima-aeo.zip', 'digest' => 'sha256:' . strtoupper( $good_sha ) );
+ok( $good_sha === Optima_Plugin_Updater::pick( array( array( 'tag_name' => 'optima-aeo-v3.0.0', 'assets' => array( $api ) ) ), 'optima-aeo', false )['sha256'], 'the API fallback\'s digest field is read as the sha256' );
+
 // 2. No Optima Build: always stable.
 ok( 'stable' === Optima_Plugin_Updater::channel(), 'no Optima Build: channel is stable' );
 $GLOBALS['t_opt']['optima_hub_channel'] = 'test';
@@ -95,6 +134,32 @@ $make->invoke( $core, $file, 'optima-core' );
 $offer = $core->check( false, array( 'Version' => '1.6.0.9' ), 'optima-core/optima-core.php' );
 ok( '1.6.0.9' === $offer['version'] && false === $offer['prerelease'], 'check(), no Build: offers 1.6.0.9 (same as installed, so up to date)' );
 ok( isset( $GLOBALS['t_tr']['optima_updater_optima-core'] ) && ! isset( $GLOBALS['t_tr']['optima_updater_optima-core__test'] ), 'stable caches under the old key' );
+
+// 3b. The download check (upgrader_pre_download).
+$pd = static fn( $url, $extra = array() ) => Optima_Plugin_Updater::pre_download( false, $url, null, $extra );
+$GLOBALS['t_dl'] = array();
+$r = $pd( T_PREFIX . 'optima-aeo-v1.9.0/optima-aeo.zip' );
+ok( is_string( $r ) && is_file( $r ) && 1 === count( $GLOBALS['t_dl'] ), 'matching sha256: the checked file is handed to WordPress' );
+if ( is_string( $r ) ) {
+	@unlink( $r );
+}
+$r = $pd( T_PREFIX . 'optima-aeo-v1.8.0/optima-aeo.zip' );
+ok( $r instanceof WP_Error && 'optima_updater_checksum' === $r->code, 'sha256 mismatch: the install stops with an error' );
+$r = $pd( T_PREFIX . 'optima-aeo-v1.7.0/optima-aeo.zip' );
+ok( false === $r && false !== strpos( (string) end( $GLOBALS['t_log'] ), 'No sha256 listed' ), 'no sha256 listed (old release): WordPress downloads it as usual, and it is logged' );
+$GLOBALS['t_dl'] = array();
+$r = $pd( 'https://example.invalid/optima-core.zip', array( 'plugin' => 'optima-core/optima-core.php' ) );
+ok( false === $r && array() === $GLOBALS['t_dl'], 'an address off the releases for a plugin this copy does not serve is left alone' );
+$ref_plugins = new ReflectionProperty( 'Optima_Plugin_Updater', 'plugins' );
+$ref_plugins->setAccessible( true );
+$ref_plugins->setValue( null, array( 'optima-core/optima-core.php' => 'optima-core' ) );
+$r = $pd( 'https://example.invalid/optima-core.zip', array( 'plugin' => 'optima-core/optima-core.php' ) );
+ok( $r instanceof WP_Error && 'optima_updater_source' === $r->code, 'an Optima plugin update from any other address is refused' );
+ok( false === $pd( '/tmp/uploaded-by-hand.zip', array( 'plugin' => 'optima-core/optima-core.php' ) ), 'a zip uploaded by hand (a local path) is left alone' );
+ok( false === $pd( 'https://downloads.wordpress.org/plugin/x.zip', array( 'plugin' => 'akismet/akismet.php' ) ), 'other plugins are left alone' );
+ok( 'kept' === Optima_Plugin_Updater::pre_download( 'kept', T_PREFIX . 'optima-aeo-v1.9.0/optima-aeo.zip' ), 'an earlier filter\'s answer is kept' );
+ok( true === $core->auto_update( null, (object) array( 'id' => 'github.com/optimadigitalmedia/Optima-Plugins/optima-core', 'package' => T_PREFIX . 'optima-core-v1.6.0.9/optima-core.zip' ) ), 'auto-update: a release package installs on its own' );
+ok( false === $core->auto_update( null, (object) array( 'id' => 'github.com/optimadigitalmedia/Optima-Plugins/optima-core', 'package' => 'https://example.invalid/optima-core.zip' ) ), 'auto-update: any other package never installs on its own' );
 
 // 4. With Optima Build: the option, then the constant.
 require dirname( __DIR__, 2 ) . '/optima-build/includes/class-optima-hub-access.php';
@@ -122,6 +187,12 @@ ok( array() === $versions( 'optima-cards' ), 'catalog, stable: nothing to instal
 Optima_Hub_Access::set_channel( 'test' );
 ok( array( '1.6.0.10', '1.6.0.9' ) === $versions( 'optima-core' ), 'catalog, test: the test release first, then the normal one' );
 ok( true === Optima_Hub_Catalog::releases( 'optima-core' )[0]['prerelease'], 'catalog, test: the test release is flagged' );
+ok( array( '1.9.0', '1.8.0', '1.7.0' ) === $versions( 'optima-aeo' ), 'catalog: a zip listed off the repo\'s releases is skipped' );
+ok( $good_sha === Optima_Hub_Catalog::releases( 'optima-aeo' )[0]['sha256'], 'catalog: carries the sha256 for Build\'s own check' );
+ok( 'https://raw.githubusercontent.com/optimadigitalmedia/Optima-Plugins/version-list/catalog-test.json' === Optima_Hub_Catalog::catalog_url(), 'catalog, test channel: reads catalog-test.json from the version-list branch' );
+Optima_Hub_Access::set_channel( 'stable' );
+ok( 'https://raw.githubusercontent.com/optimadigitalmedia/Optima-Plugins/version-list/catalog.json' === Optima_Hub_Catalog::catalog_url(), 'catalog, stable: reads the promoted catalog.json, never main' );
+Optima_Hub_Access::set_channel( 'test' );
 Optima_Hub_Catalog::flush();
 ok( ! isset( $GLOBALS['t_tr']['optima_hub_releases'] ) && ! isset( $GLOBALS['t_tr']['optima_hub_releases__test'] ), 'catalog flush clears both channels' );
 
