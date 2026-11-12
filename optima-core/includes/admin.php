@@ -294,11 +294,29 @@ final class Optima_Core_Admin {
 			'no_found_rows'  => true,
 		) );
 		$out = array();
+		// The theme's setup data (optima-setup.json, seo.pages) describes pages by
+		// address. A page it covers is not a gap: Core prints that description, and
+		// typing one into the SEO box would override the approved words.
+		$setup = class_exists( 'Optima_SEO_Setup' ) && Optima_SEO_Setup::active()
+			? (array) ( Optima_SEO_Setup::data()['pages'] ?? array() )
+			: array();
+		$base  = (string) wp_parse_url( home_url( '/' ), PHP_URL_PATH );
 		foreach ( $ids as $id ) {
 			$desc = get_post_meta( $id, OPTIMA_SEO_META_DESC, true );
-			if ( '' === $desc && ! has_excerpt( $id ) ) {
-				$out[] = (int) $id;
+			if ( '' !== $desc || has_excerpt( $id ) ) {
+				continue;
 			}
+			if ( $setup ) {
+				$path = (string) wp_parse_url( (string) get_permalink( $id ), PHP_URL_PATH );
+				if ( '' !== $base && '/' !== $base && 0 === strpos( $path, rtrim( $base, '/' ) ) ) {
+					$path = substr( $path, strlen( rtrim( $base, '/' ) ) );
+				}
+				$path = (int) get_option( 'page_on_front' ) === (int) $id ? '/' : Optima_SEO_Setup::normalize_path( $path );
+				if ( isset( $setup[ $path ] ) && is_array( $setup[ $path ] ) && array_key_exists( 'description', $setup[ $path ] ) ) {
+					continue;
+				}
+			}
+			$out[] = (int) $id;
 		}
 		return $out;
 	}
