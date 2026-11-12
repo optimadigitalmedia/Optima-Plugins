@@ -293,12 +293,24 @@ final class Optima_Core_Admin {
 			'posts_per_page' => 200,
 			'no_found_rows'  => true,
 		) );
+		// A theme's optima-setup.json can give each URL its description (seo.pages);
+		// Core prints that one, so an empty SEO box on that page is not a gap.
+		$setup = class_exists( 'Optima_SEO_Setup' ) && Optima_SEO_Setup::active()
+			? (array) ( Optima_SEO_Setup::data()['pages'] ?? array() )
+			: array();
 		$out = array();
 		foreach ( $ids as $id ) {
 			$desc = get_post_meta( $id, OPTIMA_SEO_META_DESC, true );
-			if ( '' === $desc && ! has_excerpt( $id ) ) {
-				$out[] = (int) $id;
+			if ( '' !== $desc || has_excerpt( $id ) ) {
+				continue;
 			}
+			if ( $setup ) {
+				$path = Optima_SEO_Setup::normalize_path( (string) wp_parse_url( (string) get_permalink( $id ), PHP_URL_PATH ) );
+				if ( '' !== trim( (string) ( $setup[ $path ]['description'] ?? '' ) ) ) {
+					continue;
+				}
+			}
+			$out[] = (int) $id;
 		}
 		return $out;
 	}

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.0.13 (2026-11-12)
+
+- Site health, Page descriptions: a page whose description comes from the theme's `optima-setup.json` (`seo.pages`) no longer counts as missing one. Core already prints that description; the check only read the SEO box and the excerpt, so a site on the standard showed every page as a gap (RMN staging: 56).
+
 ## 1.6.0.12 (2026-11-05)
 
 - No em dash in visible text: the empty choice in a select reads Select one.
