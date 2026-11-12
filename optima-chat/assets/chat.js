@@ -1,11 +1,22 @@
 /* Optima Chat widget. Plain JS, no dependencies. Design: Optima features
-   DESIGN.md 5.1 (panel variant). Config arrives as window.optimaChatConfig. */
+   DESIGN.md 5.1 (panel variant). chat-loader.js loads this file on the first
+   tap on the button the plugin prints (#optima-chat), and the settings ride in
+   that element's data-config. The panel opens only when the visitor asks:
+   nothing here opens it on a timer, on scroll or on leaving the page.
+
+   Law-firm sites (C.law): the fixed line always heads the panel; with AI
+   answers off there is no free-text box, only a form for a name, a phone
+   number and a short description (C.noteMax characters). Nothing else is sent. */
 (function () {
   'use strict';
+  var root = document.getElementById('optima-chat');
+  if (root && root.querySelector('.oc-panel')) return; // Already running.
   var C = window.optimaChatConfig;
-  if (!C || document.getElementById('optima-chat')) return;
+  if (!C && root) { try { C = JSON.parse(root.getAttribute('data-config') || 'null'); } catch (e) { C = null; } }
+  if (!C) return;
 
   var TEAM = C.team, Team = TEAM.charAt(0).toUpperCase() + TEAM.slice(1);
+  var LAW = !!C.law, MAX = C.noteMax || 500;
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var KEY = 'optimaChat';
   var state = { open: false, mode: 'ask', pending: '', kind: 'question', msgs: [], done: false };
@@ -21,6 +32,8 @@
     change: 'Send a request',
     person: 'Talk to a strategist'
   };
+  /* Law-firm sites: the only two paths. */
+  var LCHIPS = { details: 'Leave my details', book: 'Book a call' };
   function startChips() {
     var c = [CHIPS.market, CHIPS.cost];
     if (C.workUrl) c.push(CHIPS.work);
@@ -44,38 +57,41 @@
     return wrap;
   }
 
-  /* ---- Shell ---- */
-  var root = el('div'); root.id = 'optima-chat'; root.className = 'oc-root';
-  var launcher = el('button', 'oc-launcher'); launcher.type = 'button';
+  /* ---- Shell ----
+     The plugin prints the root and the button with the page. Without them (an
+     older page in a cache), build the same button here. */
+  if (!root) { root = el('div'); root.id = 'optima-chat'; root.className = 'oc-root'; document.body.appendChild(root); }
+  var launcher = root.querySelector('.oc-launcher');
+  if (!launcher) {
+    launcher = el('button', 'oc-launcher'); launcher.type = 'button'; launcher.setAttribute('aria-label', C.launcher);
+    launcher.appendChild(avatars('sm')); launcher.appendChild(el('span', 'oc-launcher-label', C.launcher));
+    if (!reduce) launcher.classList.add('oc-pulse');
+    root.appendChild(launcher);
+  }
   launcher.setAttribute('aria-haspopup', 'dialog'); launcher.setAttribute('aria-expanded', 'false');
-  launcher.appendChild(avatars('sm')); launcher.appendChild(el('span', 'oc-launcher-label', C.launcher));
-  if (!reduce) launcher.classList.add('oc-pulse');
 
-  var teaser = el('div', 'oc-teaser'); teaser.hidden = true;
-  var tClose = el('button', 'oc-teaser-x', '×'); tClose.type = 'button'; tClose.setAttribute('aria-label', 'Dismiss');
-  var tBody = el('button', 'oc-teaser-body'); tBody.type = 'button';
-  if (C.teaserBy) tBody.appendChild(el('span', 'oc-teaser-by', C.teaserBy));
-  tBody.appendChild(el('span', 'oc-teaser-text', 'Want to know if your market is open? Ask here and a strategist will check.'));
-  teaser.appendChild(tClose); teaser.appendChild(tBody);
-
-  var panel = el('div', 'oc-panel'); panel.hidden = true;
+  var panel = el('div', 'oc-panel'); panel.hidden = true; panel.tabIndex = -1;
   panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-modal', 'false'); panel.setAttribute('aria-label', C.name);
   var head = el('div', 'oc-head');
   head.appendChild(avatars('md'));
   var ht = el('div', 'oc-head-text');
   ht.appendChild(el('strong', null, C.name));
   var status = el('span', 'oc-status'); status.appendChild(el('span', 'oc-dot'));
-  status.appendChild(document.createTextNode('Strategists on call'));
+  status.appendChild(document.createTextNode(LAW ? 'Messages go to ' + TEAM : 'Strategists on call'));
   ht.appendChild(status); head.appendChild(ht);
-  var personBtn = el('button', 'oc-person', 'Talk to a strategist'); personBtn.type = 'button';
+  var personBtn = el('button', 'oc-person', LAW ? 'Talk to a person' : 'Talk to a strategist'); personBtn.type = 'button';
+  if (LAW && !C.ai) personBtn.hidden = true; // The form is already the way to a person.
   var minBtn = el('button', 'oc-min'); minBtn.type = 'button'; minBtn.setAttribute('aria-label', 'Close chat');
   minBtn.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
   head.appendChild(personBtn); head.appendChild(minBtn);
 
-  /* The disclosure: on screen from the moment the panel opens, before the visitor types. */
-  var disclose = el('p', 'oc-disclosure', C.disclose || ''); disclose.setAttribute('role', 'note');
+  /* The disclosure: on screen from the moment the panel opens, before the visitor
+     types. On a law-firm site the first line is the fixed line from the plugin. */
+  var lines = [].concat(C.disclose || []).filter(Boolean);
+  var disclose = el('div', 'oc-disclosure'); disclose.setAttribute('role', 'note');
   disclose.id = 'oc-disclosure';
-  if (C.disclose) panel.setAttribute('aria-describedby', disclose.id); else disclose.hidden = true;
+  lines.forEach(function (t, i) { disclose.appendChild(el('p', LAW && i === 0 ? 'oc-fixed' : null, t)); });
+  if (lines.length) panel.setAttribute('aria-describedby', disclose.id); else disclose.hidden = true;
   var stream = el('div', 'oc-stream');
   var live = el('div', 'oc-sr'); live.setAttribute('aria-live', 'polite');
   var form = el('form', 'oc-composer');
@@ -83,11 +99,13 @@
   var send = el('button', 'oc-send'); send.type = 'submit'; send.setAttribute('aria-label', 'Send');
   send.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
   form.appendChild(input); form.appendChild(send);
-  var foot = el('p', 'oc-foot', C.ai ? 'AI answers, reviewed by ' + TEAM + '. A person is one tap away.' : 'A strategist reads every question. A person is one tap away.');
+  if (LAW && !C.ai) form.hidden = true; // Collect mode on a law-firm site: no free text, only the form.
+  var foot = el('p', 'oc-foot', LAW
+    ? (C.ai ? 'AI answers. A person is one tap away.' : 'Every message goes to ' + TEAM + '.')
+    : (C.ai ? 'AI answers, reviewed by ' + TEAM + '. A person is one tap away.' : 'A strategist reads every question. A person is one tap away.'));
 
   panel.appendChild(head); panel.appendChild(disclose); panel.appendChild(stream); panel.appendChild(form); panel.appendChild(foot); panel.appendChild(live);
-  root.appendChild(teaser); root.appendChild(panel); root.appendChild(launcher);
-  document.body.appendChild(root);
+  root.insertBefore(panel, launcher);
 
   /* ---- Rendering ---- */
   function scroll() { stream.scrollTop = stream.scrollHeight; }
@@ -115,7 +133,7 @@
       if (m.event) a.setAttribute('data-optima-track', m.event);
       a.setAttribute('data-optima-legacy', m.track || 'chat_link'); row.appendChild(a);
     } else if (m.kind === 'form') {
-      row = el('div', 'oc-msg oc-bot'); row.appendChild(leadForm(m));
+      row = el('div', 'oc-msg oc-bot'); row.appendChild(LAW ? lawForm() : leadForm(m));
     } else if (m.kind === 'done') {
       row = el('div', 'oc-msg oc-bot');
       var d = el('div', 'oc-done'); var ic = el('span', 'oc-check'); ic.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg>';
@@ -171,6 +189,11 @@
 
   /* ---- Flows ---- */
   function route(label) {
+    if (LAW) {
+      if (label === LCHIPS.details) handoff();
+      else if (label === LCHIPS.book) bot([{ kind: 'link', label: 'See open times', url: C.bookUrl, track: 'chat_book', event: 'booking_click' }]);
+      return;
+    }
     if (label === CHIPS.cost) {
       bot([{ kind: 'tiers' }, { text: 'We scope pricing after a strategy call, once we know your market, your case mix and which channels it needs. Every partnership runs on a 90-day notice, and your firm owns every account, every asset and all of its data.', chips: [CHIPS.book, CHIPS.market, CHIPS.other] }]);
     } else if (label === CHIPS.market) {
@@ -193,15 +216,18 @@
   function handoff(note) {
     track('', { location: 'chat' }, 'handoff');
     state.kind = 'person';
+    if (LAW) { bot([{ text: 'Leave your name, your phone number and a few words about what happened, and ' + TEAM + ' will get back to you.' }, { kind: 'form' }]); return; }
     bot([{ text: (note || 'Happy to bring in ' + TEAM + '.') + ' Where should they reach you?' }, { kind: 'form' }]);
   }
 
   function askForContact(kind, lead) {
     state.kind = kind;
+    if (LAW) { bot([{ text: lead + 'Leave your name and phone number, and ' + TEAM + ' will get back to you.' }, { kind: 'form' }]); return; }
     bot([{ text: lead + ' Where should we send it?' }, { kind: 'form' }]);
   }
 
   function onUserText(text) {
+    if (LAW) state.mode = 'ask'; // Law-firm sites have no scripted modes.
     if (state.mode === 'change') {
       state.mode = 'ask'; state.pending = text;
       askForContact('change', 'Got it. ' + Team + ' will take care of it and confirm by email.');
@@ -214,19 +240,19 @@
     }
     // A hello or a thanks is not a question: greet back and offer the buttons.
     if (/^((hi+|hello|hey+|hiya|howdy|yo|sup|wh?at'?s ?up|good (morning|afternoon|evening))( there| y'?all| guys)?|thanks?( you)?|thank you|ty|ok(ay)?|cool)[\s!.,?]*$/i.test(text.trim())) {
-      bot([{ text: 'Hi there. What can we help you with? Type your question, or pick one below.', chips: startChips() }]);
+      bot([{ text: 'Hi there. What can we help you with? Type your question, or pick one below.', chips: LAW ? [LCHIPS.details, LCHIPS.book] : startChips() }]);
       return;
     }
     state.pending = text;
     var lead = /\?\s*$/.test(text) ? 'Good question. ' : 'Thanks. ';
-    if (!C.ai) { askForContact('question', lead + 'A strategist answers these personally, usually within one business day.'); return; }
+    if (!C.ai) { askForContact('question', LAW ? lead : lead + 'A strategist answers these personally, usually within one business day.'); return; }
     var dots = el('div', 'oc-msg oc-bot oc-typing'); dots.innerHTML = '<span></span><span></span><span></span>'; stream.appendChild(dots); scroll(); busy = true;
     post('/ask', { question: text, history: history(), page: location.href }).then(function (r) {
       dots.remove(); busy = false;
       if (r && r.answer) {
-        bot([{ text: r.answer, chips: r.handoff ? [CHIPS.person, CHIPS.book] : [CHIPS.book, CHIPS.person] }]);
+        bot([{ text: r.answer, chips: LAW ? [LCHIPS.details, LCHIPS.book] : (r.handoff ? [CHIPS.person, CHIPS.book] : [CHIPS.book, CHIPS.person]) }]);
       } else {
-        askForContact('question', lead + Team + ' will answer it personally, usually within one business day.');
+        askForContact('question', LAW ? lead : lead + Team + ' will answer it personally, usually within one business day.');
       }
     });
   }
@@ -274,20 +300,67 @@
     return f;
   }
 
-  /* ---- Open, close, teaser ---- */
+  /* Law-firm sites: a name, a phone number and a short description. Nothing
+     else is asked for or sent (no email, no transcript, no files); the server
+     drops anything else too. */
+  function lawForm() {
+    var f = el('form', 'oc-form'); f.noValidate = true;
+    var n = el('input'); n.type = 'text'; n.name = 'name'; n.autocomplete = 'name'; n.required = true; n.maxLength = 100;
+    var t = el('input'); t.type = 'tel'; t.name = 'phone'; t.autocomplete = 'tel'; t.inputMode = 'tel'; t.required = true;
+    var d = el('textarea'); d.name = 'description'; d.maxLength = MAX; d.rows = 4;
+    if (state.pending) d.value = state.pending.slice(0, MAX);
+    var hp = el('input'); hp.type = 'text'; hp.name = 'website'; hp.tabIndex = -1; hp.autocomplete = 'off'; hp.className = 'oc-hp'; hp.setAttribute('aria-hidden', 'true');
+    var id = 'sc' + Math.random().toString(36).slice(2, 7);
+    n.id = id + 'n'; t.id = id + 't'; d.id = id + 'd';
+    var ln = el('label', null, 'Your name'); ln.htmlFor = n.id;
+    var lt = el('label', null, 'Phone number'); lt.htmlFor = t.id;
+    var ld = el('label', null, 'What happened, in a few words'); ld.htmlFor = d.id;
+    var hint = el('p', 'oc-hint', 'Up to ' + MAX + ' characters. Please leave out anything confidential.'); hint.id = id + 'h';
+    d.setAttribute('aria-describedby', hint.id);
+    var err = el('p', 'oc-err'); err.setAttribute('role', 'alert');
+    var b = el('button', 'oc-submit', 'Send'); b.type = 'submit';
+    [ln, n, lt, t, ld, d, hint, hp, err, b].forEach(function (x) { f.appendChild(x); });
+    f.addEventListener('submit', function (ev) {
+      ev.preventDefault(); err.textContent = '';
+      if (!n.value.trim()) { err.textContent = 'Add your name so we know who we are talking to.'; n.focus(); return; }
+      var digits = t.value.replace(/\D/g, '');
+      if (!digits) { err.textContent = 'Add a phone number so we can reach you.'; t.focus(); return; }
+      if (digits.length < 10 || digits.length > 11) { err.textContent = 'That phone number does not look quite right.'; t.focus(); return; }
+      b.disabled = true; b.textContent = 'Sending';
+      post('/lead', { name: n.value.trim(), phone: t.value.trim(), description: d.value.trim().slice(0, MAX), website: hp.value, kind: state.kind, page: location.origin + location.pathname }).then(function (r) {
+        if (r.error) { err.textContent = r.error; b.disabled = false; b.textContent = 'Send'; return; }
+        track('form_submit', { form_id: 'chat', link_label: state.kind, location: 'chat', method: 'chat' }, 'lead_submit');
+        f.querySelectorAll('input,textarea,button').forEach(function (x) { x.disabled = true; }); b.textContent = 'Sent';
+        state.done = true; state.pending = '';
+        /* No name or number in the reply: the conversation is kept in the browser for the visit. */
+        var after = [{ kind: 'done', title: 'Sent', text: 'Thanks. ' + Team + ' will get back to you at the number you gave.' }];
+        if (C.ai) after.push({ text: 'Anything else?', chips: [LCHIPS.book] });
+        bot(after);
+      });
+    });
+    setTimeout(function () { n.focus(); }, 50);
+    return f;
+  }
+
+  /* ---- Open and close ---- */
   function open() {
     if (state.open) return;
-    state.open = true; panel.hidden = false; teaser.hidden = true; launcher.setAttribute('aria-expanded', 'true'); root.classList.add('is-open');
-    try { sessionStorage.setItem(KEY + 'Teaser', '1'); } catch (e) {}
+    state.open = true; panel.hidden = false; launcher.setAttribute('aria-expanded', 'true'); root.classList.add('is-open');
     /* chat_start once per visit (the first time the panel opens); the old chat_open on every open. */
     var started = false; try { started = !!sessionStorage.getItem(KEY + 'Started'); sessionStorage.setItem(KEY + 'Started', '1'); } catch (e) {}
     track(started ? '' : 'chat_start', { location: 'chat', method: C.ai ? 'ai' : 'collect' }, 'chat_open');
     if (!stream.childNodes.length) {
-      if (state.msgs.length) { state.msgs.forEach(function (m) { if (m.kind !== 'form') render(m, false); }); }
+      if (state.msgs.length) {
+        state.msgs.forEach(function (m) { if (m.kind !== 'form') render(m, false); });
+        if (LAW && !C.ai && !state.done) bot([{ kind: 'form' }]); // No text box here, so the form comes back.
+      }
+      else if (LAW && !C.ai) bot([{ text: 'Hi, I\'m ' + C.name + '. Leave your name, your phone number and a few words about what happened, and ' + TEAM + ' will get back to you.' }, { kind: 'form' }]);
+      else if (LAW) bot([{ text: 'Hi, I\'m ' + C.name + '. Type a question, or leave your details and ' + TEAM + ' will get back to you.', chips: [LCHIPS.details, LCHIPS.book] }]);
       else bot([{ text: 'Hi, I\'m ' + C.name + '. I can answer common questions right away, and ' + TEAM + ' is a tap away whenever you want a person.' },
                 { text: 'What brings you by?', chips: startChips() }]);
     }
-    setTimeout(function () { input.focus(); }, 60);
+    /* Focus moves into the panel: the text box, or the panel itself when there is none. */
+    setTimeout(function () { (form.hidden ? panel : input).focus(); }, 60);
   }
   function close() { state.open = false; panel.hidden = true; launcher.setAttribute('aria-expanded', 'false'); root.classList.remove('is-open'); launcher.focus(); }
 
@@ -299,17 +372,8 @@
     e.preventDefault(); var t = input.value.trim(); if (!t || busy) return;
     input.value = ''; clearChips(); user(t); onUserText(t);
   });
-  tBody.addEventListener('click', open);
-  tClose.addEventListener('click', function () { teaser.hidden = true; try { sessionStorage.setItem(KEY + 'Teaser', '1'); } catch (e) {} });
 
   load();
-  var seen = false; try { seen = !!sessionStorage.getItem(KEY + 'Teaser'); } catch (e) {}
-  /* The greeting waits for the cookie notice to be closed, so they never overlap. */
-  function showTeaser(tries) {
-    if (state.open) return;
-    var notice = document.getElementById('optima-consent');
-    if (notice && !notice.hidden) { if (tries < 30) setTimeout(function () { showTeaser(tries + 1); }, 1000); return; }
-    teaser.hidden = false;
-  }
-  if (C.teaser && !seen && !state.msgs.length) setTimeout(function () { showTeaser(0); }, 2500);
+  /* chat-loader.js calls open() once this file and chat.css have loaded. */
+  window.optimaChat = { open: open, close: close };
 })();

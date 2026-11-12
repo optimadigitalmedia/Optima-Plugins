@@ -188,18 +188,34 @@ final class Optima_Chat_Admin {
 			$key = '';
 		}
 
-		// The disclosure. Saving it on this screen as an operator is what lets the
-		// chat show on a law-firm site; a fill from the theme's setup file or any
-		// other update_option() keeps the earlier stamp.
+		// The disclosure. Saving it on this screen as an operator stamps who and
+		// when (on a law-firm site it is the firm's approved wording, shown under
+		// the fixed line); a fill from the theme's setup file or any other
+		// update_option() keeps the earlier stamp.
 		$old        = Optima_Chat::settings();
 		$disclosure = trim( mb_substr( sanitize_textarea_field( (string) ( $in['disclosure'] ?? $old['disclosure'] ) ), 0, 400 ) );
 		$saved      = $old['disclosure_saved'];
 		$by         = $old['disclosure_by'];
-		$from_form  = isset( $_POST['option_page'] ) && 'optima_chat_group' === sanitize_key( wp_unslash( $_POST['option_page'] ) ) && array_key_exists( 'disclosure', $in ); // phpcs:ignore WordPress.Security.NonceVerification -- options.php checked the nonce.
-		$operator   = class_exists( 'Optima_Hub_Access' ) ? Optima_Hub_Access::is_operator() : current_user_can( 'manage_options' );
+		$form       = isset( $_POST['option_page'] ) && 'optima_chat_group' === sanitize_key( wp_unslash( $_POST['option_page'] ) ); // phpcs:ignore WordPress.Security.NonceVerification -- options.php checked the nonce.
+		$from_form  = $form && array_key_exists( 'disclosure', $in );
+		$operator   = self::is_operator();
 		if ( $from_form && $operator && ( 0 === $saved || $disclosure !== $old['disclosure'] ) ) {
 			$saved = time();
 			$by    = get_current_user_id();
+		}
+
+		// AI answers on a law-firm site: only an operator, ticking the box on this
+		// screen, turns them on or off. Anyone else's save keeps what was there.
+		$law_ai    = $old['law_ai'];
+		$law_ai_by = $old['law_ai_by'];
+		$law_ai_at = $old['law_ai_at'];
+		if ( $form && $operator && Optima_Chat::is_law() ) {
+			$want = ! empty( $in['law_ai'] );
+			if ( $want !== $law_ai ) {
+				$law_ai    = $want;
+				$law_ai_by = $want ? get_current_user_id() : 0;
+				$law_ai_at = $want ? time() : 0;
+			}
 		}
 
 		// Retention: one of the offered lengths, or keep (0) with a reason.
@@ -216,8 +232,6 @@ final class Optima_Chat_Admin {
 			'name'      => sanitize_text_field( (string) ( $in['name'] ?? '' ) ),
 			'team'      => sanitize_text_field( (string) ( $in['team'] ?? '' ) ),
 			'launcher'  => sanitize_text_field( (string) ( $in['launcher'] ?? '' ) ),
-			'teaser'    => ! empty( $in['teaser'] ) ? 1 : 0,
-			'teaser_by' => sanitize_text_field( (string) ( $in['teaser_by'] ?? '' ) ),
 			'notify'    => sanitize_email( (string) ( $in['notify'] ?? '' ) ),
 			'alert'     => sanitize_email( (string) ( $in['alert'] ?? '' ) ),
 			'book_url'  => esc_url_raw( (string) ( $in['book_url'] ?? '' ) ),
@@ -229,9 +243,17 @@ final class Optima_Chat_Admin {
 			'disclosure'       => $disclosure,
 			'disclosure_saved' => $saved,
 			'disclosure_by'    => $by,
+			'law_ai'           => $law_ai ? 1 : 0,
+			'law_ai_by'        => $law_ai_by,
+			'law_ai_at'        => $law_ai_at,
 			'retention'        => $days,
 			'retention_reason' => 0 === $days ? $reason : '',
 		);
+	}
+
+	/** An Optima operator (the web team), or an administrator where Optima Build is not installed. */
+	private static function is_operator(): bool {
+		return class_exists( 'Optima_Hub_Access' ) ? Optima_Hub_Access::is_operator() : current_user_can( 'manage_options' );
 	}
 
 	/** Days a conversation can be kept for; 0 keeps it (with a reason). */
@@ -248,7 +270,6 @@ final class Optima_Chat_Admin {
 		'launcher'  => 'Button text',
 		'photo_1'   => 'First photo',
 		'photo_2'   => 'Second photo',
-		'teaser_by' => 'Who the greeting is from',
 		'notify'    => 'Email new questions to',
 		'alert'     => 'Text me new questions',
 		'book_url'  => 'Booking page',
@@ -268,30 +289,37 @@ final class Optima_Chat_Admin {
 		}
 		$s  = Optima_Chat::settings();
 		$o  = Optima_Chat::OPTION;
-		$ai = Optima_Chat::ai_connected();
+		$ai = Optima_Chat::ai_active();
 		$n  = self::unanswered();
-		$need = Optima_Chat::needs_disclosure();
 		$law  = Optima_Chat::is_law();
 		Optima_Admin_UI::open( __( 'Chat', 'optima-chat' ), __( 'A chat in the corner of the site. It answers the common questions, books calls and takes change requests, and saves every visitor question to Chat questions.', 'optima-chat' ), __( 'Chat', 'optima-chat' ) );
 		settings_errors( $o );
 		?>
-		<?php if ( $need ) : ?>
-		<section class="sh-box sh-check is-needs">
-			<p class="sh-label"><?php esc_html_e( 'To do', 'optima-chat' ); ?></p>
-			<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php esc_html_e( 'Save the line visitors see first', 'optima-chat' ); ?></p>
-			<p class="sh-note"><?php esc_html_e( 'This is a law-firm site, so the chat stays off the site until the disclosure below has been saved once. Start from the wording given, have the firm approve the exact text, then paste it in and save.', 'optima-chat' ); ?> <a href="#optima-chat-disclosure"><?php esc_html_e( 'Go to the disclosure', 'optima-chat' ); ?> &rsaquo;</a></p>
+		<?php if ( $law ) : ?>
+		<section class="sh-box sh-check is-good">
+			<p class="sh-label"><?php esc_html_e( 'Law-firm site', 'optima-chat' ); ?></p>
+			<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php esc_html_e( 'Law-firm rules are on', 'optima-chat' ); ?></p>
+			<p class="sh-note">
+				<?php
+				printf(
+					/* translators: %d: characters */
+					esc_html__( 'The chat window always shows the fixed line below. The chat takes only a name, a phone number and a short description (up to %d characters): no email, no other fields, no files. AI answers stay off unless the web team turns them on under AI connection.', 'optima-chat' ),
+					(int) Optima_Chat::LAW_NOTE_MAX
+				);
+				?>
+			</p>
 		</section>
 		<?php endif; ?>
 		<div class="sh-grid sh-grid-3">
-			<section class="sh-box sh-check is-<?php echo $s['enabled'] ? ( $need ? 'needs' : 'good' ) : 'off'; ?>">
+			<section class="sh-box sh-check is-<?php echo $s['enabled'] ? 'good' : 'off'; ?>">
 				<p class="sh-label"><?php esc_html_e( 'On the site', 'optima-chat' ); ?></p>
-				<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php echo $s['enabled'] ? ( $need ? esc_html__( 'Waiting on the disclosure', 'optima-chat' ) : esc_html__( 'Showing', 'optima-chat' ) ) : esc_html__( 'Hidden', 'optima-chat' ); ?></p>
-				<p class="sh-note"><?php echo $s['enabled'] ? ( $need ? esc_html__( 'Switched on, but hidden from visitors until the disclosure is saved.', 'optima-chat' ) : esc_html__( 'Visitors see the chat button on every page.', 'optima-chat' ) ) : esc_html__( 'Fill in the details below, then tick Show the chat on the site.', 'optima-chat' ); ?></p>
+				<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php echo $s['enabled'] ? esc_html__( 'Showing', 'optima-chat' ) : esc_html__( 'Hidden', 'optima-chat' ); ?></p>
+				<p class="sh-note"><?php echo $s['enabled'] ? esc_html__( 'Visitors see the chat button on every page. The chat opens only when they tap it.', 'optima-chat' ) : esc_html__( 'Fill in the details below, then tick Show the chat on the site.', 'optima-chat' ); ?></p>
 			</section>
 			<section class="sh-box sh-check is-<?php echo $ai ? 'good' : 'off'; ?>">
 				<p class="sh-label"><?php esc_html_e( 'Answers', 'optima-chat' ); ?></p>
 				<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php echo $ai ? esc_html__( 'AI connected', 'optima-chat' ) : esc_html__( 'Collecting questions', 'optima-chat' ); ?></p>
-				<p class="sh-note"><?php echo $ai ? esc_html__( 'Free-text questions get an AI answer. If the AI server is down, questions are collected instead.', 'optima-chat' ) : esc_html__( 'Common questions are answered right away. Anything else is saved with the visitor\'s email for you to answer.', 'optima-chat' ); ?></p>
+				<p class="sh-note"><?php echo $ai ? esc_html__( 'Free-text questions get an AI answer. If the AI server is down, questions are collected instead.', 'optima-chat' ) : ( $law ? esc_html__( 'No AI answers. Visitors leave a name, a phone number and a short description for the firm to call back.', 'optima-chat' ) : esc_html__( 'Common questions are answered right away. Anything else is saved with the visitor\'s email for you to answer.', 'optima-chat' ) ); ?></p>
 			</section>
 			<section class="sh-box sh-check is-<?php echo $n ? 'warn' : 'good'; ?>">
 				<p class="sh-label"><?php esc_html_e( 'Waiting for an answer', 'optima-chat' ); ?></p>
@@ -304,7 +332,7 @@ final class Optima_Chat_Admin {
 			<?php settings_fields( 'optima_chat_group' ); ?>
 			<div class="sh-box" id="optima-chat-disclosure-box">
 				<h2 class="sh-title"><?php esc_html_e( 'What visitors see first', 'optima-chat' ); ?></h2>
-				<p><?php esc_html_e( 'One line at the top of the chat, shown before the visitor types anything, and saved with every conversation.', 'optima-chat' ); ?></p>
+				<p><?php esc_html_e( 'The top of the chat, shown before the visitor types anything, and saved with every conversation.', 'optima-chat' ); ?></p>
 				<table class="form-table" role="presentation">
 					<?php
 					$by   = $s['disclosure_by'] ? get_userdata( $s['disclosure_by'] ) : false;
@@ -315,13 +343,28 @@ final class Optima_Chat_Admin {
 							$by ? $by->display_name : __( 'an operator', 'optima-chat' ),
 							wp_date( get_option( 'date_format' ), $s['disclosure_saved'] )
 						)
-						: ( $law ? __( 'Not saved yet. The chat stays off this law-firm site until it is.', 'optima-chat' ) : __( 'Not saved yet. The starting wording shows until it is.', 'optima-chat' ) );
-					self::row(
-						__( 'Disclosure', 'optima-chat' ),
-						'<textarea class="large-text" rows="3" id="optima-chat-disclosure" aria-label="' . esc_attr__( 'Disclosure', 'optima-chat' ) . '" name="' . esc_attr( $o ) . '[disclosure]">' . esc_textarea( Optima_Chat::disclosure() ) . '</textarea>'
-							. '<p class="description"><strong>' . esc_html__( 'Starting wording: the firm approves the exact text.', 'optima-chat' ) . '</strong> ' . esc_html__( 'The starting wording says the visitor is talking to an automated assistant, that it can\'t give legal advice, and that chatting doesn\'t make them a client. Blank goes back to it.', 'optima-chat' ) . '</p>',
-						$when
-					);
+						: ( $law ? __( 'Nothing added yet. Only the fixed line shows.', 'optima-chat' ) : __( 'Not saved yet. The starting wording shows until it is.', 'optima-chat' ) );
+					if ( $law ) {
+						// The fixed line is a constant in the plugin: shown here, never editable.
+						self::row(
+							__( 'Fixed line', 'optima-chat' ),
+							'<p><strong>' . esc_html( Optima_Chat::LAW_NOTICE ) . '</strong></p>',
+							__( 'Always first in the chat window on a law-firm site. It can\'t be removed or changed here. Placeholder wording until counsel approves it.', 'optima-chat' )
+						);
+						self::row(
+							__( 'Firm-approved wording', 'optima-chat' ),
+							'<textarea class="large-text" rows="3" id="optima-chat-disclosure" aria-label="' . esc_attr__( 'Firm-approved wording', 'optima-chat' ) . '" name="' . esc_attr( $o ) . '[disclosure]">' . esc_textarea( $s['disclosure'] ) . '</textarea>'
+								. '<p class="description">' . esc_html__( 'Optional. Wording the firm has approved shows under the fixed line, never in place of it. Leave blank for the fixed line alone.', 'optima-chat' ) . '</p>',
+							$when
+						);
+					} else {
+						self::row(
+							__( 'Disclosure', 'optima-chat' ),
+							'<textarea class="large-text" rows="3" id="optima-chat-disclosure" aria-label="' . esc_attr__( 'Disclosure', 'optima-chat' ) . '" name="' . esc_attr( $o ) . '[disclosure]">' . esc_textarea( Optima_Chat::disclosure() ) . '</textarea>'
+								. '<p class="description"><strong>' . esc_html__( 'Starting wording: the firm approves the exact text.', 'optima-chat' ) . '</strong> ' . esc_html__( 'The starting wording says the visitor is talking to an automated assistant, that it can\'t give legal advice, and that chatting doesn\'t make them a client. Blank goes back to it.', 'optima-chat' ) . '</p>',
+							$when
+						);
+					}
 					?>
 				</table>
 			</div>
@@ -334,7 +377,6 @@ final class Optima_Chat_Admin {
 					self::row( __( 'Assistant name', 'optima-chat' ), self::text( 'name', $s['name'], __( 'Site name + assistant', 'optima-chat' ) ) );
 					self::row( __( 'Button text', 'optima-chat' ), self::text( 'launcher', $s['launcher'], __( 'Ask + team names', 'optima-chat' ) ) );
 					self::row( __( 'Photos', 'optima-chat' ), self::text( 'photo_1', $s['photo_1'], 'https://', 'url' ) . '<br>' . self::text( 'photo_2', $s['photo_2'], 'https://', 'url' ), __( 'Optional. Paste the Media links of the people who answer. They show on the button and in the chat.', 'optima-chat' ) );
-					self::row( __( 'Greeting card', 'optima-chat' ), '<label class="sh-target"><input type="checkbox" name="' . esc_attr( $o ) . '[teaser]" value="1" ' . checked( $s['teaser'], true, false ) . '> ' . esc_html__( 'Show a small greeting after a few seconds, once per visit', 'optima-chat' ) . '</label><br>' . self::text( 'teaser_by', $s['teaser_by'], 'Your team at Optima' ), __( 'Who the greeting is from.', 'optima-chat' ) );
 					?>
 				</table>
 			</div>
@@ -371,8 +413,35 @@ final class Optima_Chat_Admin {
 			</div>
 			<div class="sh-box">
 				<h2 class="sh-title"><?php esc_html_e( 'AI connection', 'optima-chat' ); ?></h2>
-				<div class="sh-status <?php echo $ai ? '' : 'is-off'; ?>"><span class="sh-dot" aria-hidden="true"></span><p class="sh-value"><?php echo $ai ? esc_html__( 'Connected', 'optima-chat' ) : esc_html__( 'Not connected', 'optima-chat' ); ?></p></div>
-				<p class="sh-note"><?php echo $ai ? esc_html__( 'Optima\'s AI server answers free-text questions. The AI company\'s key stays on that server and never touches this site.', 'optima-chat' ) : esc_html__( 'Free-text questions are collected for you to answer. The web team connects the AI server when this site gets it.', 'optima-chat' ); ?></p>
+				<?php $wired = Optima_Chat::ai_connected(); ?>
+				<div class="sh-status <?php echo $wired ? '' : 'is-off'; ?>"><span class="sh-dot" aria-hidden="true"></span><p class="sh-value"><?php echo $wired ? esc_html__( 'Connected', 'optima-chat' ) : esc_html__( 'Not connected', 'optima-chat' ); ?></p></div>
+				<p class="sh-note"><?php echo $wired ? esc_html__( 'Optima\'s AI server answers free-text questions. The AI company\'s key stays on that server and never touches this site.', 'optima-chat' ) : esc_html__( 'Free-text questions are collected for you to answer. The web team connects the AI server when this site gets it.', 'optima-chat' ); ?></p>
+				<?php if ( $law ) : ?>
+					<?php
+					$on_by = $s['law_ai_by'] ? get_userdata( $s['law_ai_by'] ) : false;
+					$op    = self::is_operator();
+					?>
+					<div class="sh-check is-<?php echo $s['law_ai'] ? 'warn' : 'off'; ?>" id="optima-chat-law-ai">
+						<p class="sh-label"><?php esc_html_e( 'AI answers on this law-firm site', 'optima-chat' ); ?></p>
+						<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php echo $s['law_ai'] ? esc_html__( 'On', 'optima-chat' ) : esc_html__( 'Off: collecting only', 'optima-chat' ); ?></p>
+						<p class="sh-note"><strong><?php esc_html_e( 'A chatbot that answers legal questions is the firm\'s responsibility.', 'optima-chat' ); ?></strong> <?php esc_html_e( 'The firm answers for what the assistant tells a visitor, the same as for anyone on its staff (Florida Bar Ethics Opinion 24-1 says so plainly). Turn this on only when the firm has approved AI answers in writing.', 'optima-chat' ); ?></p>
+						<p><label class="sh-target"><input type="checkbox" name="<?php echo esc_attr( $o ); ?>[law_ai]" value="1" <?php checked( $s['law_ai'] ); ?> <?php disabled( ! $op ); ?>> <?php esc_html_e( 'Give AI answers on this site', 'optima-chat' ); ?></label></p>
+						<p class="sh-note">
+							<?php
+							if ( $s['law_ai'] && $s['law_ai_at'] ) {
+								printf(
+									/* translators: 1: person, 2: date */
+									esc_html__( 'Turned on by %1$s on %2$s.', 'optima-chat' ),
+									esc_html( $on_by ? $on_by->display_name : __( 'an operator', 'optima-chat' ) ),
+									esc_html( wp_date( get_option( 'date_format' ), $s['law_ai_at'] ) )
+								);
+								echo ' ';
+							}
+							echo $op ? esc_html__( 'Answers also need the AI server connected below.', 'optima-chat' ) : esc_html__( 'Only the web team can change this.', 'optima-chat' );
+							?>
+						</p>
+					</div>
+				<?php endif; ?>
 				<?php Optima_Admin_UI::dev_open(); ?>
 				<table class="form-table" role="presentation">
 					<?php

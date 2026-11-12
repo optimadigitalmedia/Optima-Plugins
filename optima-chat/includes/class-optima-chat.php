@@ -19,8 +19,23 @@
  * Disclosure: the panel opens on one line saying the visitor is talking to an
  * automated assistant (and, by default, that it gives no legal advice and
  * makes no one a client). The wording is a setting, and the text shown is
- * saved with every lead. On a law-firm site the chat stays off the site until
- * an operator has saved that wording at least once (the firm approves it).
+ * saved with every lead.
+ *
+ * Law-firm sites (Optima Playbook 5.3 and 5.8; Florida Bar Ethics Opinion 24-1):
+ * - The window always shows LAW_NOTICE first. It is a constant, so no setting
+ *   can remove or change it. Wording the firm approves (the Disclosure setting)
+ *   shows under it, never in place of it.
+ * - AI answers stay off (collect mode) until an operator turns them on for the
+ *   site on the Chat screen, even when an AI server is connected.
+ * - A lead holds only a name, a phone number and a short description (up to
+ *   LAW_NOTE_MAX characters). The server drops everything else the browser sends.
+ *
+ * Loading: on page load the site gets only the button (static markup from
+ * button(), chat-button.css and the small chat-loader.js). The full widget
+ * (chat.js, chat.css) loads on the first tap, click or key press on the
+ * button. Nothing per visitor goes into the page, and the REST routes take no
+ * nonce, so cached pages stay correct. The panel only ever opens when the
+ * visitor asks for it.
  *
  * @package Optima_Chat
  */
@@ -39,6 +54,7 @@ final class Optima_Chat {
 		add_action( 'init', array( __CLASS__, 'register_type' ) );
 		add_action( 'rest_api_init', array( __CLASS__, 'routes' ) );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'assets' ) );
+		add_action( 'wp_footer', array( __CLASS__, 'button' ), 5 );
 	}
 
 	/** @return array<string, mixed> */
@@ -49,8 +65,6 @@ final class Optima_Chat {
 			'name'      => (string) ( $s['name'] ?? '' ),
 			'team'      => (string) ( $s['team'] ?? '' ),
 			'launcher'  => (string) ( $s['launcher'] ?? '' ),
-			'teaser'    => ! isset( $s['teaser'] ) || ! empty( $s['teaser'] ),
-			'teaser_by' => (string) ( $s['teaser_by'] ?? '' ),
 			'notify'    => (string) ( $s['notify'] ?? get_option( 'admin_email' ) ),
 			'alert'     => (string) ( $s['alert'] ?? '' ),
 			'book_url'  => (string) ( $s['book_url'] ?? '' ),
@@ -64,6 +78,10 @@ final class Optima_Chat {
 			// When an operator last saved the disclosure on the Chat screen (0: never), and who.
 			'disclosure_saved' => (int) ( $s['disclosure_saved'] ?? 0 ),
 			'disclosure_by'    => (int) ( $s['disclosure_by'] ?? 0 ),
+			// Law-firm sites only: AI answers, off until an operator turns them on (who and when).
+			'law_ai'           => ! empty( $s['law_ai'] ),
+			'law_ai_by'        => (int) ( $s['law_ai_by'] ?? 0 ),
+			'law_ai_at'        => (int) ( $s['law_ai_at'] ?? 0 ),
 			// Days a saved conversation is kept; 0 keeps them, with a reason.
 			'retention'        => isset( $s['retention'] ) ? max( 0, (int) $s['retention'] ) : self::RETENTION_DAYS,
 			'retention_reason' => (string) ( $s['retention_reason'] ?? '' ),
@@ -87,10 +105,34 @@ final class Optima_Chat {
 		return __( 'You are chatting with an automated assistant. It can\'t give legal advice, and chatting doesn\'t make you a client of the firm.', 'optima-chat' );
 	}
 
-	/** The disclosure shown at the top of the chat and saved with each lead. */
-	public static function disclosure(): string {
+	/**
+	 * The fixed line every law-firm site's chat window shows first. One string,
+	 * never translated or filtered, so no setting can take it away. Placeholder
+	 * wording until counsel approves it (decided Nov 12, Q426-62).
+	 */
+	const LAW_NOTICE = "AI assistant, not a lawyer. It can't give legal advice. Please don't share confidential details here.";
+
+	/** Longest description a law-firm site's chat takes, in characters. */
+	const LAW_NOTE_MAX = 500;
+
+	/**
+	 * The lines at the top of the chat, in order. A law-firm site: the fixed
+	 * line, then the firm's approved wording when an operator saved some. Any
+	 * other site: the saved wording, or the starting wording.
+	 *
+	 * @return string[]
+	 */
+	public static function disclosure_lines(): array {
 		$text = trim( self::settings()['disclosure'] );
-		return '' !== $text ? $text : self::default_disclosure();
+		if ( self::is_law() ) {
+			return '' !== $text && $text !== self::LAW_NOTICE ? array( self::LAW_NOTICE, $text ) : array( self::LAW_NOTICE );
+		}
+		return array( '' !== $text ? $text : self::default_disclosure() );
+	}
+
+	/** The disclosure shown at the top of the chat, as one string, saved with each lead. */
+	public static function disclosure(): string {
+		return implode( ' ', self::disclosure_lines() );
 	}
 
 	/**
@@ -109,14 +151,12 @@ final class Optima_Chat {
 		return (bool) apply_filters( 'optima_chat_is_law', $law );
 	}
 
-	/** True while a law-firm site's disclosure has never been saved by an operator: the chat stays hidden. */
-	public static function needs_disclosure(): bool {
-		return self::is_law() && 0 === self::settings()['disclosure_saved'];
-	}
-
-	/** Switched on, and (on a law-firm site) the disclosure has been saved. */
+	/**
+	 * Switched on. (Until 0.2.4.11's law rules, a law-firm site also waited for
+	 * an operator to save the disclosure; the fixed line now does that job.)
+	 */
 	public static function visible(): bool {
-		return self::settings()['enabled'] && ! self::needs_disclosure();
+		return self::settings()['enabled'];
 	}
 
 	/** The connection key: wp-config's OPTIMA_CHAT_AI_KEY wins over the setting. */
@@ -127,6 +167,11 @@ final class Optima_Chat {
 	public static function ai_connected(): bool {
 		$url = self::settings()['ai_url'];
 		return '' !== self::ai_key() && 0 === strpos( $url, 'https://' );
+	}
+
+	/** AI answers go out: connected, and on a law-firm site an operator has turned them on. */
+	public static function ai_active(): bool {
+		return self::ai_connected() && ( ! self::is_law() || self::settings()['law_ai'] );
 	}
 
 	/** "the Optima team", or "our team" when no names are set. */
@@ -157,33 +202,72 @@ final class Optima_Chat {
 		);
 	}
 
-	/** On every public page while the chat is switched on. */
+	/** Set by assets() when this page shows the chat button. */
+	private static $show = false;
+
+	/**
+	 * On every public page while the chat is switched on: only the button's
+	 * small stylesheet and the loader. chat.js and chat.css load on the first tap.
+	 */
 	public static function assets(): void {
-		$s = self::settings();
 		if ( ! self::visible() || is_admin() || ! (bool) apply_filters( 'optima_chat_show', true ) ) {
 			return;
 		}
-		wp_enqueue_style( 'optima-chat', OPTIMA_CHAT_URL . 'assets/chat.css', array(), OPTIMA_CHAT_VERSION );
-		wp_enqueue_script( 'optima-chat', OPTIMA_CHAT_URL . 'assets/chat.js', array(), OPTIMA_CHAT_VERSION, array( 'in_footer' => true, 'strategy' => 'defer' ) );
+		self::$show = true;
+		wp_enqueue_style( 'optima-chat-button', OPTIMA_CHAT_URL . 'assets/chat-button.css', array(), OPTIMA_CHAT_VERSION );
+		wp_enqueue_script( 'optima-chat', OPTIMA_CHAT_URL . 'assets/chat-loader.js', array(), OPTIMA_CHAT_VERSION, array( 'in_footer' => true, 'strategy' => 'defer' ) );
+	}
+
+	/**
+	 * What the widget needs, the same for every visitor (no nonce, nothing
+	 * personal), so it can sit in cached HTML.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public static function config(): array {
+		$s    = self::settings();
 		$book = '' !== $s['book_url'] ? $s['book_url'] : ( function_exists( 'optima_booking_url' ) ? optima_booking_url() : home_url( '/contact/' ) );
 		$name = '' !== $s['name'] ? $s['name'] : sprintf( /* translators: %s: site name */ __( '%s assistant', 'optima-chat' ), self::short_site_name() );
-		wp_localize_script(
-			'optima-chat',
-			'optimaChatConfig',
-			array(
-				'rest'     => esc_url_raw( rest_url( self::NS ) ),
-				'name'     => $name,
-				'team'     => self::team(),
-				'hasTeam'  => '' !== trim( $s['team'] ),
-				'launcher' => '' !== $s['launcher'] ? $s['launcher'] : ( '' !== trim( $s['team'] ) ? sprintf( /* translators: %s: team names */ __( 'Ask %s', 'optima-chat' ), str_replace( ' and ', ' & ', $s['team'] ) ) : __( 'Ask us', 'optima-chat' ) ),
-				'teaser'   => $s['teaser'],
-				'teaserBy' => $s['teaser_by'],
-				'photos'   => array_values( array_filter( array( $s['photo_1'], $s['photo_2'] ) ) ),
-				'bookUrl'  => esc_url_raw( $book ),
-				'workUrl'  => esc_url_raw( $s['work_url'] ),
-				'ai'       => self::ai_connected(),
-				'disclose' => self::disclosure(),
-			)
+		return array(
+			'rest'     => esc_url_raw( rest_url( self::NS ) ),
+			'name'     => $name,
+			'team'     => self::team(),
+			'hasTeam'  => '' !== trim( $s['team'] ),
+			'launcher' => '' !== $s['launcher'] ? $s['launcher'] : ( '' !== trim( $s['team'] ) ? sprintf( /* translators: %s: team names */ __( 'Ask %s', 'optima-chat' ), str_replace( ' and ', ' & ', $s['team'] ) ) : __( 'Ask us', 'optima-chat' ) ),
+			'photos'   => array_values( array_filter( array( $s['photo_1'], $s['photo_2'] ) ) ),
+			'bookUrl'  => esc_url_raw( $book ),
+			'workUrl'  => esc_url_raw( $s['work_url'] ),
+			'ai'       => self::ai_active(),
+			'law'      => self::is_law(),
+			'noteMax'  => self::LAW_NOTE_MAX,
+			'disclose' => self::disclosure_lines(),
+		);
+	}
+
+	/**
+	 * The button, printed in the footer: a real <button> at its final size, so
+	 * nothing moves when the full widget takes it over. The widget's settings
+	 * ride in data attributes (no inline script).
+	 */
+	public static function button(): void {
+		if ( ! self::$show ) {
+			return;
+		}
+		$c   = self::config();
+		$css = add_query_arg( 'ver', OPTIMA_CHAT_VERSION, OPTIMA_CHAT_URL . 'assets/chat.css' );
+		$js  = add_query_arg( 'ver', OPTIMA_CHAT_VERSION, OPTIMA_CHAT_URL . 'assets/chat.js' );
+		$img = '';
+		foreach ( $c['photos'] as $src ) {
+			$img .= '<img src="' . esc_url( $src ) . '" alt="" width="24" height="24" loading="lazy" decoding="async">';
+		}
+		printf(
+			'<div id="optima-chat" class="oc-root" data-config="%1$s" data-css="%2$s" data-js="%3$s"><button type="button" class="oc-launcher oc-pulse" aria-label="%4$s" aria-haspopup="dialog" aria-expanded="false"><span class="oc-stack oc-stack-sm" aria-hidden="true"><span class="oc-ai"><span class="oc-mark"></span></span>%5$s</span><span class="oc-launcher-label">%6$s</span></button></div>' . "\n",
+			esc_attr( (string) wp_json_encode( $c ) ),
+			esc_url( $css ),
+			esc_url( $js ),
+			esc_attr( $c['launcher'] ),
+			$img, // phpcs:ignore WordPress.Security.EscapeOutput -- escaped above.
+			esc_html( $c['launcher'] )
 		);
 	}
 
@@ -247,7 +331,7 @@ final class Optima_Chat {
 
 	/** Save a conversation with contact details, and email the team. */
 	public static function lead( WP_REST_Request $req ) {
-		if ( ! self::visible() ) { // Off, or a law-firm site whose disclosure is not saved yet.
+		if ( ! self::visible() ) { // Switched off.
 			return new WP_Error( 'optima_chat_off', __( 'The chat is not available right now. Please call or email us instead.', 'optima-chat' ), array( 'status' => 403 ) );
 		}
 		if ( '' !== (string) $req->get_param( 'website' ) ) { // Honeypot: people never fill it.
@@ -256,11 +340,15 @@ final class Optima_Chat {
 		if ( self::too_many( 'lead', 5 ) ) {
 			return new WP_Error( 'optima_chat_slow', __( 'Too many messages in a row. Please try again in a few minutes.', 'optima-chat' ), array( 'status' => 429 ) );
 		}
+		$law   = self::is_law();
 		$name  = sanitize_text_field( mb_substr( (string) $req->get_param( 'name' ), 0, 100 ) );
-		$email = sanitize_email( (string) $req->get_param( 'email' ) );
+		$email = $law ? '' : sanitize_email( (string) $req->get_param( 'email' ) ); // Law-firm site: no email, ever.
 		$phone = self::phone( (string) $req->get_param( 'phone' ) );
 		if ( '' === $name ) {
 			return new WP_Error( 'optima_chat_name', __( 'Add your name so we know who we are talking to.', 'optima-chat' ), array( 'status' => 400 ) );
+		}
+		if ( $law && '' === $phone ) {
+			return new WP_Error( 'optima_chat_phone', __( 'Add a phone number so we can reach you.', 'optima-chat' ), array( 'status' => 400 ) );
 		}
 		if ( '' === $phone && ! is_email( $email ) ) {
 			return new WP_Error( 'optima_chat_email', __( 'Add a phone number or an email so we can reply.', 'optima-chat' ), array( 'status' => 400 ) );
@@ -276,8 +364,16 @@ final class Optima_Chat {
 		);
 		$kind    = sanitize_key( (string) $req->get_param( 'kind' ) );
 		$kind    = isset( $kinds[ $kind ] ) ? $kind : 'question';
-		$history = self::clean_history( $req->get_param( 'history' ) );
-		$page    = esc_url_raw( (string) $req->get_param( 'page' ) );
+		if ( $law ) {
+			// A law-firm site keeps a name, a phone number and a short description,
+			// nothing else: the transcript, email and any other field are dropped.
+			$note    = trim( mb_substr( sanitize_textarea_field( mb_substr( (string) $req->get_param( 'description' ), 0, self::LAW_NOTE_MAX * 2 ) ), 0, self::LAW_NOTE_MAX ) );
+			$history = '' !== $note ? array( array( 'from' => 'user', 'text' => $note ) ) : array();
+			$page    = esc_url_raw( (string) preg_replace( '/[?#].*$/s', '', (string) $req->get_param( 'page' ) ) ); // The page, without its query string.
+		} else {
+			$history = self::clean_history( $req->get_param( 'history' ) );
+			$page    = esc_url_raw( (string) $req->get_param( 'page' ) );
+		}
 		$first   = '';
 		foreach ( array_reverse( $history ) as $m ) {
 			if ( 'user' === $m['from'] ) {
@@ -345,7 +441,8 @@ final class Optima_Chat {
 	/** Pass a free-text question to the AI server. Falls back to collecting. */
 	public static function ask( WP_REST_Request $req ) {
 		$question = trim( wp_strip_all_tags( mb_substr( (string) $req->get_param( 'question' ), 0, 1000 ) ) );
-		if ( '' === $question || ! self::ai_connected() || ! self::visible() ) {
+		// A law-firm site answers with AI only after an operator turned it on.
+		if ( '' === $question || ! self::ai_active() || ! self::visible() ) {
 			return array( 'answer' => '', 'collect' => true );
 		}
 		if ( self::too_many( 'ask', 20 ) ) {

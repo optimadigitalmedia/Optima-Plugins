@@ -1,50 +1,16 @@
-/* Optima Chat. Design: Optima features DESIGN.md 5.1. Reads the site's tokens
-   when they exist (Optima themes) and falls back to the Optima dark palette. */
-.oc-root {
-  --oc-bg: var(--bg, var(--optima-ink)); --oc-surface: var(--surface, var(--optima-ink)); --oc-surface-2: var(--surface-2, var(--optima-ink));
-  --oc-text: var(--text, var(--optima-canvas)); --oc-text-2: var(--text-2, var(--optima-night-ink-2)); --oc-text-3: var(--text-3, var(--optima-ink-2));
-  --oc-line: var(--line, rgba(255,255,255,.10)); --oc-accent: var(--accent, var(--optima-accent)); --oc-accent-text: var(--accent-text, var(--optima-highlight));
-  --oc-mono: var(--font-mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
-  position: fixed; right: 20px; bottom: 20px; z-index: 9998; display: flex; flex-direction: column; align-items: flex-end; gap: 12px;
-  font-family: inherit; font-size: 15px; line-height: 1.5; color: var(--oc-text);
-}
-.oc-root *, .oc-root *::before, .oc-root *::after { box-sizing: border-box; }
-.oc-root button, .oc-root input { font: inherit; }
-.oc-root [hidden] { display: none !important; }
+/* Optima Chat: the panel. Loads on the first tap on the button; the button,
+   the --oc-* tokens and the corner position live in chat-button.css, which is
+   always on the page first. Design: Optima features DESIGN.md 5.1. */
 .oc-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-/* Arrow mark and avatar stack */
-.oc-mark { display: block; width: 45%; height: 45%; background: var(--optima-surface); clip-path: polygon(35% 0,100% 0,100% 65%,76% 41%,17% 100%,0 83%,59% 24%); }
-.oc-stack { display: inline-flex; align-items: center; }
-.oc-stack > * { border-radius: 50%; border: 2px solid var(--oc-surface); flex: none; object-fit: cover; }
-.oc-stack > * + * { margin-left: -8px; }
-.oc-ai { display: grid; place-items: center; background: var(--oc-accent); }
-.oc-stack-sm > * { width: 28px; height: 28px; }
+/* Avatar stack in the panel header */
 .oc-stack-md > * { width: 34px; height: 34px; }
 .oc-stack-md > img { width: 22px; height: 22px; align-self: flex-end; margin-left: -10px; }
 
-/* Launcher */
-.oc-launcher { display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 20px 8px 10px; border-radius: 980px; cursor: pointer;
-  background: var(--oc-surface); color: var(--oc-text); border: 1px solid var(--oc-line); box-shadow: 0 14px 40px -12px rgba(0,0,0,.6), 0 0 0 1px rgba(18,114,196,.25);
-  font-weight: 500; transition: transform .15s ease, border-color .15s ease; }
-.oc-launcher:hover { transform: translateY(-1px); border-color: var(--oc-accent); }
-.oc-launcher:focus-visible, .oc-root button:focus-visible, .oc-root a:focus-visible, .oc-root input:focus-visible { outline: 2px solid var(--oc-accent); outline-offset: 2px; }
-/* The pulse is a ring that grows and fades. Only transform and opacity move,
-   so the browser animates it on the GPU without repainting the page. */
-.oc-launcher { position: relative; }
-.oc-pulse::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: 0 0 0 3px rgba(18,114,196,.6); pointer-events: none; animation: oc-pulse 1.6s ease-out 3; opacity: 0; }
-@keyframes oc-pulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.3); opacity: 0; } }
+/* Focus rings inside the panel */
+.oc-root button:focus-visible, .oc-root a:focus-visible, .oc-root input:focus-visible, .oc-root textarea:focus-visible { outline: 2px solid var(--oc-accent); outline-offset: 2px; }
+.oc-panel:focus { outline: none; }
 .is-open .oc-launcher { display: none; }
-
-/* Teaser */
-/* The greeting floats above the launcher instead of joining the column, so the
-   corner widget never changes size when it appears. Before, the widget grew
-   upward and PageSpeed counted that as a layout shift (0.069 on optimadigitalmedia.com). */
-.oc-teaser { position: absolute; right: 0; bottom: calc(100% + 12px); width: max-content; max-width: min(300px, calc(100vw - 24px)); background: var(--oc-surface); border: 1px solid var(--oc-line); border-radius: 18px; box-shadow: 0 18px 50px -14px rgba(0,0,0,.6); }
-.oc-teaser-body { display: flex; flex-direction: column; gap: 4px; padding: 14px 36px 14px 16px; background: none; border: 0; color: inherit; text-align: left; cursor: pointer; }
-.oc-teaser-by { font-family: var(--oc-mono); font-size: 11px; font-weight: 500; letter-spacing: 1.3px; text-transform: uppercase; color: var(--oc-accent-text); }
-.oc-teaser-text { color: var(--oc-text-2); font-size: 14.5px; text-wrap: pretty; }
-.oc-teaser-x { position: absolute; top: 6px; right: 6px; width: 32px; height: 32px; border-radius: 50%; background: none; border: 0; color: var(--oc-text-3); font-size: 20px; cursor: pointer; }
 
 /* Panel */
 .oc-panel { width: min(400px, calc(100vw - 40px)); height: min(680px, calc(100vh - 40px)); display: flex; flex-direction: column; overflow: hidden;
@@ -91,7 +57,9 @@
 .oc-form { width: 100%; display: flex; flex-direction: column; gap: 6px; padding: 14px; background: var(--oc-surface); border: 1px solid var(--oc-line); border-radius: 16px; }
 .oc-form label { font-family: var(--oc-mono); font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--oc-text-3); margin-top: 4px; }
 .oc-form input { height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--oc-line); background: var(--oc-bg); color: var(--oc-text); }
-.oc-form input:focus { border-color: var(--oc-accent); outline: none; }
+.oc-form textarea { min-height: 96px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--oc-line); background: var(--oc-bg); color: var(--oc-text); resize: vertical; }
+.oc-form input:focus, .oc-form textarea:focus { border-color: var(--oc-accent); outline: none; }
+.oc-hint { margin: 0; font-size: 12px; color: var(--oc-text-3); }
 .oc-hp { position: absolute !important; left: -9999px !important; width: 1px !important; height: 1px !important; }
 .oc-err { margin: 2px 0 0; min-height: 0; color: var(--optima-negative); font-size: 13.5px; }
 .oc-err:empty { display: none; }
@@ -109,18 +77,15 @@
 .oc-composer input { flex: 1; min-width: 0; height: 40px; border: 0; background: none; color: var(--oc-text); outline: none; font-size: 16px; }
 .oc-send { width: 40px; height: 40px; flex: none; border-radius: 50%; border: 0; background: var(--oc-accent); color: var(--optima-accent-ink); display: grid; place-items: center; cursor: pointer; }
 .oc-disclosure { margin: 0; padding: 9px 14px; font-size: 12.5px; line-height: 1.45; color: var(--oc-text-2); background: var(--oc-surface-2); border-bottom: 1px solid var(--oc-line); text-wrap: pretty; }
+.oc-disclosure p { margin: 0; }
+.oc-disclosure p + p { margin-top: 4px; }
+/* The fixed line on a law-firm site: always first, a little stronger. */
+.oc-disclosure .oc-fixed { color: var(--oc-text); font-weight: 500; }
 .oc-disclosure[hidden] { display: none; }
 .oc-foot { margin: 8px 16px 12px; text-align: center; font-size: 12px; color: var(--oc-text-3); text-wrap: balance; }
 
 @media (max-width: 480px) {
-  .oc-root { right: 12px; bottom: 12px; }
-  /* A round 56px button on phones, so it never covers what someone is reading. */
-  .oc-launcher { width: 56px; height: 56px; min-height: 0; padding: 0; justify-content: center; }
-  .oc-launcher .oc-launcher-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  .oc-launcher .oc-stack > img { display: none; }
-  .oc-launcher .oc-stack > .oc-ai { width: 44px; height: 44px; border: 0; }
   .is-open.oc-root { inset: 0; right: 0; bottom: 0; }
   .is-open .oc-panel { width: 100vw; height: 100dvh; border-radius: 0; border: 0; }
   .oc-person { display: none; }
 }
-@media (prefers-reduced-motion: reduce) { .oc-root * { animation: none !important; transition: none !important; } }
