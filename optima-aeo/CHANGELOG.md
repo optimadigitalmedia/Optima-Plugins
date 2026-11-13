@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.2.4.11 (2026-11-13)
+
+- **/llms.txt describes each page with its current words.** The line after a link now comes from the page's SEO description, then the homepage description on the home page, then the theme's description for that address (optima-setup.json), and only then the excerpt or the opening of the page's own text. An excerpt carried over from an old site is no longer used when a current description exists.
+- **Leftover pages are never listed.** A page kept as a 404 (404, 404-2, page-not-found), a copy whose address ends in -2 or -copy, a second page called home that is not the front page, and a page under a trashed parent are left out of every list. The `optima_aeo_llms_leftover` filter can change that.
+- **Real pages first.** With no pages ticked, the list is the home page, then the pages in the site's menus (the main menu first, in menu order), then every other top-level page by page order and title, each followed by its children. Pages that are left out are dropped before the list is cut to 30, so a leftover can no longer push a real page off the list or show ahead of one.
+- The "Pages to list" help line says how the automatic list is built and what is left out.
+
+## 0.2.4.10 (2026-11-12)
+
+- **/llms.txt lists only final addresses.** A page or post is listed only when it is published, public, has no password, is not hidden from search (its own switch or the theme's seo section), does not name another page as its canonical, and has no stored redirect in Optima Redirects. Pages such as an old contact or results address that forward elsewhere drop out. Only saved settings are read; no web requests are made when the guide is built.
+- The same check covers the "Questions answered on this site" list. A theme that forwards a page on its own can drop or change an address with the new `optima_aeo_llms_url` filter.
+- **Safer FAQ schema output.** The FAQPage JSON-LD is encoded with `JSON_HEX_TAG`, so a `<` or `>` in a question or answer can never close the script tag early.
+- The "Pages to list" help line now says password-protected and forwarded pages are left out too.
+- Updates install only from the Optima Plugins release downloads (https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/). A release listed at any other address is skipped, and an update of an Optima plugin from any other address is refused with an error.
+- Every download is checked against the sha256 published in the version list before WordPress unpacks it. A mismatch deletes the file, stops the install with an error and writes a line to the PHP error log.
+- A release listed without a sha256 (one published before checksums were recorded) still installs as before, with a line in the PHP error log saying no checksum was checked.
+- Automatic updates run only for a package from the Optima Plugins releases.
+- The GitHub API fallback reads each asset's digest as its sha256, so the check works on that path too.
+
 ## 0.2.4.9 (2026-11-05)
 
 - Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).

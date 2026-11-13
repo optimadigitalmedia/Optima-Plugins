@@ -18,6 +18,33 @@ final class Optima_Reviews_Render {
 
 	const STYLE = 'optima-reviews';
 
+	/** The shortcodes that print reviews. The block is optima/reviews. */
+	const SHORTCODES = array( 'optima_reviews', 'optima_review_summary' );
+
+	/**
+	 * The few layout rules printed inline when reviews render after <head>
+	 * has gone out, so the cards and stars take their size on the first
+	 * paint and nothing moves when the stylesheet arrives. Layout only: no
+	 * color, font or radius, those come from the stylesheet and the theme's
+	 * --optima-* tokens.
+	 */
+	const CRITICAL = '.optima-reviews{display:flex;flex-direction:column;gap:28px}'
+		. '.optima-reviews-summary,.optima-reviews-summary__item{display:flex;flex-wrap:wrap;align-items:center}'
+		. '.optima-reviews__list{display:grid;gap:20px;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))}'
+		. '.optima-reviews--list .optima-reviews__list{grid-template-columns:1fr;max-width:760px}'
+		. '.optima-reviews--row .optima-reviews__list{display:flex;overflow-x:auto}'
+		. '.optima-reviews--row .optima-review{flex:0 0 min(86%,360px)}'
+		. '.optima-review{display:flex;flex-direction:column;gap:16px;margin:0;padding:24px}'
+		. '.optima-stars{display:inline-block;flex:none;width:92px;height:16px}'
+		. '.optima-review__avatar{width:40px;height:40px}'
+		. '.optima-reviews .screen-reader-text{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}';
+
+	/** Set once the stylesheet has been printed beside the reviews on this request. */
+	private static $printed = false;
+
+	/** This request's answer to page_uses(), worked out once. */
+	private static $uses = null;
+
 	public static function register(): void {
 		wp_register_style( self::STYLE, OPTIMA_REVIEWS_URL . 'assets/optima-reviews.css', array(), OPTIMA_REVIEWS_VERSION );
 
@@ -63,8 +90,7 @@ final class Optima_Reviews_Render {
 	public static function shortcode_summary( $atts ): string {
 		$atts = is_array( $atts ) ? $atts : array();
 		$opts = self::options( $atts );
-		self::enqueue();
-		return self::template( 'summary', array( 'totals' => Optima_Reviews_Query::totals( $opts['source'] ) ) );
+		return self::style_tag() . self::template( 'summary', array( 'totals' => Optima_Reviews_Query::totals( $opts['source'] ) ) );
 	}
 
 	public static function block( array $attributes ): string {
@@ -110,37 +136,202 @@ final class Optima_Reviews_Render {
 			return '';
 		}
 
-		self::enqueue();
-		return self::template(
+		$law = Optima_Reviews_Law::is_law();
+		// North Carolina: the disclaimer before and after any quote about an outcome.
+		foreach ( $reviews as $i => $review ) {
+			$reviews[ $i ]['outcome_disclaimer'] = Optima_Reviews_Law::outcome_disclaimer( (string) $review['text'] );
+		}
+
+		// A hand-picked or capped list says so, with the way to every review (16 CFR 465.7).
+		$curated = ! empty( $query['featured'] ) || '' !== (string) $query['topic'] || (int) $query['count'] > 0;
+		$google  = Optima_Reviews_Settings::profile( 'google' );
+
+		return self::style_tag() . self::template(
 			'section',
 			array(
-				'reviews'    => $reviews,
-				'totals'     => $totals,
-				'layout'     => $opts['layout'],
-				'disclaimer' => Optima_Reviews_Settings::get()['disclaimer'],
+				'reviews'          => $reviews,
+				'totals'           => $totals,
+				'layout'           => $opts['layout'],
+				'disclaimer'       => $law ? Optima_Reviews_Law::disclaimer() : (string) Optima_Reviews_Settings::get()['disclaimer'],
+				'disclaimer_first' => $law, // Law sites: required, and printed before the list.
+				'curated'          => $curated && (bool) $reviews,
+				/** Filter the label printed above a hand-picked or capped list of reviews. */
+				'curated_label'    => (string) apply_filters( 'optima_reviews_curated_label', __( 'Selected client reviews', 'optima-reviews' ) ),
+				'all_url'          => $google['url'],
 			)
 		);
 	}
 
 	/**
-	 * Put the stylesheet in <head> when the page's content uses the shortcode
-	 * or block, so the reviews never restyle after they paint. Theme slots can
-	 * do the same with wp_enqueue_style( 'optima-reviews' ).
+	 * The "as of" date for a platform's totals: Google's last sync when it
+	 * syncs, else the day the totals were last saved. '' when unknown.
+	 */
+	public static function as_of( string $source ): string {
+		$ts = 0;
+		if ( 'google' === $source && Optima_Reviews_Google::is_ready() ) {
+			$g  = Optima_Reviews_Google::get();
+			$ts = '' === (string) ( $g['last_error'] ?? '' ) ? (int) ( $g['last_sync'] ?? 0 ) : 0;
+		}
+		if ( ! $ts ) {
+			$ts = (int) get_option( Optima_Reviews_Settings::STAMP, 0 );
+		}
+		return $ts > 0 ? wp_date( (string) get_option( 'date_format' ), $ts ) : '';
+	}
+
+	/**
+	 * Put the stylesheet in <head> when the page will print reviews, so the
+	 * reviews never restyle after they paint. Looks at the page's own content
+	 * (shortcode or block), the synced patterns it uses, its Elementor data
+	 * (shortcode and text widgets, embedded templates, global widgets) and the
+	 * Elementor theme templates that apply to it. Anything this misses (a
+	 * theme slot, a sidebar widget) still gets its styles beside the output
+	 * (see style_tag()). Theme slots can also call
+	 * wp_enqueue_style( 'optima-reviews' ) before the head.
 	 */
 	public static function enqueue_early(): void {
-		$post = get_queried_object();
-		if ( ! $post instanceof WP_Post ) {
-			return;
-		}
-		if ( has_block( 'optima/reviews', $post ) || has_shortcode( $post->post_content, 'optima_reviews' ) || has_shortcode( $post->post_content, 'optima_review_summary' ) ) {
+		if ( self::page_uses() ) {
 			self::enqueue();
 		}
 	}
 
+	/** Will this page print reviews? */
+	public static function page_uses(): bool {
+		if ( null !== self::$uses ) {
+			return self::$uses;
+		}
+		$obj  = get_queried_object();
+		$ids  = $obj instanceof WP_Post ? array( (int) $obj->ID ) : array();
+		$ids  = array_merge( $ids, self::elementor_location_ids() );
+		$seen = array();
+		$uses = false;
+		foreach ( $ids as $id ) {
+			if ( self::post_uses( (int) $id, $seen ) ) {
+				$uses = true;
+				break;
+			}
+		}
+		/** Filter whether this page loads the reviews stylesheet in the head (a theme template that always prints reviews can say yes). */
+		self::$uses = (bool) apply_filters( 'optima_reviews_load_in_head', $uses, $obj );
+		return self::$uses;
+	}
+
+	/** Does this post (or anything it embeds, a few levels deep) use the reviews shortcode or block? */
+	private static function post_uses( int $id, array &$seen, int $depth = 0 ): bool {
+		if ( $id <= 0 || isset( $seen[ $id ] ) || $depth > 3 ) {
+			return false;
+		}
+		$seen[ $id ] = true;
+		$post        = get_post( $id );
+		if ( ! $post ) {
+			return false;
+		}
+		$content = (string) $post->post_content;
+		if ( has_block( 'optima/reviews', $content ) ) {
+			return true;
+		}
+		foreach ( self::SHORTCODES as $tag ) {
+			if ( has_shortcode( $content, $tag ) ) {
+				return true;
+			}
+		}
+		// Synced patterns: <!-- wp:block {"ref":12} /-->.
+		if ( false !== strpos( $content, 'wp:block' ) && preg_match_all( '/<!--\s+wp:block\s+\{[^}]*"ref":(\d+)/', $content, $m ) ) {
+			foreach ( $m[1] as $ref ) {
+				if ( self::post_uses( (int) $ref, $seen, $depth + 1 ) ) {
+					return true;
+				}
+			}
+		}
+		// Elementor keeps a page's widgets as JSON in _elementor_data.
+		$data = get_post_meta( $id, '_elementor_data', true );
+		if ( is_array( $data ) ) {
+			$data = (string) wp_json_encode( $data );
+		}
+		if ( ! is_string( $data ) || '' === $data ) {
+			return false;
+		}
+		foreach ( self::SHORTCODES as $tag ) {
+			if ( false !== strpos( $data, '[' . $tag ) ) {
+				return true;
+			}
+		}
+		if ( false !== strpos( $data, 'wp:optima\\/reviews' ) || false !== strpos( $data, 'wp:optima/reviews' ) ) {
+			return true;
+		}
+		// Templates placed inside the page: the Template widget, global widgets and [elementor-template id="12"].
+		if ( preg_match_all( '/"(?:template_id|templateID)":"?(\d+)|elementor-template\s+id=\\\\?["\']?(\d+)/', $data, $m, PREG_SET_ORDER ) ) {
+			foreach ( $m as $hit ) {
+				$ref = (int) ( '' !== ( $hit[1] ?? '' ) ? $hit[1] : ( $hit[2] ?? 0 ) );
+				if ( self::post_uses( $ref, $seen, $depth + 1 ) ) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/** The Elementor theme templates (header, footer, single, archive) that apply to this page, when Elementor Pro is on. */
+	private static function elementor_location_ids(): array {
+		if ( ! class_exists( '\ElementorPro\Modules\ThemeBuilder\Module' ) ) {
+			return array();
+		}
+		try {
+			$module = \ElementorPro\Modules\ThemeBuilder\Module::instance();
+			$mgr    = method_exists( $module, 'get_conditions_manager' ) ? $module->get_conditions_manager() : null;
+			if ( ! $mgr || ! method_exists( $mgr, 'get_documents_for_location' ) ) {
+				return array();
+			}
+			$ids = array();
+			foreach ( array( 'header', 'footer', 'single', 'archive' ) as $location ) {
+				foreach ( (array) $mgr->get_documents_for_location( $location ) as $id => $doc ) {
+					$ids[] = is_object( $doc ) && method_exists( $doc, 'get_main_id' ) ? (int) $doc->get_main_id() : (int) $id;
+				}
+			}
+			return $ids;
+		} catch ( \Throwable $e ) {
+			return array();
+		}
+	}
+
+	/** Is the stylesheet on? (Reviews, Settings; a theme that styles reviews itself turns it off.) */
+	public static function styles_on(): bool {
+		return (bool) apply_filters( 'optima_reviews_load_styles', (bool) Optima_Reviews_Settings::get()['load_styles'] );
+	}
+
 	public static function enqueue(): void {
-		if ( apply_filters( 'optima_reviews_load_styles', (bool) Optima_Reviews_Settings::get()['load_styles'] ) ) {
+		if ( self::styles_on() ) {
 			wp_enqueue_style( self::STYLE );
 		}
+	}
+
+	/**
+	 * The stylesheet for reviews that render after <head> has gone out
+	 * (Elementor widgets and templates, theme slots, sidebar widgets, cached
+	 * widget output): the inline layout rules, then the stylesheet itself,
+	 * printed once beside the first reviews on the page. A stylesheet in the
+	 * body holds back the content after it until it loads, so nothing
+	 * restyles after it paints, and it rides along when Elementor caches the
+	 * widget's HTML. Empty when the head already carried the stylesheet or
+	 * the stylesheet is off. Before the head is out (or on a dashboard
+	 * screen) it simply enqueues.
+	 */
+	public static function style_tag(): string {
+		if ( self::$printed || ! self::styles_on() || wp_style_is( self::STYLE, 'done' ) ) {
+			return '';
+		}
+		$late = did_action( 'wp_head' ) || wp_doing_ajax() || ( defined( 'REST_REQUEST' ) && REST_REQUEST );
+		if ( ! $late || ( is_admin() && ! wp_doing_ajax() ) || ! wp_style_is( self::STYLE, 'registered' ) ) {
+			self::enqueue();
+			return '';
+		}
+		$styles = wp_styles();
+		wp_dequeue_style( self::STYLE );
+		ob_start();
+		$styles->do_item( self::STYLE );
+		$link           = (string) ob_get_clean();
+		$styles->done[] = self::STYLE;
+		self::$printed  = true;
+		return '<style id="optima-reviews-critical">' . self::CRITICAL . '</style>' . $link;
 	}
 
 	/**

@@ -135,6 +135,35 @@ final class Optima_Team_Editor {
 		echo '</fieldset>';
 	}
 
+	/**
+	 * Practice areas: the shared list as checkboxes, plus free entries. Each
+	 * one links to its practice page when the site has one and goes into the
+	 * Person schema as knowsAbout.
+	 *
+	 * @param array $p The profile.
+	 */
+	private static function practice_areas( array $p ): void {
+		$known  = Optima_Team::practices();
+		$picked = (array) $p['practice_areas'];
+		$other  = array_values( array_diff( $picked, array_keys( $known ) ) );
+		?>
+		<fieldset class="st-group">
+			<legend><?php esc_html_e( 'Practice areas', 'optima-team' ); ?></legend>
+			<p class="sh-note"><?php esc_html_e( 'The case types this person handles. Each one links to its practice page when the site has a page at that address, and tells search engines what the person knows.', 'optima-team' ); ?></p>
+			<div class="st-practice-list">
+				<?php foreach ( $known as $slug => $name ) : ?>
+					<label><input type="checkbox" name="optima_team[practice_areas][]" value="<?php echo esc_attr( $slug ); ?>" <?php checked( in_array( $slug, $picked, true ) ); ?>> <?php echo esc_html( $name ); ?></label>
+				<?php endforeach; ?>
+			</div>
+			<p class="st-field">
+				<label for="st-practice-other"><?php esc_html_e( 'Other practice areas', 'optima-team' ); ?></label>
+				<textarea id="st-practice-other" name="optima_team[practice_other]" rows="2"><?php echo esc_textarea( implode( "\n", $other ) ); ?></textarea>
+				<span class="description"><?php esc_html_e( 'One per line. Use the practice page\'s address, for example truck-accidents/underride-crashes, so it links to that page.', 'optima-team' ); ?></span>
+			</p>
+		</fieldset>
+		<?php
+	}
+
 	public static function render_profile( $post ): void {
 		$p = Optima_Team::profile( (int) $post->ID );
 		wp_nonce_field( 'optima_team_save', self::NONCE );
@@ -179,6 +208,25 @@ final class Optima_Team_Editor {
 			</fieldset>
 
 			<?php self::facts( $p, $law ); ?>
+
+			<?php self::practice_areas( $p ); ?>
+
+			<fieldset class="st-group">
+				<legend><?php esc_html_e( 'Bio page', 'optima-team' ); ?></legend>
+				<p class="sh-note"><?php esc_html_e( 'Only when the theme already has this person\'s bio on a page of its own. Each person then has one page: the profile page forwards there, leaves the sitemap, and every link, byline and schema line points there.', 'optima-team' ); ?></p>
+				<div class="st-grid">
+					<p class="st-field">
+						<label for="st-bio-url"><?php esc_html_e( 'Bio page address (optional)', 'optima-team' ); ?></label>
+						<input id="st-bio-url" type="text" class="code" name="optima_team[bio_url]" value="<?php echo esc_attr( $p['bio_url'] ); ?>" placeholder="/about/">
+						<span class="description"><?php esc_html_e( 'An address on this site. Leave blank to use the profile page.', 'optima-team' ); ?></span>
+					</p>
+					<p class="st-field">
+						<label for="st-schema-id"><?php esc_html_e( 'Person id in the schema (optional)', 'optima-team' ); ?></label>
+						<input id="st-schema-id" type="text" class="code" name="optima_team[schema_id]" value="<?php echo esc_attr( $p['schema_id'] ); ?>" placeholder="/#jane">
+						<span class="description"><?php esc_html_e( 'The id the theme\'s schema already gives this person, so search engines see one person. Leave blank for the page address with #person.', 'optima-team' ); ?></span>
+					</p>
+				</div>
+			</fieldset>
 
 			<fieldset class="st-group">
 				<legend><?php esc_html_e( 'Contact and byline', 'optima-team' ); ?></legend>

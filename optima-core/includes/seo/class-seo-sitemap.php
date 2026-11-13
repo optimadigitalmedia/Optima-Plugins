@@ -3,7 +3,10 @@
  * Sitemap handling. WordPress core already generates a valid XML sitemap at
  * /wp-sitemap.xml and lists it in robots.txt, so we do not rebuild it. We tune
  * it (noindexed pages stay out, so what we tell crawlers to index and what we
- * submit always agree) and guard it: if robots.txt ends up with no Sitemap
+ * submit always agree: the SEO box's noindex, and the robots rules in the
+ * theme's optima-setup.json seo.pages, for pages, terms, whole archive kinds
+ * and author archives; testimonials and FAQs, which show inside pages, never
+ * get a sitemap of their own) and guard it: if robots.txt ends up with no Sitemap
  * line (an SEO plugin switched core's off, or a leftover setting), we add the
  * one that works. Finding it happens in a daily background check, so serving
  * robots.txt never waits on a web request.
@@ -25,6 +28,13 @@ final class Optima_SEO_Sitemap {
 
 	public static function init() {
 		add_filter( 'wp_sitemaps_posts_query_args', array( __CLASS__, 'exclude_noindex' ), 10, 2 );
+		// Testimonials and FAQs (Core's, or the same types from another plugin) are quotes and answers shown inside pages.
+		add_filter( 'wp_sitemaps_post_types', array( __CLASS__, 'drop_skipped_types' ) );
+		// The theme's noindexed archives (seo.pages ":category", ":tag", ":author", ":archive", term paths).
+		add_filter( 'wp_sitemaps_taxonomies', array( __CLASS__, 'drop_noindex_taxonomies' ) );
+		add_filter( 'wp_sitemaps_taxonomies_query_args', array( __CLASS__, 'exclude_noindex_terms' ), 10, 2 );
+		add_filter( 'wp_sitemaps_users_pre_max_num_pages', array( __CLASS__, 'drop_noindex_users' ) );
+		add_filter( 'wp_sitemaps_users_pre_url_list', array( __CLASS__, 'drop_noindex_users_list' ) );
 		// After every SEO plugin has had its say, just before AI Search's Content-Signal line.
 		add_filter( 'robots_txt', array( __CLASS__, 'guard_robots' ), PHP_INT_MAX - 1, 2 );
 		add_action( self::CRON, array( __CLASS__, 'find' ) );
@@ -75,6 +85,35 @@ final class Optima_SEO_Sitemap {
 	}
 
 	/**
+	 * Post types that never get a sitemap or an indexable single page:
+	 * testimonials and FAQs, whoever registers them. Filter
+	 * `optima_core_sitemap_skip_types` to change the list.
+	 *
+	 * @return string[]
+	 */
+	public static function skipped_types(): array {
+		$types = (array) apply_filters( 'optima_core_sitemap_skip_types', array( 'testimonial', 'testimonials', 'faq', 'faqs' ) );
+		return array_values( array_filter( array_map( 'sanitize_key', array_map( 'strval', $types ) ) ) );
+	}
+
+	/** True on a single testimonial or FAQ (the head marks it noindex to match the sitemap). */
+	public static function is_skipped_single(): bool {
+		$types = self::skipped_types();
+		return $types && is_singular( $types );
+	}
+
+	/** Leave testimonial and FAQ post types out of wp-sitemap.xml. */
+	public static function drop_skipped_types( $post_types ) {
+		if ( ! is_array( $post_types ) ) {
+			return $post_types;
+		}
+		foreach ( self::skipped_types() as $type ) {
+			unset( $post_types[ $type ] );
+		}
+		return $post_types;
+	}
+
+	/**
 	 * Drop any post flagged noindex from the core sitemap query.
 	 */
 	public static function exclude_noindex( $args, $post_type ) {
@@ -92,6 +131,122 @@ final class Optima_SEO_Sitemap {
 			),
 		);
 		$args['meta_query'] = $meta_query;
+		// And any page the theme's seo.pages robots rules noindex (path, pattern, ":posts").
+		$skip = self::setup_noindex_posts( (string) $post_type );
+		if ( $skip ) {
+			$args['post__not_in'] = array_values( array_unique( array_merge( array_map( 'intval', (array) ( $args['post__not_in'] ?? array() ) ), $skip ) ) );
+		}
 		return $args;
+	}
+
+	/* ---- The theme's robots rules (optima-setup.json seo.pages) ------------ */
+
+	/** The special keys an archive of this taxonomy uses, most specific first (as Optima_SEO_Setup::special_keys()). */
+	private static function taxonomy_keys( string $taxonomy ): array {
+		$map = array(
+			'category' => ':category',
+			'post_tag' => ':tag',
+		);
+		return isset( $map[ $taxonomy ] ) ? array( $map[ $taxonomy ], ':archive' ) : array( ':archive' );
+	}
+
+	/** Drop a whole taxonomy whose archives the theme noindexes (":category", ":tag", ":archive"). */
+	public static function drop_noindex_taxonomies( $taxonomies ) {
+		if ( ! is_array( $taxonomies ) || ! Optima_SEO_Setup::active() ) {
+			return $taxonomies;
+		}
+		foreach ( array_keys( $taxonomies ) as $taxonomy ) {
+			if ( Optima_SEO_Setup::noindexed( Optima_SEO_Setup::entry_for( '', self::taxonomy_keys( (string) $taxonomy ) ) ) ) {
+				unset( $taxonomies[ $taxonomy ] );
+			}
+		}
+		return $taxonomies;
+	}
+
+	/** Leave out single terms the theme noindexes by path ("/category/news/", "/topics/*"). */
+	public static function exclude_noindex_terms( $args, $taxonomy ) {
+		if ( ! is_array( $args ) || ! Optima_SEO_Setup::has_page_noindex() ) {
+			return $args;
+		}
+		$keys  = self::taxonomy_keys( (string) $taxonomy );
+		$terms = get_terms(
+			array(
+				'taxonomy'               => (string) $taxonomy,
+				'hide_empty'             => true,
+				'update_term_meta_cache' => false,
+			)
+		);
+		$skip  = array();
+		foreach ( is_array( $terms ) ? $terms : array() as $term ) {
+			$link = get_term_link( $term );
+			if ( is_wp_error( $link ) ) {
+				continue;
+			}
+			$path = Optima_SEO_Setup::path_below_home( (string) wp_parse_url( $link, PHP_URL_PATH ) );
+			if ( Optima_SEO_Setup::noindexed( Optima_SEO_Setup::entry_for( $path, $keys ) ) ) {
+				$skip[] = (int) $term->term_id;
+			}
+		}
+		if ( $skip ) {
+			$args['exclude'] = array_values( array_unique( array_merge( wp_parse_id_list( $args['exclude'] ?? array() ), $skip ) ) );
+		}
+		return $args;
+	}
+
+	/** True when the theme noindexes author archives (":author", ":archive"). */
+	private static function users_noindexed(): bool {
+		return Optima_SEO_Setup::active() && Optima_SEO_Setup::noindexed( Optima_SEO_Setup::entry_for( '', array( ':author', ':archive' ) ) );
+	}
+
+	/** No author sitemap in the index when author archives are noindexed. */
+	public static function drop_noindex_users( $max ) {
+		return self::users_noindexed() ? 0 : $max;
+	}
+
+	/** And none served (core answers 404 for an empty list). */
+	public static function drop_noindex_users_list( $list ) {
+		return self::users_noindexed() ? array() : $list;
+	}
+
+	/**
+	 * IDs of published posts of one type that the theme's seo.pages robots rules
+	 * noindex, matched by path as the head matches them (the front page is "/",
+	 * the posts page also takes ":posts"). Only worked out when some rule can
+	 * noindex a page at all.
+	 *
+	 * @return int[]
+	 */
+	private static function setup_noindex_posts( string $post_type ): array {
+		static $cache = array();
+		if ( isset( $cache[ $post_type ] ) ) {
+			return $cache[ $post_type ];
+		}
+		$skip = array();
+		if ( Optima_SEO_Setup::has_page_noindex() ) {
+			$static     = 'page' === get_option( 'show_on_front' );
+			$front      = $static ? (int) get_option( 'page_on_front' ) : 0;
+			$posts_page = $static ? (int) get_option( 'page_for_posts' ) : 0;
+			$posts      = get_posts(
+				array(
+					'post_type'              => $post_type,
+					'post_status'            => 'publish',
+					'has_password'           => false,
+					'numberposts'            => -1,
+					'orderby'                => 'ID',
+					'order'                  => 'ASC',
+					'suppress_filters'       => true,
+					'update_post_meta_cache' => false,
+				)
+			);
+			foreach ( $posts as $post ) {
+				$id   = (int) $post->ID;
+				$path = $id === $front ? '/' : Optima_SEO_Setup::path_below_home( (string) wp_parse_url( (string) get_permalink( $post ), PHP_URL_PATH ) );
+				if ( Optima_SEO_Setup::noindexed( Optima_SEO_Setup::entry_for( $path, $id === $posts_page ? array( ':posts' ) : array() ) ) ) {
+					$skip[] = $id;
+				}
+			}
+		}
+		$cache[ $post_type ] = $skip;
+		return $skip;
 	}
 }

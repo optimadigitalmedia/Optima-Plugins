@@ -52,8 +52,12 @@
 .odc-txt strong { font-weight: 600; font-size: 17px; }
 .odc-txt span { color: var(--odc-text-2); font-size: 15px; }
 
-/* Phones only. Keep page content, the cookie notice and the chat button clear of the bar. */
+/* Phones only. Keep page content, the cookie notice and the chat button clear of the bar.
+   This file loads only on pages where the bar shows. scroll-padding-bottom keeps a
+   focused field or link from scrolling under the bar (WCAG 2.2, 2.4.11 Focus Not
+   Obscured); the body padding lets the last content scroll clear of it. */
 @media (max-width: 760px) {
+  html { scroll-padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
   body.odc-on { padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
   body.odc-on .optima-consent { bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
   body.odc-on .oc-root { bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }

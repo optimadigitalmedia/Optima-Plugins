@@ -200,7 +200,7 @@ final class Optima_Hub_Health {
 	}
 
 	public static function run_scan(): void {
-		$home  = wp_remote_get( home_url( '/' ), array( 'timeout' => 8, 'redirection' => 2, 'sslverify' => false, 'headers' => array( 'Cache-Control' => 'no-cache' ) ) );
+		$home  = wp_remote_get( home_url( '/' ), array( 'timeout' => 8, 'redirection' => 2, 'sslverify' => self::self_sslverify(), 'headers' => array( 'Cache-Control' => 'no-cache' ) ) );
 		if ( ! is_wp_error( $home ) && 200 === (int) wp_remote_retrieve_response_code( $home ) ) {
 			self::note_nav( (string) wp_remote_retrieve_body( $home ) );
 		}
@@ -209,7 +209,7 @@ final class Optima_Hub_Health {
 		$found   = 0;
 		$checked = 0;
 		foreach ( $pages as $p ) {
-			$r = wp_remote_get( get_permalink( $p ), array( 'timeout' => 8, 'redirection' => 2, 'sslverify' => false, 'headers' => array( 'Cache-Control' => 'no-cache' ) ) );
+			$r = wp_remote_get( get_permalink( $p ), array( 'timeout' => 8, 'redirection' => 2, 'sslverify' => self::self_sslverify(), 'headers' => array( 'Cache-Control' => 'no-cache' ) ) );
 			if ( is_wp_error( $r ) || 200 !== (int) wp_remote_retrieve_response_code( $r ) ) {
 				continue;
 			}
@@ -255,7 +255,7 @@ final class Optima_Hub_Health {
 		if ( false !== $cached ) {
 			return 'yes' === $cached;
 		}
-		$r      = wp_remote_head( home_url( '/' ), array( 'timeout' => 5, 'redirection' => 0, 'sslverify' => false ) );
+		$r      = wp_remote_head( home_url( '/' ), array( 'timeout' => 5, 'redirection' => 0, 'sslverify' => self::self_sslverify() ) );
 		$locked = ! is_wp_error( $r ) && 401 === (int) wp_remote_retrieve_response_code( $r );
 		set_transient( 'optima_hub_staging_auth', $locked ? 'yes' : 'no', HOUR_IN_SECONDS );
 		return $locked;
@@ -304,22 +304,41 @@ final class Optima_Hub_Health {
 	 * someone's own computer (localhost, *.local, *.test, a private IP).
 	 */
 	public static function is_live(): bool {
-		if ( self::is_staging() ) {
-			return false;
-		}
+		return ! self::is_staging() && ! self::is_local_host();
+	}
+
+	/**
+	 * A copy on someone's own computer: no host, localhost, a LOCAL_HOSTS
+	 * name, or a private or reserved IP address.
+	 */
+	public static function is_local_host(): bool {
 		$host = strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) );
 		if ( '' === $host || 'localhost' === $host ) {
-			return false;
+			return true;
 		}
 		foreach ( self::LOCAL_HOSTS as $suffix ) {
 			if ( str_ends_with( $host, $suffix ) ) {
-				return false;
+				return true;
 			}
 		}
 		if ( filter_var( $host, FILTER_VALIDATE_IP ) ) {
-			return false !== filter_var( $host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE );
+			return false === filter_var( $host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE );
 		}
-		return true;
+		return false;
+	}
+
+	/**
+	 * Whether the site's checks of its own pages verify its HTTPS certificate.
+	 * Yes on live and on host staging addresses (STAGING_HOSTS serve real
+	 * certificates). No only on a copy on someone's own computer (a local
+	 * host name, a private IP, or WordPress's environment set to local or
+	 * development), where the certificate is usually self-signed and the check
+	 * would read every page as unreachable. Core's https_local_ssl_verify
+	 * filter can still change the answer for one site.
+	 */
+	public static function self_sslverify(): bool {
+		$local = self::is_local_host() || in_array( wp_get_environment_type(), array( 'local', 'development' ), true );
+		return (bool) apply_filters( 'https_local_ssl_verify', ! $local ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- core filter.
 	}
 
 	/**

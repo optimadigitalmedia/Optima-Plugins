@@ -124,6 +124,7 @@ final class Optima_Optimize {
 					'generate_avif'    => false,      // Off until enabled per site.
 					'rewrite_picture'  => false,      // Off until enabled per site.
 					'max_dimension'    => 1920,       // Full-size longest-edge cap in pixels.
+					'jquery_footer'    => false,      // Off until enabled per site.
 				)
 			);
 		}
@@ -232,9 +233,31 @@ final class Optima_Optimize {
 			'generate_avif'    => false,
 			'rewrite_picture'  => false,
 			'max_dimension'    => 1920,
+			'jquery_footer'    => false,
 		);
 		$saved    = get_option( self::SETTINGS_OPTION, array() );
 		return is_array( $saved ) ? array_merge( $defaults, $saved ) : $defaults;
+	}
+
+	/**
+	 * True when image optimization is paused because NitroPack runs on this site.
+	 *
+	 * NitroPack optimizes and serves images itself, and two image optimizers on
+	 * one site fight over the same files (Optima Playbook 5.28: never two tools
+	 * on one job). While it is active, new uploads are not optimized, the
+	 * library sweep does not run, and the smaller copies are not served. The
+	 * settings are kept, so removing NitroPack picks up where the site was.
+	 * The optima_optimize_pause_images filter can override the check.
+	 *
+	 * @return bool
+	 */
+	public static function images_paused() {
+		/**
+		 * Filters whether Optima Optimize pauses its image work.
+		 *
+		 * @param bool $paused True while NitroPack is active.
+		 */
+		return (bool) apply_filters( 'optima_optimize_pause_images', Optima_Optimize_Speed::nitropack() );
 	}
 
 	/**
@@ -262,6 +285,7 @@ final class Optima_Optimize {
 			'generate_avif'    => ! empty( $_POST['generate_avif'] ),
 			'rewrite_picture'  => ! empty( $_POST['rewrite_picture'] ),
 			'max_dimension'    => $max,
+			'jquery_footer'    => ! empty( $_POST['jquery_footer'] ),
 		);
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
@@ -269,6 +293,35 @@ final class Optima_Optimize {
 
 		wp_safe_redirect( self::url( 'optima-optimize', array( 'updated' => '1' ) ) );
 		exit;
+	}
+
+	/**
+	 * One plain sentence on where jQuery loads on this site, and why.
+	 *
+	 * @param array{move:bool,why:string} $jq From Optima_Optimize_Speed::jquery_state().
+	 * @return string
+	 */
+	private static function jquery_sentence( array $jq ) {
+		switch ( $jq['why'] ) {
+			case 'off':
+				return __( 'jQuery stays in the head because the speed fixes are switched off for this site in code.', 'optima-optimize' );
+			case 'elementor':
+				return __( 'jQuery stays in the head because this site runs Elementor, whose widgets call jQuery inside the page.', 'optima-optimize' );
+			case 'nitropack':
+				return __( 'jQuery stays in the head because this site runs NitroPack, which handles script loading itself.', 'optima-optimize' );
+			case 'constant':
+				return $jq['move']
+					? __( 'jQuery moves to the end of the page because wp-config.php turns it on (OPTIMA_JQUERY_IN_FOOTER).', 'optima-optimize' )
+					: __( 'jQuery stays in the head because wp-config.php turns the move off (OPTIMA_JQUERY_IN_FOOTER).', 'optima-optimize' );
+			case 'filter':
+				return $jq['move']
+					? __( 'jQuery moves to the end of the page because code on this site turns it on (the optima_jquery_in_footer filter).', 'optima-optimize' )
+					: __( 'jQuery stays in the head because code on this site turns the move off (the optima_jquery_in_footer filter).', 'optima-optimize' );
+			case 'setting':
+				return __( 'jQuery and the scripts that need it load at the end of the page, so they do not hold up the first paint.', 'optima-optimize' );
+			default:
+				return __( 'jQuery stays in the head. Turn this on only when no page calls jQuery inside its content, such as a form embed or a page-builder widget.', 'optima-optimize' );
+		}
 	}
 
 	/**
@@ -312,6 +365,10 @@ final class Optima_Optimize {
 				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Settings saved.', 'optima-optimize' ); ?></p></div>
 			<?php endif; ?>
 
+			<?php if ( self::images_paused() ) : ?>
+				<div class="notice notice-warning inline"><p><?php esc_html_e( 'Image optimization is paused because NitroPack already optimizes this site\'s images; your settings are kept for when it is removed.', 'optima-optimize' ); ?></p></div>
+			<?php endif; ?>
+
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<?php wp_nonce_field( 'optima_optimize_settings' ); ?>
 				<input type="hidden" name="action" value="optima_optimize_save" />
@@ -348,6 +405,20 @@ final class Optima_Optimize {
 							<th scope="row"><label for="oo-max"><?php esc_html_e( 'Largest image size', 'optima-optimize' ); ?></label></th>
 							<td><input id="oo-max" type="number" name="max_dimension" min="0" max="8000" step="10" value="<?php echo esc_attr( (string) $s['max_dimension'] ); ?>" /> <?php esc_html_e( 'pixels', 'optima-optimize' ); ?>
 							<p class="description"><?php esc_html_e( 'New uploads wider or taller than this are scaled down. 0 turns the limit off.', 'optima-optimize' ); ?></p></td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Page speed', 'optima-optimize' ); ?></th>
+							<td>
+								<?php
+								$jq     = Optima_Optimize_Speed::jquery_state();
+								$locked = ! in_array( $jq['why'], array( 'setting', 'default' ), true );
+								?>
+								<p><label class="sh-target"><input type="checkbox" name="jquery_footer" value="1" <?php checked( ! empty( $s['jquery_footer'] ) ); ?> <?php disabled( $locked ); ?> /> <?php esc_html_e( 'Move jQuery to the end of the page', 'optima-optimize' ); ?></label></p>
+								<?php if ( $locked && ! empty( $s['jquery_footer'] ) ) : ?>
+									<input type="hidden" name="jquery_footer" value="1" />
+								<?php endif; ?>
+								<p class="description"><?php echo esc_html( self::jquery_sentence( $jq ) ); ?></p>
+							</td>
 						</tr>
 					</table>
 					<?php submit_button( __( 'Save', 'optima-optimize' ) ); ?>

@@ -265,3 +265,42 @@
 	white-space: nowrap;
 	border: 0;
 }
+
+/* Law sites (release 1): the testimonial disclaimer before the list, and the
+   North Carolina line before and after a quote about an outcome, at body size
+   in the text's own full-contrast color. */
+.optima-reviews__disclaimer--first,
+.optima-review__disclaimer {
+	margin: 0;
+	font-size: 1em;
+	line-height: 1.5;
+	color: inherit;
+}
+
+/* A hand-picked or capped list says so, with the way to every review. */
+.optima-reviews__curated {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 6px 16px;
+	margin: 0;
+	font-size: 15px;
+}
+.optima-reviews__curated-label {
+	font-weight: 600;
+}
+.optima-reviews__all {
+	color: var(--sr-link);
+	text-decoration: none;
+	text-underline-offset: 3px;
+}
+.optima-reviews__all:hover,
+.optima-reviews__all:focus-visible {
+	text-decoration: underline;
+}
+
+/* "as of" the last read of Google's rating and count. */
+.optima-reviews-summary__asof {
+	font-size: 13px;
+	color: var(--sr-muted);
+}

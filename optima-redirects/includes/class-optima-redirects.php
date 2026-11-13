@@ -15,9 +15,71 @@ final class Optima_Redirects {
 
 	const OPTION = 'optima_redirects_settings';
 	const NOTICE = 'optima_redirects_auto_';
+	const CRON   = 'optima_redirects_maintenance';
 
 	/** Addresses that belong to WordPress itself and are never redirected or logged. */
 	const RESERVED = array( 'wp-admin', 'wp-login.php', 'wp-json', 'xmlrpc.php', 'wp-cron.php', 'wp-content', 'wp-includes', 'wp-signup.php', 'wp-activate.php' );
+
+	/**
+	 * Missing addresses that are scanners and break-in attempts, never pages a
+	 * person wanted. A value starting with "#" is a pattern; any other value is
+	 * a folder name, matched as a whole part of the path anywhere in it
+	 * ("portal" matches /portal and /client/portal/login). Keys are names, so a
+	 * site with a real /portal page drops that one entry:
+	 *
+	 *     add_filter( 'optima_redirects_noise_patterns', fn( $p ) => array_diff_key( $p, array( 'portal' => 1 ) ) );
+	 *
+	 * An address saved as an old address in a redirect is never noise.
+	 */
+	const NOISE_PATTERNS = array(
+		// Hidden files and folders: /.env, /.git/config, /.aws, /.well-known.
+		'dot-files'       => '#(^|/)\.#',
+		// Any file other than an .html or .htm page: /terraform.tfvars, /db.sql, /backup.zip, /wp-config.php.bak.
+		// WordPress addresses never hold a dot, so a dotted address is never a WordPress page.
+		'file-extensions' => '#/[^/]*\.(?!html?$)[a-z][a-z0-9]{0,9}$#',
+		// index.php in a folder; WordPress's own index.php sits at the top.
+		'index-php'       => '#^/.+/index\.php$#',
+		// Log-in and admin guesses.
+		'log-in'          => '#^/(wp-login|wp-admin|admin|administrator|login|user/login|xmlrpc|wp-config|wp-includes)(/|$)#',
+		// Icons phones and browsers ask for on their own.
+		'icons'           => '#^/(apple-touch-icon|favicon|browserconfig|mstile)#',
+		// The API explorer, its folder or its page: /swagger, /swagger-ui/, /swagger-ui.html.
+		'swagger'         => '#(^|/)swagger[a-z0-9_-]*(\.html?)?(/|$)#',
+		'actuator'        => 'actuator',
+		'api'             => 'api',
+		'api-docs'        => 'api-docs',
+		'auth'            => 'auth',
+		'graphql'         => 'graphql',
+		'ckfinder'        => 'ckfinder',
+		'wk'              => 'wk',
+		'files'           => 'files',
+		'vendor'          => 'vendor',
+		'node_modules'    => 'node_modules',
+		'cgi-bin'         => 'cgi-bin',
+		'phpmyadmin'      => 'phpmyadmin',
+		'server-status'   => 'server-status',
+		'console'         => 'console',
+		'portal'          => 'portal',
+		'onboarding'      => 'onboarding',
+		'register'        => 'register',
+		'forgot-password' => 'forgot-password',
+		'settings'        => 'settings',
+		// WordPress's demo page and post, which bots ask for on every site.
+		'sample-page'     => 'sample-page',
+		'hello-world'     => 'hello-world',
+	);
+
+	/** Files under /.well-known/ that WordPress plugins serve (ActivityPub), so a miss there is real. */
+	const WELL_KNOWN_KEEP = '#^/\.well-known/(webfinger|nodeinfo)$#';
+
+	/** Search engines whose visitors make a missing page worth fixing first. */
+	const SEARCH_HOSTS = '#(^|\.)(google|bing|duckduckgo|yahoo|yandex|baidu|ecosia|qwant|startpage|ask|aol)\.[a-z.]+$|^search\.brave\.com$#';
+
+	/** Paths the site's menus link to, worked out once per request. */
+	private static ?array $menu_paths = null;
+
+	/** Broken-link answers already worked out in this request. */
+	private static array $link_checks = array();
 
 	public static function boot(): void {
 		add_action( 'plugins_loaded', array( 'Optima_Redirects_Store', 'maybe_install' ), 5 );
@@ -28,6 +90,29 @@ final class Optima_Redirects {
 		add_action( 'template_redirect', array( __CLASS__, 'maybe_log_404' ), 99 );
 		add_action( 'post_updated', array( __CLASS__, 'address_changed' ), 10, 3 );
 		add_filter( 'site_status_tests', array( __CLASS__, 'site_health' ) );
+		// Hit counts and the missing-page cap are written in the background, once
+		// an hour, instead of on every visit (includes/class-optima-redirects-store.php).
+		add_action( self::CRON, array( __CLASS__, 'maintenance' ) );
+		add_action( 'init', array( __CLASS__, 'schedule' ) );
+	}
+
+	/** Make sure the hourly tidy-up is booked. Reads the autoloaded cron list only. */
+	public static function schedule(): void {
+		if ( ! wp_next_scheduled( self::CRON ) ) {
+			wp_schedule_event( time() + HOUR_IN_SECONDS, 'hourly', self::CRON );
+		}
+	}
+
+	/** The hourly tidy-up: write the counted redirect uses, then keep the missing-page list under its cap. */
+	public static function maintenance(): void {
+		Optima_Redirects_Store::flush_hits();
+		Optima_Redirects_Store::log_trim( self::settings()['log_cap'] );
+	}
+
+	/** Deactivation: write the counted uses and take the hourly tidy-up off the schedule. */
+	public static function deactivate(): void {
+		Optima_Redirects_Store::flush_hits();
+		wp_clear_scheduled_hook( self::CRON );
 	}
 
 	public static function settings(): array {
@@ -223,32 +308,96 @@ final class Optima_Redirects {
 		}
 	}
 
-	/** True when the visitor looks like a crawler or a script rather than a person. */
+	/**
+	 * True when the visitor looks like a crawler or a script rather than a
+	 * person. A browser opening a page always asks for HTML; scanners and
+	 * scripts that fake a browser's name usually do not, so a request whose
+	 * Accept header leaves out text/html is not counted either.
+	 */
 	private static function is_bot(): bool {
 		$ua = isset( $_SERVER['HTTP_USER_AGENT'] ) ? strtolower( sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) ) : '';
 		if ( '' === $ua ) {
 			return true;
 		}
-		return (bool) preg_match( '/bot|crawl|spider|slurp|scan|curl|wget|python|httpclient|go-http|java\/|libwww|headless|lighthouse|facebookexternalhit|preview|monitor|uptime|feed|okhttp|axios|node-fetch/', $ua );
+		if ( preg_match( '/bot|crawl|spider|slurp|scan|curl|wget|python|httpclient|go-http|java\/|libwww|headless|lighthouse|facebookexternalhit|preview|monitor|uptime|feed|okhttp|axios|node-fetch/', $ua ) ) {
+			return true;
+		}
+		$accept = isset( $_SERVER['HTTP_ACCEPT'] ) ? strtolower( sanitize_text_field( wp_unslash( $_SERVER['HTTP_ACCEPT'] ) ) ) : '';
+		return false === strpos( $accept, 'text/html' );
 	}
 
-	/** True for requests that are noise rather than a page someone wanted. */
-	public static function is_noise( string $path ): bool {
+	/** The noise list, after the optima_redirects_noise_patterns filter. */
+	public static function noise_patterns(): array {
+		/**
+		 * Filters the addresses left out of the missing-page list. Remove an
+		 * entry by its key when a real page matches it.
+		 *
+		 * @param array $patterns Name => pattern ("#...#") or folder name.
+		 */
+		$patterns = apply_filters( 'optima_redirects_noise_patterns', self::NOISE_PATTERNS );
+		return is_array( $patterns ) ? $patterns : self::NOISE_PATTERNS;
+	}
+
+	/**
+	 * True for requests that are noise rather than a page someone wanted.
+	 *
+	 * @param bool $check_redirects Also look up whether the address is a saved
+	 *                              redirect's old address. The front end skips
+	 *                              it: a forwarded address never reaches a 404.
+	 */
+	public static function is_noise( string $path, bool $check_redirects = true ): bool {
 		if ( self::is_reserved( $path ) ) {
 			return true;
 		}
-		$noise = '#^/(\.well-known|\.git|\.env|\.aws|cgi-bin|phpmyadmin)(/|$)|^/(apple-touch-icon|favicon|browserconfig|mstile)|\.(php\d?|aspx?|jsp|cgi|env|ini|sql|bak|old|zip|gz|tar|rar|log|yml|yaml|xml|txt|json|map|css|js|mjs|ico|woff2?|ttf|eot|otf|svg|png|jpe?g|gif|webp|avif|bmp|mp4|webm|mp3)$#';
+		$noise = false;
+		if ( ! preg_match( self::WELL_KNOWN_KEEP, $path ) ) {
+			foreach ( self::noise_patterns() as $pattern ) {
+				if ( ! is_string( $pattern ) || '' === $pattern ) {
+					continue;
+				}
+				$regex = '#' === $pattern[0] ? $pattern : '#(^|/)' . preg_quote( strtolower( trim( $pattern, '/' ) ), '#' ) . '(/|$)#';
+				if ( preg_match( $regex, $path ) ) {
+					$noise = true;
+					break;
+				}
+			}
+		}
 		/**
 		 * Filters whether a missing address is left out of the log.
 		 *
 		 * @param bool   $is_noise True to leave it out.
 		 * @param string $path     The normalized path.
 		 */
-		return (bool) apply_filters( 'optima_redirects_is_noise', (bool) preg_match( $noise, $path ), $path );
+		$noise = (bool) apply_filters( 'optima_redirects_is_noise', $noise, $path );
+		// Someone forwards this address on purpose, so it is a real old page whatever it looks like.
+		if ( $noise && $check_redirects && Optima_Redirects_Store::count() > 0 && null !== Optima_Redirects_Store::find( $path ) ) {
+			return false;
+		}
+		return $noise;
+	}
+
+	/**
+	 * Tidy the missing-page list once per version: drop entries the noise rules
+	 * now leave out (break-in attempts an older version logged), and stop
+	 * calling an entry a broken link when its page does not really link to it.
+	 * The option key keeps its first name so every site runs this once.
+	 */
+	public static function sweep_noise(): void {
+		if ( get_option( 'optima_redirects_noise_swept' ) === OPTIMA_REDIRECTS_VERSION ) {
+			return;
+		}
+		foreach ( Optima_Redirects_Store::log_list( 2000 ) as $row ) {
+			if ( self::is_noise( (string) $row->path ) ) {
+				Optima_Redirects_Store::log_delete( (int) $row->id );
+			} elseif ( (int) $row->internal && ! self::is_broken_link( (string) $row->path, (string) $row->referrer ) ) {
+				Optima_Redirects_Store::log_unflag( (int) $row->id );
+			}
+		}
+		update_option( 'optima_redirects_noise_swept', OPTIMA_REDIRECTS_VERSION, false );
 	}
 
 	public static function maybe_log_404(): void {
-		if ( ! is_404() || self::skip_request() || self::is_bot() ) {
+		if ( ! is_404() || self::skip_request() ) {
 			return;
 		}
 		$s = self::settings();
@@ -256,19 +405,174 @@ final class Optima_Redirects {
 			return;
 		}
 		$path = self::request_path();
-		if ( '' === $path || '/' === $path || self::is_noise( $path ) ) {
+		// Cheapest checks first: scanner probes and bots never reach the database.
+		if ( '' === $path || '/' === $path || self::is_noise( $path, false ) || self::is_bot() ) {
 			return;
+		}
+		$method = isset( $_SERVER['REQUEST_METHOD'] ) ? strtoupper( sanitize_key( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) ) : 'GET';
+		if ( 'GET' !== $method ) {
+			return; // HEAD requests come from link checkers and uptime monitors, not people.
 		}
 		$ref      = isset( $_SERVER['HTTP_REFERER'] ) ? esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		$internal = false;
 		if ( '' !== $ref ) {
-			$host     = strtolower( (string) wp_parse_url( $ref, PHP_URL_HOST ) );
-			$internal = $host === self::home_host();
 			// Keep a referrer's address without its query string: shorter, and no tracking tokens.
 			$ref = strtok( $ref, '?#' );
 			$ref = substr( (string) $ref, 0, 255 );
+			// Scanners fake the referrer, so it only counts as a broken link when that page really links here.
+			$internal = self::is_broken_link( $path, $ref );
 		}
-		Optima_Redirects_Store::log_404( $path, $ref, $internal, $s['log_cap'] );
+		Optima_Redirects_Store::log_404( $path, $ref, $internal );
+	}
+
+	/* ---------------------------------------------------------------- */
+	/* Broken links                                                      */
+	/* ---------------------------------------------------------------- */
+
+	/** True when a full web address is on this site (with or without www). */
+	public static function is_home_url( string $url ): bool {
+		if ( ! preg_match( '#^https?://#i', trim( $url ) ) ) {
+			return false;
+		}
+		$host = strtolower( (string) wp_parse_url( trim( $url ), PHP_URL_HOST ) );
+		$home = self::home_host();
+		return '' !== $host && ( $host === $home || 'www.' . $host === $home || $host === 'www.' . $home );
+	}
+
+	/** True when a referrer is a search engine. */
+	public static function is_search_engine( string $url ): bool {
+		$host = strtolower( (string) wp_parse_url( trim( $url ), PHP_URL_HOST ) );
+		return '' !== $host && (bool) preg_match( self::SEARCH_HOSTS, $host );
+	}
+
+	/** The front page's post ID, or 0 when the front page lists the latest posts. */
+	private static function front_page_id(): int {
+		return 'page' === get_option( 'show_on_front' ) ? (int) get_option( 'page_on_front' ) : 0;
+	}
+
+	/**
+	 * Every address on this site that a block of HTML or block markup links
+	 * to, in stored form. Covers href and src attributes and the "url" that
+	 * button and navigation blocks keep in their settings.
+	 *
+	 * @return string[]
+	 */
+	public static function link_paths( string $html ): array {
+		if ( '' === $html ) {
+			return array();
+		}
+		preg_match_all( '#\b(?:href|src)\s*=\s*(["\'])(.*?)\1#is', $html, $attr );
+		preg_match_all( '#"url"\s*:\s*"((?:[^"\\\\]|\\\\.)*)"#', $html, $json );
+		$paths = array();
+		foreach ( array_merge( $attr[2], $json[1] ) as $raw ) {
+			$raw = html_entity_decode( str_replace( '\\/', '/', (string) $raw ), ENT_QUOTES );
+			$raw = trim( $raw );
+			if ( '' === $raw || '#' === $raw[0] || '?' === $raw[0] ) {
+				continue;
+			}
+			$path = self::normalize_source( $raw );
+			if ( '' !== $path ) {
+				$paths[ $path ] = true;
+			}
+		}
+		return array_keys( $paths );
+	}
+
+	/** Paths every menu on the site links to: classic menus and block theme navigation. */
+	public static function menu_paths(): array {
+		if ( null !== self::$menu_paths ) {
+			return self::$menu_paths;
+		}
+		$paths = array();
+		if ( function_exists( 'wp_get_nav_menus' ) ) {
+			foreach ( (array) wp_get_nav_menus() as $menu ) {
+				foreach ( (array) wp_get_nav_menu_items( $menu->term_id ?? 0 ) as $item ) {
+					$path = self::normalize_source( (string) ( $item->url ?? '' ) );
+					if ( '' !== $path ) {
+						$paths[ $path ] = true;
+					}
+				}
+			}
+		}
+		$navs = get_posts(
+			array(
+				'post_type'      => 'wp_navigation',
+				'post_status'    => 'publish',
+				'posts_per_page' => 20,
+				'no_found_rows'  => true,
+			)
+		);
+		foreach ( (array) $navs as $nav ) {
+			foreach ( self::link_paths( (string) ( $nav->post_content ?? '' ) ) as $path ) {
+				$paths[ $path ] = true;
+			}
+		}
+		self::$menu_paths = array_keys( $paths );
+		return self::$menu_paths;
+	}
+
+	/**
+	 * True when a missing address is a real broken link on this site: the
+	 * referring page's content, or one of the site's menus, links to it.
+	 * Referrers on other sites, the missing address itself, sitemap files and
+	 * other file addresses, and pages that are missing too never count, because
+	 * scanners fake the referrer.
+	 */
+	public static function is_broken_link( string $path, string $referrer ): bool {
+		$key = $path . ' ' . $referrer;
+		if ( isset( self::$link_checks[ $key ] ) ) {
+			return self::$link_checks[ $key ];
+		}
+		$from   = self::is_home_url( $referrer ) ? self::normalize_source( $referrer ) : '';
+		$broken = false;
+		if ( '' !== $from && '' !== $path && $from !== $path && ! self::is_noise( $from ) && ( '/' === $from || ! Optima_Redirects_Store::log_has( $from ) ) ) {
+			$post_id = '/' === $from ? self::front_page_id() : (int) url_to_postid( home_url( $from ) );
+			if ( $post_id && in_array( $path, self::link_paths( (string) get_post_field( 'post_content', $post_id ) ), true ) ) {
+				$broken = true;
+			} else {
+				$broken = in_array( $path, self::menu_paths(), true );
+			}
+		}
+		self::$link_checks[ $key ] = $broken;
+		return $broken;
+	}
+
+	/**
+	 * Broken links on the site's own pages, checked again before they show,
+	 * so the Redirects screen and Site status list the same real ones.
+	 * Entries whose page no longer links to them stay as missing pages.
+	 */
+	public static function broken_links( int $limit ): array {
+		$out = array();
+		foreach ( Optima_Redirects_Store::log_list( 50, true ) as $row ) {
+			if ( ! self::is_broken_link( (string) $row->path, (string) $row->referrer ) ) {
+				Optima_Redirects_Store::log_unflag( (int) $row->id );
+				continue;
+			}
+			$out[] = $row;
+			if ( count( $out ) >= $limit ) {
+				break;
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * Missing pages with the real-looking ones first: a visit from a search
+	 * engine or a broken link on this site, then the rest, each by visits.
+	 */
+	public static function sort_missing( array $rows ): array {
+		$rank = static function ( $row ): int {
+			return ( (int) $row->internal || self::is_search_engine( (string) $row->referrer ) ) ? 0 : 1;
+		};
+		usort(
+			$rows,
+			static function ( $a, $b ) use ( $rank ): int {
+				return array( $rank( $a ), - (int) $a->hits, - strtotime( (string) $a->last_seen . ' UTC' ) )
+					<=> array( $rank( $b ), - (int) $b->hits, - strtotime( (string) $b->last_seen . ' UTC' ) );
+			}
+		);
+		return $rows;
 	}
 
 	/* ---------------------------------------------------------------- */
@@ -358,7 +662,8 @@ final class Optima_Redirects {
 	}
 
 	public static function site_health_test(): array {
-		$rows   = Optima_Redirects_Store::log_list( 5, true );
+		self::sweep_noise();
+		$rows   = self::broken_links( 5 );
 		$screen = Optima_Redirects_Admin::url();
 		$result = array(
 			'label'       => __( 'Your pages link to pages that exist', 'optima-redirects' ),
@@ -386,7 +691,7 @@ final class Optima_Redirects {
 		}
 		$result['label']       = __( 'Some of your pages link to pages that are missing', 'optima-redirects' );
 		$result['status']      = 'recommended';
-		$result['description'] = '<p>' . esc_html__( 'Visitors followed these links and found nothing. Fix each one by adding a redirect or editing the link.', 'optima-redirects' ) . '</p><ul>' . $items . '</ul>';
+		$result['description'] = '<p>' . esc_html__( 'These links are on your pages or menus and lead to a missing page. Fix each one with a redirect or by editing the link.', 'optima-redirects' ) . '</p><ul>' . $items . '</ul>';
 		$result['actions']     = '<p><a href="' . esc_url( $screen ) . '">' . esc_html__( 'Open Redirects', 'optima-redirects' ) . '</a></p>';
 		return $result;
 	}

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.2.8 (2026-11-12)
+
+- Updates install only from the Optima Plugins release downloads (https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/). A release listed at any other address is skipped, and an update of an Optima plugin from any other address is refused with an error.
+- Every download is checked against the sha256 published in the version list before WordPress unpacks it. A mismatch deletes the file, stops the install with an error and writes a line to the PHP error log.
+- A release listed without a sha256 (one published before checksums were recorded) still installs as before, with a line in the PHP error log saying no checksum was checked.
+- Automatic updates run only for a package from the Optima Plugins releases.
+- The GitHub API fallback reads each asset's digest as its sha256, so the check works on that path too.
+
 ## 0.3.2.7 (2026-11-12)
 
 - **Refuses List answers that carry hidden code.** Gravity Forms 3.1.2 and earlier has a reported critical flaw (CVE-2026-103039, rated 9.8): a List field headed for a Post Custom Field is handed to PHP's unserialize, which can run code on the site if another plugin or theme supplies a way to use it. Forms Guard now checks every List field before Gravity Forms saves anything, and refuses a submission whose answer is serialized PHP (an object, a class or an array in PHP's storage format). Nobody types that into a List field, so real visitors lose nothing. A refusal adds to the monthly blocked count. The real fix is to update Gravity Forms (3.2.2 is out), and this keeps a site safe until it has. Turn it off with the `optima_forms_guard_block_serialized` filter.

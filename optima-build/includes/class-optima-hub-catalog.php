@@ -2,13 +2,17 @@
 /**
  * The list of features, and the releases each one can be installed from.
  *
- * The list is `catalog.json` at the root of the Optima Plugins repo, fetched
- * from GitHub and cached for 12 hours, so a new feature shows up on every site
- * without a hub release. The copy bundled with the plugin is the fallback when
- * GitHub cannot be reached.
+ * The list is the catalog the Release workflow publishes on the repo's
+ * `version-list` branch, fetched and cached for 12 hours, so a new feature
+ * shows up on every site without a hub release. It goes through the release
+ * channels like a plugin does: each release run writes `catalog-test.json`
+ * from the commit it releases, and only Promote copies that to `catalog.json`.
+ * A site on the test channel reads the first, every other site the second.
+ * The copy bundled with the plugin is the fallback when neither can be read.
  *
  * Releases are read from the same GitHub releases the updater uses: tags named
- * `<slug>-v<version>`, each carrying a `<slug>.zip` asset.
+ * `<slug>-v<version>`, each carrying a `<slug>.zip` asset from this repo's own
+ * release downloads (DOWNLOAD_PREFIX); an asset listed anywhere else is skipped.
  *
  * @package Optima_Build
  */
@@ -20,7 +24,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Optima_Hub_Catalog {
 
 	const REPO          = 'optimadigitalmedia/Optima-Plugins';
-	const CATALOG_URL   = 'https://raw.githubusercontent.com/optimadigitalmedia/Optima-Plugins/main/catalog.json';
+	const CATALOG_BASE  = 'https://raw.githubusercontent.com/optimadigitalmedia/Optima-Plugins/version-list/';
+	const DOWNLOAD_PREFIX = 'https://github.com/' . self::REPO . '/releases/download/';
 	const CATALOG_KEY   = 'optima_hub_catalog';
 	const RELEASES_KEY  = 'optima_hub_releases';
 	const CATALOG_TTL   = 12 * HOUR_IN_SECONDS;
@@ -32,10 +37,10 @@ final class Optima_Hub_Catalog {
 	 * @return array<string, array{slug:string, name:string, summary:string, tier:string, law:bool, requires:string[], hidden:bool}>
 	 */
 	public static function features(): array {
-		$data = get_transient( self::CATALOG_KEY );
+		$data = get_transient( self::catalog_key() );
 		if ( ! is_array( $data ) ) {
 			$data     = null;
-			$response = wp_remote_get( self::CATALOG_URL, array( 'timeout' => 8 ) );
+			$response = wp_remote_get( self::catalog_url(), array( 'timeout' => 8, 'headers' => array( 'User-Agent' => 'OptimaBuild/' . OPTIMA_HUB_VERSION ) ) );
 			if ( ! is_wp_error( $response ) && 200 === (int) wp_remote_retrieve_response_code( $response ) ) {
 				$decoded = json_decode( wp_remote_retrieve_body( $response ), true );
 				if ( is_array( $decoded ) && ! empty( $decoded['features'] ) ) {
@@ -45,9 +50,9 @@ final class Optima_Hub_Catalog {
 			if ( null === $data ) {
 				$local = json_decode( (string) file_get_contents( OPTIMA_HUB_DIR . 'catalog.json' ), true );
 				$data  = is_array( $local ) ? $local : array( 'features' => array() );
-				set_transient( self::CATALOG_KEY, $data, HOUR_IN_SECONDS ); // Retry sooner after a failure.
+				set_transient( self::catalog_key(), $data, HOUR_IN_SECONDS ); // Retry sooner after a failure.
 			} else {
-				set_transient( self::CATALOG_KEY, $data, self::CATALOG_TTL );
+				set_transient( self::catalog_key(), $data, self::CATALOG_TTL );
 			}
 		}
 
@@ -76,11 +81,40 @@ final class Optima_Hub_Catalog {
 	}
 
 	/**
+	 * The catalog address for this site's channel: catalog-test.json on the
+	 * test channel, catalog.json (what Promote last sent out) on stable.
+	 */
+	public static function catalog_url(): string {
+		return self::CATALOG_BASE . ( 'test' === Optima_Hub_Access::channel() ? 'catalog-test.json' : 'catalog.json' );
+	}
+
+	/** The catalog cache key for this site's channel (stable keeps the old key). */
+	private static function catalog_key(): string {
+		return self::CATALOG_KEY . ( 'test' === Optima_Hub_Access::channel() ? '__test' : '' );
+	}
+
+	/** Whether an address is one of this repo's release downloads. */
+	public static function is_release_url( string $url ): bool {
+		return 0 === strpos( $url, self::DOWNLOAD_PREFIX )
+			&& 1 === preg_match( '#^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+\.zip$#', substr( $url, strlen( self::DOWNLOAD_PREFIX ) ) )
+			&& false === strpos( $url, '..' );
+	}
+
+	/** A sha256 as 64 lower-case hex characters ("sha256:" prefix allowed), or ''. */
+	public static function clean_sha256( $value ): string {
+		$value = strtolower( trim( (string) $value ) );
+		if ( 0 === strpos( $value, 'sha256:' ) ) {
+			$value = substr( $value, 7 );
+		}
+		return 1 === preg_match( '/^[0-9a-f]{64}$/', $value ) ? $value : '';
+	}
+
+	/**
 	 * Installable releases for one plugin, newest first. On the test channel
 	 * test releases (GitHub pre-releases) are in the list too, flagged
 	 * 'prerelease'; on stable they never are.
 	 *
-	 * @return array<int, array{version:string, package:string, prerelease:bool}>
+	 * @return array<int, array{version:string, package:string, prerelease:bool, sha256:string}>
 	 */
 	public static function releases( string $slug ): array {
 		$all = self::all_releases();
@@ -154,11 +188,13 @@ final class Optima_Hub_Catalog {
 				continue;
 			}
 			foreach ( (array) ( $release['assets'] ?? array() ) as $asset ) {
-				if ( ( $asset['name'] ?? '' ) === $m[1] . '.zip' && ! empty( $asset['browser_download_url'] ) ) {
+				if ( ( $asset['name'] ?? '' ) === $m[1] . '.zip' && ! empty( $asset['browser_download_url'] ) && self::is_release_url( (string) $asset['browser_download_url'] ) ) {
 					$out[ $m[1] ][] = array(
 						'version'    => $m[2],
 						'package'    => (string) $asset['browser_download_url'],
 						'prerelease' => ! empty( $release['prerelease'] ),
+						// The version list writes sha256; GitHub's API (the fallback) writes digest.
+						'sha256'     => self::clean_sha256( $asset['sha256'] ?? ( $asset['digest'] ?? '' ) ),
 					);
 				}
 			}
@@ -173,6 +209,7 @@ final class Optima_Hub_Catalog {
 
 	public static function flush(): void {
 		delete_transient( self::CATALOG_KEY );
+		delete_transient( self::CATALOG_KEY . '__test' );
 		delete_transient( self::RELEASES_KEY );
 		delete_transient( self::RELEASES_KEY . '__test' );
 	}

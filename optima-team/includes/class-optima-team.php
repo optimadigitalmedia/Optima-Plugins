@@ -23,6 +23,12 @@ final class Optima_Team {
 
 	public static function boot(): void {
 		add_action( 'init', array( __CLASS__, 'register_post_type' ), 5 );
+		// One public address per person: a profile whose bio lives on a theme page
+		// forwards there, links point there, and the sitemap skips the copy.
+		add_action( 'template_redirect', array( __CLASS__, 'forward_to_bio' ), 1 );
+		add_filter( 'post_type_link', array( __CLASS__, 'bio_link' ), 10, 2 );
+		add_filter( 'wp_sitemaps_posts_query_args', array( __CLASS__, 'sitemap_skip' ), 20, 2 );
+		add_filter( 'wp_robots', array( __CLASS__, 'robots' ), 20 );
 	}
 
 	public static function register_post_type(): void {
@@ -143,6 +149,9 @@ final class Optima_Team {
 			'bar'             => array(),
 			'education'       => array(),
 			'awards'          => array(),
+			'practice_areas'  => array(),
+			'bio_url'         => '',
+			'schema_id'       => '',
 		);
 	}
 
@@ -174,6 +183,9 @@ final class Optima_Team {
 		$out['military_years']  = sanitize_text_field( (string) ( $in['military_years'] ?? '' ) );
 		$out['languages']       = sanitize_text_field( (string) ( $in['languages'] ?? '' ) );
 		$out['memberships']     = self::lines( (string) ( $in['memberships'] ?? '' ) );
+		$out['practice_areas']  = self::clean_practices( $in['practice_areas'] ?? array(), (string) ( $in['practice_other'] ?? '' ) );
+		$out['bio_url']         = self::site_path( (string) ( $in['bio_url'] ?? '' ) );
+		$out['schema_id']       = self::site_path( (string) ( $in['schema_id'] ?? '' ), true );
 
 		$urls = array();
 		foreach ( self::lines( (string) ( $in['same_as'] ?? '' ) ) as $line ) {
@@ -219,6 +231,250 @@ final class Optima_Team {
 			}
 		}
 		return $out;
+	}
+
+	/* ---------- practice areas ---------- */
+
+	/**
+	 * The shared practice-area list (law-site blueprint, "The shared
+	 * practice-area list"): one slug per case type, the same on every site,
+	 * matching the practice page address and the case results area.
+	 *
+	 * @return array<string, string> slug => name on the site.
+	 */
+	public static function practices(): array {
+		return array(
+			'car-accidents'        => __( 'Car accidents', 'optima-team' ),
+			'truck-accidents'      => __( 'Truck accidents', 'optima-team' ),
+			'motorcycle-accidents' => __( 'Motorcycle accidents', 'optima-team' ),
+			'pedestrian-accidents' => __( 'Pedestrian accidents', 'optima-team' ),
+			'bicycle-accidents'    => __( 'Bicycle accidents', 'optima-team' ),
+			'rideshare-accidents'  => __( 'Uber and Lyft accidents', 'optima-team' ),
+			'bus-accidents'        => __( 'Bus accidents', 'optima-team' ),
+			'wrongful-death'       => __( 'Wrongful death', 'optima-team' ),
+			'brain-injury'         => __( 'Brain injury', 'optima-team' ),
+			'spinal-cord-injury'   => __( 'Spinal cord injury', 'optima-team' ),
+			'burn-injury'          => __( 'Burn injury', 'optima-team' ),
+			'catastrophic-injury'  => __( 'Catastrophic injury', 'optima-team' ),
+			'premises-liability'   => __( 'Slip and fall and unsafe property', 'optima-team' ),
+			'dog-bites'            => __( 'Dog bites', 'optima-team' ),
+			'medical-malpractice'  => __( 'Medical malpractice', 'optima-team' ),
+			'nursing-home-abuse'   => __( 'Nursing home abuse', 'optima-team' ),
+			'product-liability'    => __( 'Defective products', 'optima-team' ),
+			'workers-compensation' => __( 'Workers\' compensation', 'optima-team' ),
+			'maritime-injury'      => __( 'Maritime and boating injury', 'optima-team' ),
+		);
+	}
+
+	/** A slug from the list or shaped like one ("truck-accidents/underride-crashes"). */
+	public static function is_slug( string $value ): bool {
+		return (bool) preg_match( '#^[a-z0-9]+(?:-[a-z0-9]+)*(?:/[a-z0-9]+(?:-[a-z0-9]+)*)*$#', $value );
+	}
+
+	/**
+	 * Clean the practice areas: picks from the shared list (an array, or a
+	 * comma or line separated string from the setup file) plus free entries,
+	 * one per line. A free entry that names a listed case type becomes its slug.
+	 *
+	 * @param array|string $list  Slugs or names.
+	 * @param string       $other Free entries, one per line.
+	 */
+	public static function clean_practices( $list, string $other = '' ): array {
+		$items = is_array( $list ) ? $list : preg_split( '/[,\r\n]+/', (string) $list );
+		$items = array_merge( (array) $items, preg_split( '/\r\n|\r|\n/', $other ) );
+		$known = self::practices();
+		$names = array_flip( array_map( 'strtolower', $known ) ); // name => slug
+		$out   = array();
+		foreach ( $items as $item ) {
+			$item = trim( sanitize_text_field( (string) $item ) );
+			if ( '' === $item ) {
+				continue;
+			}
+			$lower = strtolower( $item );
+			if ( isset( $names[ $lower ] ) ) {
+				$item = (string) $names[ $lower ];
+			} elseif ( isset( $known[ sanitize_title( $item ) ] ) ) {
+				$item = sanitize_title( $item );
+			}
+			if ( ! in_array( $item, $out, true ) ) {
+				$out[] = $item;
+			}
+		}
+		return array_slice( $out, 0, 30 );
+	}
+
+	/**
+	 * The person's practice areas for the page and the schema: a name for each,
+	 * and the address of the practice page when the site has a published page
+	 * at that slug.
+	 *
+	 * @param array $p A profile.
+	 * @return array<int, array{name:string, url:string}>
+	 */
+	public static function practice_links( array $p ): array {
+		$known = self::practices();
+		$out   = array();
+		foreach ( (array) $p['practice_areas'] as $item ) {
+			$item = (string) $item;
+			$slug = self::is_slug( $item ) ? $item : sanitize_title( $item );
+			$page = '' !== $slug ? get_page_by_path( $slug, OBJECT, 'page' ) : null;
+			$url  = ( $page instanceof WP_Post && 'publish' === $page->post_status ) ? (string) get_permalink( $page ) : '';
+			if ( isset( $known[ $item ] ) ) {
+				$name = $known[ $item ];
+			} elseif ( self::is_slug( $item ) ) {
+				$name = '' !== $url ? wp_strip_all_tags( get_the_title( $page ) ) : ucfirst( str_replace( array( '-', '/' ), array( ' ', ', ' ), $item ) );
+			} else {
+				$name = $item;
+			}
+			$out[] = array(
+				'name' => html_entity_decode( $name, ENT_QUOTES, 'UTF-8' ),
+				'url'  => $url,
+			);
+		}
+		return $out;
+	}
+
+	/* ---------- one public address per person ---------- */
+
+	/**
+	 * A site address as a path (with an optional #fragment), so it moves with
+	 * the site from staging to live. Takes "/about/", "/about/#jane" or a full
+	 * address on this site; anything on another site is dropped.
+	 *
+	 * @param string $value     What was typed or read from the setup file.
+	 * @param bool   $fragment  Keep the #fragment (for a schema id).
+	 */
+	public static function site_path( string $value, bool $fragment = false ): string {
+		$value = trim( sanitize_text_field( $value ) );
+		if ( '' === $value ) {
+			return '';
+		}
+		$parts = wp_parse_url( $value );
+		if ( ! is_array( $parts ) ) {
+			return '';
+		}
+		if ( isset( $parts['host'] ) ) {
+			// This site, or its live address (Optima Core's production_url) when typed on staging.
+			$hosts = array( (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
+			if ( class_exists( 'Optima_SEO_Setup' ) && method_exists( 'Optima_SEO_Setup', 'site' ) ) {
+				$hosts[] = (string) wp_parse_url( (string) Optima_SEO_Setup::site( 'production_url' ), PHP_URL_HOST );
+			}
+			$bare  = static fn( $h ) => preg_replace( '/^www\./', '', strtolower( (string) $h ) );
+			if ( ! in_array( $bare( $parts['host'] ), array_filter( array_map( $bare, $hosts ) ), true ) ) {
+				return '';
+			}
+		} elseif ( '/' !== substr( $value, 0, 1 ) && ! ( $fragment && '#' === substr( $value, 0, 1 ) ) ) {
+			return '';
+		}
+		$path = (string) ( $parts['path'] ?? '/' );
+		$path = '/' . ltrim( preg_replace( '#[^A-Za-z0-9/_.~%-]#', '', $path ), '/' );
+		$hash = $fragment ? preg_replace( '/[^A-Za-z0-9_-]/', '', (string) ( $parts['fragment'] ?? '' ) ) : '';
+		return $path . ( '' !== $hash ? '#' . $hash : '' );
+	}
+
+	/** A stored site path as a full address on this site. */
+	public static function site_address( string $path ): string {
+		if ( '' === $path ) {
+			return '';
+		}
+		$hash = '';
+		if ( false !== strpos( $path, '#' ) ) {
+			list( $path, $hash ) = explode( '#', $path, 2 );
+		}
+		return home_url( '' !== $path ? $path : '/' ) . ( '' !== $hash ? '#' . $hash : '' );
+	}
+
+	/**
+	 * The person's one public page: the theme's bio page when the profile names
+	 * one, else the profile page.
+	 *
+	 * @param int $post_id Profile post ID.
+	 */
+	public static function public_url( int $post_id ): string {
+		$bio = (string) self::profile( $post_id )['bio_url'];
+		if ( '' !== $bio ) {
+			return self::site_address( $bio );
+		}
+		return (string) get_permalink( $post_id );
+	}
+
+	/** Profiles that live on a theme bio page: post ID => bio path. */
+	public static function bio_pages(): array {
+		static $map = null;
+		if ( null !== $map ) {
+			return $map;
+		}
+		$map = array();
+		$ids = get_posts(
+			array(
+				'post_type'      => self::POST_TYPE,
+				'post_status'    => 'publish',
+				'posts_per_page' => 200,
+				'fields'         => 'ids',
+				'no_found_rows'  => true,
+			)
+		);
+		if ( $ids ) {
+			update_meta_cache( 'post', $ids );
+		}
+		foreach ( $ids as $id ) {
+			$bio = (string) self::profile( (int) $id )['bio_url'];
+			if ( '' !== $bio ) {
+				$map[ (int) $id ] = $bio;
+			}
+		}
+		return $map;
+	}
+
+	/** On the site, links to a profile with a bio page go to that page. */
+	public static function bio_link( $link, $post ) {
+		if ( is_admin() || ! $post instanceof WP_Post || self::POST_TYPE !== $post->post_type ) {
+			return $link;
+		}
+		$bio = (string) self::profile( (int) $post->ID )['bio_url'];
+		return '' !== $bio ? self::site_address( $bio ) : $link;
+	}
+
+	/** The profile page of someone whose bio lives on a theme page forwards there (301). */
+	public static function forward_to_bio(): void {
+		if ( ! is_singular( self::POST_TYPE ) || is_preview() ) {
+			return;
+		}
+		$bio = (string) self::profile( (int) get_queried_object_id() )['bio_url'];
+		if ( '' === $bio ) {
+			return;
+		}
+		$to = strtok( self::site_address( $bio ), '#' );
+		if ( $to && wp_safe_redirect( $to, 301, 'Optima Team' ) ) {
+			exit;
+		}
+	}
+
+	/** Profiles that forward to a bio page stay out of the sitemap. */
+	public static function sitemap_skip( $args, $post_type ) {
+		if ( self::POST_TYPE !== $post_type ) {
+			return $args;
+		}
+		$skip = array_keys( self::bio_pages() );
+		if ( $skip ) {
+			$args['post__not_in'] = array_values( array_unique( array_merge( array_map( 'intval', (array) ( $args['post__not_in'] ?? array() ) ), $skip ) ) );
+		}
+		return $args;
+	}
+
+	/**
+	 * The /team/ list (the post type archive) is a list of links, not a page of
+	 * its own: noindex, follow, so search engines read each person once, on
+	 * their bio. Same for a forwarded profile seen in a preview.
+	 */
+	public static function robots( $robots ) {
+		$copy = is_singular( self::POST_TYPE ) && '' !== (string) self::profile( (int) get_queried_object_id() )['bio_url'];
+		if ( is_post_type_archive( self::POST_TYPE ) || $copy ) {
+			$robots['noindex'] = true;
+			$robots['follow']  = true;
+			unset( $robots['index'] );
+		}
+		return $robots;
 	}
 
 	/** Languages as a list. */

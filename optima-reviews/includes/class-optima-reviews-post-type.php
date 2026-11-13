@@ -221,6 +221,11 @@ final class Optima_Reviews_Post_Type {
 		update_post_meta( $post_id, self::META_DETAIL, sanitize_text_field( (string) ( $in['detail'] ?? '' ) ) );
 		update_post_meta( $post_id, self::META_FEATURED, ! empty( $in['featured'] ) );
 
+		// A person saved it: a review the old auto-publish option added now has a person's approval.
+		if ( 'publish' === $post->post_status && class_exists( 'Optima_Reviews_Law' ) && Optima_Reviews_Law::is_law() ) {
+			delete_post_meta( $post_id, '_optima_review_auto_added' );
+		}
+
 		Optima_Reviews_Query::flush();
 	}
 

@@ -220,7 +220,9 @@ final class Optima_Reviews_Google_Sync {
 		delete_post_meta( $post_id, self::META_REMOVED );
 
 		// A brand-new 5-star review goes straight onto the site when the site asks for that.
-		if ( 'new' === $outcome && 5 === (int) $rating && ! empty( Optima_Reviews_Settings::get()['auto_add_five'] ) ) {
+		// Never on a law site: there a person approves every review.
+		$law = class_exists( 'Optima_Reviews_Law' ) && Optima_Reviews_Law::is_law();
+		if ( 'new' === $outcome && 5 === (int) $rating && ! $law && ! empty( Optima_Reviews_Settings::get()['auto_add_five'] ) ) {
 			update_post_meta( $post_id, '_optima_review_auto_added', 1 );
 			Optima_Reviews_Inbox::add( $post_id, Optima_Reviews_Topics::suggest( $text ), false );
 		}

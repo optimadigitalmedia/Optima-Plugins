@@ -4,12 +4,15 @@
  *
  * The graph is one connected entity model, not a pile of disconnected blobs:
  *
- *   #business  LocalBusiness (or the subtype set in Optima Business) — the NAP,
- *              geo, profiles, and an aggregateRating computed from real
- *              testimonials. Stable @id: home_url( '/#business' ).
+ *   #business  LocalBusiness (or the subtype set in Optima Business): the NAP,
+ *              geo and profiles. Stable @id: home_url( '/#business' ). No star
+ *              rating and no Review entries are built from testimonials: those
+ *              are hand-picked quotes, not a platform's full count, and Google
+ *              treats a business's own review markup as self-serving. A plugin
+ *              with real platform totals adds a rating through the
+ *              `optima_schema_aggregate_rating` filter.
  *   #website   WebSite, publisher -> #business.
  *   FAQPage    on the FAQ hub page / archive, from the FAQ post type.
- *   Review     from testimonials, itemReviewed -> #business.
  *   BlogPosting on single posts, publisher -> #business.
  *
  * Everything references #business by @id, which is what makes Google (and AI
@@ -25,6 +28,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class Optima_Schema {
 
+	/**
+	 * The old testimonial rating cache. Nothing is cached under it any more;
+	 * clear_cache() still deletes it so a leftover copy goes away.
+	 */
 	const CACHE_KEY = 'optima_schema_reviews';
 
 	/**
@@ -49,6 +56,7 @@ final class Optima_Schema {
 		if ( class_exists( 'Optima_SEO_Setup' ) ) {
 			$graph = Optima_SEO_Setup::finish_graph( $graph );
 		}
+		$graph = self::legal_service( $graph );
 		if ( empty( $graph ) ) {
 			return;
 		}
@@ -65,9 +73,27 @@ final class Optima_Schema {
 		echo "\n";
 		foreach ( $blocks as $data ) {
 			echo '<script type="application/ld+json">'
-				. wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE )
+				. wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG )
 				. "</script>\n";
 		}
+	}
+
+	/**
+	 * schema.org deprecates `Attorney` for a firm: the business node prints it as
+	 * `LegalService`, wherever the type came from (a value saved on Details before
+	 * it left the list, or the theme's setup data). Nothing saved changes.
+	 *
+	 * @param array<string,array> $graph
+	 * @return array<string,array>
+	 */
+	public static function legal_service( array $graph ) {
+		if ( ! isset( $graph['business']['@type'] ) ) {
+			return $graph;
+		}
+		$types = array_map( array( 'Optima_Core_Business', 'schema_type' ), (array) $graph['business']['@type'] );
+		$types = array_values( array_unique( $types ) );
+		$graph['business']['@type'] = 1 === count( $types ) ? $types[0] : $types;
+		return $graph;
 	}
 
 	/**
@@ -93,18 +119,20 @@ final class Optima_Schema {
 		if ( ! $id ) {
 			return $graph;
 		}
-		$url  = get_permalink( $id );
-		$node = array(
+		$url     = get_permalink( $id );
+		$private = class_exists( 'Optima_SEO_Head' ) && Optima_SEO_Head::is_private( $id );
+		$node    = array(
 			'@type'         => 'WebPage',
 			'@id'           => $url . '#webpage',
 			'url'           => $url,
-			'name'          => wp_strip_all_tags( get_the_title( $id ) ),
+			// A password-protected page never names itself in public markup.
+			'name'          => $private ? Optima_SEO_Head::private_title() : wp_strip_all_tags( get_the_title( $id ) ),
 			'isPartOf'      => array( '@id' => home_url( '/#website' ) ),
 			'about'         => array( '@id' => home_url( '/#business' ) ),
 			'datePublished' => get_the_date( 'c', $id ),
 			'dateModified'  => get_the_modified_date( 'c', $id ),
 		);
-		if ( has_excerpt( $id ) ) {
+		if ( ! $private && has_excerpt( $id ) ) {
 			$node['description'] = wp_strip_all_tags( get_the_excerpt( $id ) );
 		}
 		$graph['webpage'] = $node;
@@ -122,14 +150,17 @@ final class Optima_Schema {
 			'website'  => self::website_node(),
 		);
 
-		list( $aggregate, $reviews ) = self::reviews();
-
-		$aggregate = apply_filters( 'optima_schema_aggregate_rating', $aggregate );
-		if ( ! empty( $aggregate ) ) {
+		/**
+		 * A star rating for the business node. Empty by default: Optima Core
+		 * never builds one from testimonials. A plugin that holds a platform's
+		 * real totals (rating value and review count) can return an
+		 * AggregateRating array here.
+		 *
+		 * @param array $aggregate Empty array.
+		 */
+		$aggregate = apply_filters( 'optima_schema_aggregate_rating', array() );
+		if ( ! empty( $aggregate ) && is_array( $aggregate ) ) {
 			$graph['business']['aggregateRating'] = $aggregate;
-		}
-		foreach ( $reviews as $i => $review ) {
-			$graph[ 'review_' . $i ] = $review;
 		}
 
 		if ( self::is_faq_context() ) {
@@ -154,7 +185,7 @@ final class Optima_Schema {
 	 */
 	private static function business_node() {
 		$b    = optima_core_business();
-		$type = ( '' !== $b['business_type'] ) ? $b['business_type'] : 'LocalBusiness';
+		$type = ( '' !== $b['business_type'] ) ? Optima_Core_Business::schema_type( $b['business_type'] ) : 'LocalBusiness';
 
 		$node = array(
 			'@type' => $type,
@@ -213,103 +244,45 @@ final class Optima_Schema {
 		return $node;
 	}
 
+	/**
+	 * The WebSite node. No SearchAction: Google retired the sitelinks search box
+	 * it fed, and a site search page is not a page anyone should land on from
+	 * search. `alternateName` (a DBA or a short name people search for) prints
+	 * only when set (see alternate_name()).
+	 */
 	private static function website_node() {
-		return array(
-			'@type'           => 'WebSite',
-			'@id'             => home_url( '/#website' ),
-			'url'             => home_url( '/' ),
-			'name'            => get_bloginfo( 'name' ),
-			'publisher'       => array( '@id' => home_url( '/#business' ) ),
-			'potentialAction' => array(
-				'@type'       => 'SearchAction',
-				'target'      => array(
-					'@type'       => 'EntryPoint',
-					'urlTemplate' => home_url( '/?s={search_term_string}' ),
-				),
-				'query-input' => 'required name=search_term_string',
-			),
+		$node = array(
+			'@type'     => 'WebSite',
+			'@id'       => home_url( '/#website' ),
+			'url'       => home_url( '/' ),
+			'name'      => get_bloginfo( 'name' ),
+			'publisher' => array( '@id' => home_url( '/#business' ) ),
 		);
+		$alt = self::alternate_name();
+		if ( $alt ) {
+			$node['alternateName'] = 1 === count( $alt ) ? $alt[0] : $alt;
+		}
+		return $node;
 	}
 
 	/**
-	 * Compute the aggregate rating and review nodes from testimonials.
-	 * Cached for an hour; cleared on testimonial save/delete.
+	 * Other names the site goes by, for WebSite `alternateName`: what an operator
+	 * typed on Search and AI, SEO (one per line), else `seo.alternate_name` in the
+	 * theme's optima-setup.json (a string or a list). A theme can also set it as
+	 * `seo.schema.website.alternateName`, which is laid over this node and wins.
 	 *
-	 * @return array{0:?array,1:array}
+	 * @return string[]
 	 */
-	public static function reviews() {
-		$cached = get_transient( self::CACHE_KEY );
-		if ( is_array( $cached ) ) {
-			return $cached;
+	public static function alternate_name() {
+		$names = array();
+		if ( class_exists( 'Optima_Core_SEO_Settings' ) ) {
+			$names = self::lines( (string) Optima_Core_SEO_Settings::value( 'alternate_name' ) );
 		}
-
-		$limit   = (int) apply_filters( 'optima_schema_review_limit', 10 );
-		$ratings = array();
-		$reviews = array();
-
-		$query = new WP_Query(
-			array(
-				'post_type'      => 'testimonial',
-				'post_status'    => 'publish',
-				'posts_per_page' => -1,
-				'no_found_rows'  => true,
-			)
-		);
-
-		foreach ( $query->posts as $post ) {
-			$rating = get_post_meta( $post->ID, optima_core_meta_key( 'rating' ), true );
-			if ( is_numeric( $rating ) ) {
-				$ratings[] = (float) $rating;
-			}
-
-			// Google's review snippet needs a star rating on every Review. Testimonials
-			// without one stay on the page but are left out of the markup, which
-			// a client site Rich Results test flagged as 10 invalid items (Oct 15).
-			if ( count( $reviews ) >= $limit || ! is_numeric( $rating ) ) {
-				continue;
-			}
-
-			$node = array(
-				'@type'        => 'Review',
-				'@id'          => home_url( '/#review-' . $post->ID ),
-				'itemReviewed' => array( '@id' => home_url( '/#business' ) ),
-				'author'       => array(
-					'@type' => 'Person',
-					'name'  => get_the_title( $post ),
-				),
-			);
-
-			$body = trim( wp_strip_all_tags( $post->post_content ) );
-			if ( '' !== $body ) {
-				$node['reviewBody'] = $body;
-			}
-			$node['reviewRating'] = array(
-				'@type'       => 'Rating',
-				'ratingValue' => (string) ( 0 + $rating ),
-				'bestRating'  => '5',
-			);
-			$date = get_post_meta( $post->ID, optima_core_meta_key( 'date' ), true );
-			if ( '' !== $date ) {
-				$node['datePublished'] = $date;
-			}
-
-			$reviews[] = $node;
+		if ( ! $names && class_exists( 'Optima_SEO_Setup' ) && Optima_SEO_Setup::active() ) {
+			$given = Optima_SEO_Setup::data()['alternate_name'] ?? '';
+			$names = array_values( array_filter( array_map( 'trim', array_map( 'strval', array_filter( (array) $given, 'is_scalar' ) ) ), 'strlen' ) );
 		}
-		wp_reset_postdata();
-
-		$aggregate = null;
-		if ( $ratings ) {
-			$aggregate = array(
-				'@type'       => 'AggregateRating',
-				'ratingValue' => (string) round( array_sum( $ratings ) / count( $ratings ), 1 ),
-				'reviewCount' => (string) count( $ratings ),
-				'bestRating'  => '5',
-			);
-		}
-
-		$result = array( $aggregate, $reviews );
-		set_transient( self::CACHE_KEY, $result, HOUR_IN_SECONDS );
-		return $result;
+		return array_values( array_unique( array_map( 'sanitize_text_field', $names ) ) );
 	}
 
 	public static function clear_cache() {

@@ -337,7 +337,7 @@ final class Optima_Hub_Features {
 					? new WP_Error( 'optima_hub', __( 'Could not reach GitHub to download it. Try again in a few minutes.', 'optima-build' ) )
 					: new WP_Error( 'optima_hub', __( 'No release is published yet, so it cannot be installed from here.', 'optima-build' ) );
 			}
-			$r = self::install( $releases[0]['package'], false );
+			$r = self::install( $releases[0]['package'], false, (string) ( $releases[0]['sha256'] ?? '' ) );
 			if ( is_wp_error( $r ) ) {
 				return $r;
 			}
@@ -477,13 +477,18 @@ final class Optima_Hub_Features {
 			return new WP_Error( 'optima_hub', __( 'There is no earlier release to go back to.', 'optima-build' ) );
 		}
 		$package = '';
+		$sha256  = '';
 		foreach ( Optima_Hub_Catalog::releases( $slug ) as $release ) {
 			if ( $release['version'] === $status['previous'] ) {
 				$package = $release['package'];
+				$sha256  = (string) ( $release['sha256'] ?? '' );
 			}
 		}
+		if ( '' === $package ) {
+			return new WP_Error( 'optima_hub', __( 'The earlier release is no longer listed, so it cannot be installed from here.', 'optima-build' ) );
+		}
 		$was_on = 'on' === $status['state'];
-		$r      = self::install( $package, true );
+		$r      = self::install( $package, true, $sha256 );
 		if ( is_wp_error( $r ) ) {
 			return $r;
 		}
@@ -499,10 +504,20 @@ final class Optima_Hub_Features {
 		return true;
 	}
 
-	/** @return true|WP_Error */
-	private static function install( string $package, bool $overwrite ) {
+	/**
+	 * Install one release zip. Only a package from the Optima Plugins releases
+	 * is accepted. With a sha256 from the version list, the zip is downloaded
+	 * here and checked first, whichever updater copy loaded; a mismatch stops
+	 * the install before anything is unpacked.
+	 *
+	 * @return true|WP_Error
+	 */
+	private static function install( string $package, bool $overwrite, string $sha256 = '' ) {
 		if ( ! Optima_Hub_Access::can_install() ) {
 			return new WP_Error( 'optima_hub', __( 'This site does not allow installing plugins from the dashboard.', 'optima-build' ) );
+		}
+		if ( ! Optima_Hub_Catalog::is_release_url( $package ) ) {
+			return new WP_Error( 'optima_hub', __( 'That download is not an Optima Plugins release, so it was not installed.', 'optima-build' ) );
 		}
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 		require_once ABSPATH . 'wp-admin/includes/plugin.php';
@@ -510,8 +525,25 @@ final class Optima_Hub_Features {
 		if ( 'direct' !== get_filesystem_method() ) {
 			return new WP_Error( 'optima_hub', __( 'The host needs file access set to direct before plugins can be installed from here.', 'optima-build' ) );
 		}
+		$sha256 = Optima_Hub_Catalog::clean_sha256( $sha256 );
+		$local  = '';
+		if ( '' !== $sha256 ) {
+			$local = download_url( $package, 300 );
+			if ( is_wp_error( $local ) ) {
+				return $local;
+			}
+			if ( ! hash_equals( $sha256, (string) hash_file( 'sha256', $local ) ) ) {
+				wp_delete_file( $local );
+				// The caller writes the failure to Recent changes; this keeps the details for the host's log.
+				error_log( 'Optima Build: checksum mismatch for ' . $package . ', install stopped.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- an update safety record, kept on purpose.
+				return new WP_Error( 'optima_hub', __( 'The download did not match the checksum published with the release, so nothing was installed. Try again later.', 'optima-build' ) );
+			}
+		}
 		$upgrader = new Plugin_Upgrader( new WP_Ajax_Upgrader_Skin() );
-		$result   = $upgrader->install( $package, array( 'overwrite_package' => $overwrite ) );
+		$result   = $upgrader->install( '' !== $local ? $local : $package, array( 'overwrite_package' => $overwrite ) );
+		if ( '' !== $local ) {
+			wp_delete_file( $local );
+		}
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		}

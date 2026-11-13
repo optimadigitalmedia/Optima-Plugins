@@ -61,6 +61,10 @@ final class Optima_Core_Business {
 	 * Schema types to pick from (Details shows a list, not a typed name). A value
 	 * saved before release 3 that is not in the list stays and shows as its own choice.
 	 *
+	 * `Attorney` is no longer offered: schema.org deprecates it for a firm. A site
+	 * that saved it keeps the saved value; the schema prints it as LegalService
+	 * (see schema_type()).
+	 *
 	 * @return array<string,string> type => plain label
 	 */
 	public static function types() {
@@ -68,7 +72,6 @@ final class Optima_Core_Business {
 			'optima_core_business_types',
 			array(
 				'LegalService'       => 'Law firm (LegalService)',
-				'Attorney'           => 'Attorney (Attorney)',
 				'LocalBusiness'      => 'Local business (LocalBusiness)',
 				'ProfessionalService' => 'Professional service (ProfessionalService)',
 				'MedicalBusiness'    => 'Medical practice (MedicalBusiness)',
@@ -80,6 +83,15 @@ final class Optima_Core_Business {
 				'Organization'       => 'Organization (Organization)',
 			)
 		);
+	}
+
+	/**
+	 * The schema type to print for a saved business type. A saved `Attorney`
+	 * prints as `LegalService`; the saved value itself never changes.
+	 */
+	public static function schema_type( $type ) {
+		$type = (string) $type;
+		return 'Attorney' === $type ? 'LegalService' : $type;
 	}
 
 	/** Is the hours box owned by Optima Hours (rule 45: hours typed on one tab only)? */

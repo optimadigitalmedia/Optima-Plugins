@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.11.3 (2026-11-13)
+
+- Practice areas on each profile: tick case types from the shared practice-area list (car-accidents, truck-accidents, brain-injury and the rest) or add others, one per line. They show on the profile page and go into the Person schema as knowsAbout, each linked to the practice page when the site has a published page at that slug. Add a person brings them in from the setup file's practice_areas.
+- The ProfilePage schema now carries dateCreated (the date the profile was published) beside dateModified.
+- One page and one Person per attorney. The cause of the duplicate: every profile is its own public page under /team/, so on a site whose theme already has the bio (for example on /about/) the same person had a second page, a second sitemap entry and a second Person id, and a theme with no profile template showed it under an "Archives" heading. A profile can now name its bio page (Bio page address) and the Person id the theme's schema already uses. With a bio page set, the profile page forwards there (301), leaves the sitemap, and every link, byline, reviewed-by line and schema reference points there; on that page the profile's facts join the theme's Person node with the same id instead of adding a second one. Profiles without a bio page are unchanged.
+- The /team/ list (the profile archive) is now noindex, follow. It still works for links; the team grid shortcode does not use it.
+- Reviewed by: the line and the reviewedBy and lastReviewed schema print only when the record is complete: the reviewer, the review date, and the version of the page the review covers (a fingerprint of its words, taken when the review is entered). If the words change after that, nothing prints, the page's box says so, and People lists it under Reviews to fix as "Review out of date" until someone ticks that the reviewer read the page as it is now. A review saved before this release counts while the page has not been changed after its review date. Picking a reviewer no longer fills in today's date: a review with no date stays incomplete and prints nothing.
+
+## 0.1.11.2 (2026-11-12)
+
+- Updates install only from the Optima Plugins release downloads (https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/). A release listed at any other address is skipped, and an update of an Optima plugin from any other address is refused with an error.
+- Every download is checked against the sha256 published in the version list before WordPress unpacks it. A mismatch deletes the file, stops the install with an error and writes a line to the PHP error log.
+- A release listed without a sha256 (one published before checksums were recorded) still installs as before, with a line in the PHP error log saying no checksum was checked.
+- Automatic updates run only for a package from the Optima Plugins releases.
+- The GitHub API fallback reads each asset's digest as its sha256, so the check works on that path too.
+
 ## 0.1.11.1 (2026-11-05)
 
 - No em dash in visible text: a missing title on Add a person reads Not set.

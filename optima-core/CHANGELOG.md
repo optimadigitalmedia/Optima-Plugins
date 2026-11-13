@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.6.0.15 (2026-11-13)
+
+- **Law firms are LegalService, never Attorney.** Your business, Details no longer offers Attorney as a business type, because schema.org deprecates it for a firm. A site that saved Attorney keeps its saved value (it shows as its own choice with a note to pick Law firm), and the schema prints it as LegalService. The same goes for a business type of Attorney in the theme's setup data. Nothing saved changes.
+- **WebSite schema: no search box, an optional other name.** The WebSite entry no longer carries a SearchAction. Google retired the sitelinks search box it fed. It can now carry `alternateName` (the name a business trades under, or a short name people type), printed only when set: typed on Search and AI, SEO (new optional field, one name per line), else `seo.alternate_name` in the theme's optima-setup.json. A theme's `seo.schema.website.alternateName` still works and wins.
+- **Sitemap: testimonials and FAQs stay out.** They are quotes and answers shown inside pages, so their post types (Core's, or the same types from another plugin) no longer get a sitemap, and a single testimonial or FAQ page is marked noindex to match. The list can be changed with the `optima_core_sitemap_skip_types` filter. Noindexed archives, terms, author archives and pages (1.6.0.13) and empty taxonomies (WordPress leaves those out) already stayed out; a thank-you page stays out once it is noindexed in the SEO box or the theme's `seo.pages`.
+- **Embeds name the organization.** When another site embeds or previews a page (oEmbed), the author is the business name and the site's address, never the WordPress user who made the page or their author archive.
+- **Private pages stay private.** A password-protected page shows a generic title in public: its `<title>`, share title and Twitter title read "Private page" with the site name, it prints no description or image alt text, its schema WebPage is named "Private page", and it is marked noindex. Its oEmbed answer is a plain link titled "Private page" with no embed code or picture, its embed view shows the same title, and it prints no oEmbed discovery links. This holds even when the theme prints its own head. The words can be changed with the `optima_core_private_title` filter.
+
+## 1.6.0.14 (2026-11-12)
+
+- **Site health, Page descriptions:** a page whose address has a description in the theme's setup data (`optima-setup.json`, `seo.pages`) no longer counts as missing one. Core already prints that description; the old check told people to type one into the SEO box, which would have overridden the approved words. (From PR #26.)
+- **No star rating built from testimonials.** The business entry in the schema no longer carries a star rating or Review entries made from the site's own testimonials. Hand-picked quotes are not a platform's full count, Google does not show self-serving review markup, and on a law-firm site they read as a rating the firm gave itself. Testimonials and how they show on pages do not change.
+- A plugin that holds a review platform's real totals can still add a rating through the `optima_schema_aggregate_rating` filter, which now starts empty. The `optima_schema_review_limit` filter is gone with the Review entries. The old rating cache is still cleared on save, so a leftover copy goes away.
+- **Safer schema output.** The JSON-LD block is encoded with `JSON_HEX_TAG`, so a `<` or `>` in any field (a page title, an excerpt, a business name) can never close the script tag early.
+- Updates install only from the Optima Plugins release downloads (https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/). A release listed at any other address is skipped, and an update of an Optima plugin from any other address is refused with an error.
+- Every download is checked against the sha256 published in the version list before WordPress unpacks it. A mismatch deletes the file, stops the install with an error and writes a line to the PHP error log.
+- A release listed without a sha256 (one published before checksums were recorded) still installs as before, with a line in the PHP error log saying no checksum was checked.
+- Automatic updates run only for a package from the Optima Plugins releases.
+- The GitHub API fallback reads each asset's digest as its sha256, so the check works on that path too.
+
+## 1.6.0.13 (2026-11-12)
+
+- Sitemap agrees with noindex: when Core prints the head, whatever the theme's `seo.pages` robots rules noindex leaves WordPress's sitemap too. `:category`, `:tag` or `:archive` drops that taxonomy's sitemap, `:author` or `:archive` the author sitemap, a term's path drops that term, and a page's path, pattern or `:posts` drops that page (the SEO box's noindex already did). Before, a theme that handed its head to Core kept its noindexed category archive in wp-sitemap.xml.
+- A `canonical` of `"%link%"` no longer crashes the page (it named itself, so working it out never ended); it now means the default canonical. A token whose value names itself (`%title%` in a title) gives nothing instead of looping, and a per-URL title naming `%title%` is ignored, so WordPress builds the title.
+
 ## 1.6.0.12 (2026-11-05)
 
 - No em dash in visible text: the empty choice in a select reads Select one.

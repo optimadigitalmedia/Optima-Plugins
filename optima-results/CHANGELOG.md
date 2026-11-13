@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.1.10.3 (2026-11-13)
+
+- New facts on every result, on the existing edit screen and saved with the result: the attorney's role (lead trial counsel, co-counsel or another role), whether the amount is gross or net, the venue (county or parish, and state), what happened after the result (reduced, remitted, appealed, not collected, default or uncontested, plus a short note) and the client's consent date. The card prints the gross or net label, the role and anything that happened after the result beside the amount, and the venue with the date under it. The consent date stays on file and never prints. Results saved before this release show exactly as before until these fields are filled in.
+- Florida rule set: a result cannot be approved or shown on the site without the client's consent date. Ticking "Approved by the firm" without the date saves it for review with a notice that says why, and the results lists read "Needs the client's consent date (Florida)". An approved Florida result saved earlier without a consent date stops showing until the date is added. Other states are unchanged.
+- Four more state rule sets: Louisiana, District of Columbia, Maryland and South Carolina. Their starting wording is a placeholder marked [VERIFY: counsel] (no state wording is written for them here), and the Disclaimer card reads "Not approved" until counsel's wording is saved with an approver's name.
+- A new "Wording approved by" box under the disclaimer records who approved the wording and when, for that state and that exact text. Changing the state or the wording needs a new save with the name. Wording still marked [VERIFY: counsel] never counts as approved.
+- The disclaimer now prints before the first amount: once above the results grid, and inside a single result ([optima_result id="12"]) right under the headline. Every card in the grid still carries its own line, so each result, Louisiana included, has the disclaimer with it. The disclaimer prints at body size in the text's own full-contrast color, from the design tokens.
+
+## 0.1.10.2 (2026-11-12)
+
+- The firm's publishing threshold now holds on the site, not only in the dashboard: an approved result under the line no longer shows in the results grid or as a single result. A threshold of 0 or an empty box still means every approved result may show.
+- A result whose amount has no figure in it (for example "Confidential settlement") shows once the firm approves it, since there is no number to compare. The dashboard now labels each result Yes, "No, not shown on the site" or "No amount to check", so the list matches what visitors see.
+- A result limit (limit="6") now counts only results the site may show, newest result date first.
+- The results stylesheet now loads in the page head on Elementor pages, Elementor templates and synced patterns that use the shortcode. Anywhere else it prints right beside the results with a few layout rules, so the grid never jumps when the page loads.
+- Updates install only from the Optima Plugins release downloads (https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/). A release listed at any other address is skipped, and an update of an Optima plugin from any other address is refused with an error.
+- Every download is checked against the sha256 published in the version list before WordPress unpacks it. A mismatch deletes the file, stops the install with an error and writes a line to the PHP error log.
+- A release listed without a sha256 (one published before checksums were recorded) still installs as before, with a line in the PHP error log saying no checksum was checked.
+- Automatic updates run only for a package from the Optima Plugins releases.
+- The GitHub API fallback reads each asset's digest as its sha256, so the check works on that path too.
+
 ## 0.1.10.1 (2026-11-05)
 
 - Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).

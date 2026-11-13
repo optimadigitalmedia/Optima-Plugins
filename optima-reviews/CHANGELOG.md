@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.5.5.12 (2026-11-13)
+
+- Law-site rules for reviews. A site counts as a law firm's the way the other Optima plugins tell: the business type on Your business, Details, Optima Team's law mode, or a law rule set (the new one here, or the one saved under Case results).
+- On a law site every review shown needs a person's approval. The "New 5-star reviews" auto-publish box is hidden and ignored (its saved value is kept for the day the site stops being a law site), and a review the old option already put on the site stays hidden until someone opens it and presses Update. The Reviews screen counts any such reviews.
+- On a law site the star filter is always off (min_rating is read as 0 everywhere, the block's setting included), so no review is hidden for its rating.
+- Any hand-picked or capped list (featured, a topic, or a count limit) prints "Selected client reviews" with a "Read all reviews on Google" link to the Google profile the plugin already stores. The Google rating in the summary shows "as of" the last good sync, or the day the totals were last saved when Google is not connected.
+- The testimonial disclaimer is required on a law site and prints before the reviews, at body size in the text's own color. With no wording saved, the site prints a placeholder marked [VERIFY: counsel]; the Display section reads "Not approved" until counsel's wording is saved with a name in the new "Wording approved by" box. Sites that are not law firms keep the optional disclaimer under the reviews, as before.
+- New "Law firm rule set" under Display, with the same eight choices as Case results (North Carolina, Virginia, Florida, Louisiana, District of Columbia, Maryland, South Carolina, another state). Left on "Same as Case results" it follows the Case results setting.
+- North Carolina: the Review inbox flags any review with a "$" or a number near "settle", "verdict" or "award", and a flagged review cannot be approved (the inbox, Add all and the editor's Publish button all keep it a draft and say why). The disclaimer also prints before and after any review that talks about an outcome. Other law sites see the flag as a reminder only.
+- A theme that replaced the section or card template keeps its own markup; copy the plugin's new section.php and card.php to get the label, the link and the disclaimer placement.
+
+## 0.5.5.11 (2026-11-12)
+
+- The reviews stylesheet now loads in the page head on Elementor pages, Elementor templates and synced patterns that use the shortcode or the block, so reviews no longer jump when the page loads.
+- Reviews placed somewhere the head check cannot see (a theme slot, a widget, a cached Elementor widget) now carry their stylesheet and a few layout rules right beside them, printed once per page, instead of waiting for the footer.
+- Pages without reviews still load no reviews styles, and turning the stylesheet off under Reviews settings still turns it off everywhere.
+- Updates install only from the Optima Plugins release downloads (https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/). A release listed at any other address is skipped, and an update of an Optima plugin from any other address is refused with an error.
+- Every download is checked against the sha256 published in the version list before WordPress unpacks it. A mismatch deletes the file, stops the install with an error and writes a line to the PHP error log.
+- A release listed without a sha256 (one published before checksums were recorded) still installs as before, with a line in the PHP error log saying no checksum was checked.
+- Automatic updates run only for a package from the Optima Plugins releases.
+- The GitHub API fallback reads each asset's digest as its sha256, so the check works on that path too.
+
 ## 0.5.5.10 (2026-11-05)
 
 - Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).

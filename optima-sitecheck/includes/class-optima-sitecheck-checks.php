@@ -33,12 +33,19 @@ final class Optima_Sitecheck_Checks {
 		'Applebot-Extended' => array( 'Apple Intelligence', '' ),
 	);
 
-	public static function step( string $step, string $url ): array {
+	/**
+	 * Run one step. $background is true in a scheduled job (not a visitor's
+	 * request): only then may Google's speed tool take its full time.
+	 * Returns ['pending' => true] when the speed tool did not answer within a
+	 * visitor's request and should be run again in the background.
+	 */
+	public static function step( string $step, string $url, bool $background = false ): array {
 		switch ( $step ) {
 			case 'basics':
 				return self::basics( $url );
 			case 'speed':
-				return array( self::speed( $url ) );
+				$row = self::speed( $url, $background );
+				return null === $row ? array( 'pending' => true ) : array( $row );
 			case 'crawlers':
 				return self::crawlers( $url );
 			case 'photos':
@@ -337,7 +344,23 @@ final class Optima_Sitecheck_Checks {
 
 	/* ---------- speed ---------- */
 
-	private static function speed( string $url ): array {
+	/** Longest wait for Google's speed tool inside a visitor's request, in seconds. */
+	const SPEED_QUICK = 20;
+
+	/** Longest wait in the background job. */
+	const SPEED_SLOW = 60;
+
+	/** The row when Google's speed tool never answered: left out of the score. */
+	public static function speed_skipped(): array {
+		return self::row( 'speed', __( 'Speed', 'optima-sitecheck' ), 'skip', __( 'Google\'s speed tool didn\'t answer this time, so speed is left out of your score.', 'optima-sitecheck' ), __( 'Google speed tool', 'optima-sitecheck' ) );
+	}
+
+	/**
+	 * Google's speed tool. Inside a visitor's request it waits at most
+	 * SPEED_QUICK seconds and returns null when the tool has not answered, so
+	 * the run moves to the background instead of holding the request open.
+	 */
+	private static function speed( string $url, bool $background = false ): ?array {
 		$t   = __( 'Speed', 'optima-sitecheck' );
 		$src = __( 'Google speed tool', 'optima-sitecheck' );
 		$api = add_query_arg(
@@ -351,11 +374,14 @@ final class Optima_Sitecheck_Checks {
 			),
 			'https://www.googleapis.com/pagespeedonline/v5/runPagespeed'
 		);
-		$res = wp_remote_get( $api, array( 'timeout' => 90 ) );
+		$res = wp_remote_get( $api, array( 'timeout' => $background ? self::SPEED_SLOW : self::SPEED_QUICK ) );
+		if ( is_wp_error( $res ) && ! $background ) {
+			return null; // Timed out or could not connect: try again in the background.
+		}
 		$data = is_wp_error( $res ) ? null : json_decode( (string) wp_remote_retrieve_body( $res ), true );
 		$score = $data['lighthouseResult']['categories']['performance']['score'] ?? null;
 		if ( null === $score ) {
-			return self::row( 'speed', $t, 'skip', __( 'Google\'s speed tool didn\'t answer this time, so speed is left out of your score.', 'optima-sitecheck' ), $src );
+			return self::speed_skipped();
 		}
 		$score = (int) round( (float) $score * 100 );
 		$lcp   = (float) ( $data['lighthouseResult']['audits']['largest-contentful-paint']['numericValue'] ?? 0 ) / 1000;

@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.11.12 (2026-11-13)
+
+- When the call bar shows, the page gets scroll-padding-bottom equal to the bar's height plus the phone's safe-area inset, so a field or link reached with the keyboard never sits under the bar (WCAG 2.2, 2.4.11 Focus Not Obscured). The body padding that keeps the last content clear of the bar stays as it was.
+- The Text button starts off on a new site (no Call buttons settings saved yet). Saved settings keep their value, and a site that saved its settings before the Text switch existed keeps Text as it was.
+- The texting setting now asks "Is this number able to receive texts and monitored?". The Text button shows only when that is answered yes.
+- Checked the event names against rule 50: the bar and the Let's talk sheet send call_click, text_click and booking_click. No change needed.
+
+## 0.1.11.11 (2026-11-12)
+
+- The call bar and the Let's talk sheet now send call_click, text_click and booking_click (rule 50), with location call_bar or lets_talk_sheet.
+- The old contact_call, contact_text, contact_book and contact_open names go out only on sites that turn on old event names in Optima Analytics.
+- Phone and text taps no longer send the number to analytics.
+- Updates install only from the Optima Plugins release downloads (https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/). A release listed at any other address is skipped, and an update of an Optima plugin from any other address is refused with an error.
+- Every download is checked against the sha256 published in the version list before WordPress unpacks it. A mismatch deletes the file, stops the install with an error and writes a line to the PHP error log.
+- A release listed without a sha256 (one published before checksums were recorded) still installs as before, with a line in the PHP error log saying no checksum was checked.
+- Automatic updates run only for a package from the Optima Plugins releases.
+- The GitHub API fallback reads each asset's digest as its sha256, so the check works on that path too.
+
 ## 0.1.11.10 (2026-11-05)
 
 - Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).

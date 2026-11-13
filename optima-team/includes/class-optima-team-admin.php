@@ -100,6 +100,41 @@ final class Optima_Team_Admin {
 		);
 	}
 
+	/**
+	 * Problems first (rule 52): pages whose "Reviewed by" line is not showing
+	 * because the page changed after the review, or the record is missing the
+	 * reviewer or the date.
+	 */
+	private static function reviews_box(): void {
+		if ( ! class_exists( 'Optima_Team_Reviewed' ) ) {
+			return;
+		}
+		$pages = Optima_Team_Reviewed::needs_attention();
+		if ( ! $pages ) {
+			return;
+		}
+		?>
+		<section class="sh-box">
+			<h2 class="sh-title"><?php esc_html_e( 'Reviews to fix', 'optima-team' ); ?></h2>
+			<p><?php esc_html_e( 'These pages show no "Reviewed by" line until the review is complete and covers the words on the page now. Open a page, check it with the reviewer, then set the date and tick that they read the page as it is now.', 'optima-team' ); ?></p>
+			<div class="sh-scroll"><table class="widefat striped">
+				<thead><tr><th scope="col"><?php esc_html_e( 'Page', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Reviewer', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Reviewed on', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Status', 'optima-team' ); ?></th></tr></thead>
+				<tbody>
+				<?php foreach ( $pages as $id => $status ) : ?>
+					<?php $r = Optima_Team_Reviewed::get( (int) $id ); ?>
+					<tr>
+						<td><a href="<?php echo esc_url( (string) get_edit_post_link( (int) $id ) ); ?>"><strong><?php echo esc_html( '' !== get_the_title( (int) $id ) ? wp_strip_all_tags( get_the_title( (int) $id ) ) : __( '(no title)', 'optima-team' ) ); ?></strong></a></td>
+						<td><?php echo esc_html( $r['who'] ? wp_strip_all_tags( get_the_title( $r['who'] ) ) : __( 'Not set', 'optima-team' ) ); ?></td>
+						<td><?php echo esc_html( '' !== $r['when'] ? $r['when'] : __( 'Not set', 'optima-team' ) ); ?></td>
+						<td><span class="sh-pill is-received"><?php echo esc_html( 'stale' === $status ? __( 'Review out of date', 'optima-team' ) : __( 'Review incomplete', 'optima-team' ) ); ?></span></td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table></div>
+		</section>
+		<?php
+	}
+
 	public static function render(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
@@ -143,12 +178,13 @@ final class Optima_Team_Admin {
 			__( 'People', 'optima-team' )
 		);
 		settings_errors( $o );
+		self::reviews_box();
 		?>
 		<div class="sh-grid sh-grid-3">
 			<section class="sh-box sh-check is-<?php echo $people ? 'good' : 'warn'; ?>">
 				<p class="sh-label"><?php esc_html_e( 'People', 'optima-team' ); ?></p>
 				<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php echo esc_html( (string) count( $people ) ); ?></p>
-				<p class="sh-note"><?php echo $people ? esc_html__( 'Each one has a profile page under /team/.', 'optima-team' ) : esc_html__( 'Add the first person to start the team page.', 'optima-team' ); ?></p>
+				<p class="sh-note"><?php echo $people ? esc_html__( 'Each one has one page: their profile under /team/, or the bio page the profile names.', 'optima-team' ) : esc_html__( 'Add the first person to start the team page.', 'optima-team' ); ?></p>
 			</section>
 			<section class="sh-box sh-check is-<?php echo ( $people && count( $people ) === $complete ) ? 'good' : 'warn'; ?>">
 				<p class="sh-label"><?php esc_html_e( 'Complete profiles', 'optima-team' ); ?></p>
