@@ -3,7 +3,7 @@
  * Plugin Name:       Optima Reviews
  * Plugin URI:        https://optimadigitalmedia.com
  * Description:       Reviews from Google, Facebook, Yelp, Clutch, and anywhere else, kept in one place and shown on the site in a custom design. Every review links back to where it was posted, and the rating summary uses the real totals from each platform.
- * Version:           0.5.5.11
+ * Version:           0.5.5.12
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Author:            Optima Digital
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OPTIMA_REVIEWS_VERSION', '0.5.5.11' );
+define( 'OPTIMA_REVIEWS_VERSION', '0.5.5.12' );
 define( 'OPTIMA_REVIEWS_DIR', plugin_dir_path( __FILE__ ) );
 define( 'OPTIMA_REVIEWS_URL', plugin_dir_url( __FILE__ ) );
 define( 'OPTIMA_REVIEWS_FILE', __FILE__ );
@@ -40,6 +40,7 @@ require_once OPTIMA_REVIEWS_DIR . 'includes/class-optima-admin-ui.php';
 require_once OPTIMA_REVIEWS_DIR . 'includes/class-optima-reviews-sources.php';
 require_once OPTIMA_REVIEWS_DIR . 'includes/class-optima-reviews-post-type.php';
 require_once OPTIMA_REVIEWS_DIR . 'includes/class-optima-reviews-settings.php';
+require_once OPTIMA_REVIEWS_DIR . 'includes/class-optima-reviews-law.php';
 require_once OPTIMA_REVIEWS_DIR . 'includes/class-optima-reviews-query.php';
 require_once OPTIMA_REVIEWS_DIR . 'includes/class-optima-reviews-render.php';
 require_once OPTIMA_REVIEWS_DIR . 'includes/class-optima-reviews-google.php';
@@ -61,6 +62,7 @@ Optima_Reviews_Google_Sync::boot();
 Optima_Reviews_Topics::boot();
 Optima_Reviews_Requests::boot();
 Optima_Reviews_Notes::boot();
+Optima_Reviews_Law::boot();
 
 if ( is_admin() ) {
 	Optima_Reviews_Menu::boot();

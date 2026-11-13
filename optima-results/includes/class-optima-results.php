@@ -26,6 +26,14 @@ final class Optima_Results {
 		'approver'    => '_optima_result_approver',
 		'approved_on' => '_optima_result_approved_on',
 		'attorney'    => '_optima_result_attorney', // A People profile (optima_team post ID), rule 47.
+		// Release 1 (2026-11-13): the facts a bar rule may ask for beside a figure.
+		'role'        => '_optima_result_role', // lead | co | other ('' = not given).
+		'gross_net'   => '_optima_result_gross_net', // gross | net ('' = not given).
+		'venue_county' => '_optima_result_venue_county',
+		'venue_state' => '_optima_result_venue_state',
+		'post_verdict' => '_optima_result_post_verdict', // Comma list of post_verdict_options() keys.
+		'post_verdict_note' => '_optima_result_post_verdict_note',
+		'consent_on'  => '_optima_result_consent_on', // The client's consent date. Internal, never printed.
 	);
 
 	public static function boot(): void {
@@ -105,9 +113,25 @@ final class Optima_Results {
 			'nc'    => __( 'North Carolina', 'optima-results' ),
 			'va'    => __( 'Virginia', 'optima-results' ),
 			'fl'    => __( 'Florida', 'optima-results' ),
+			'la'    => __( 'Louisiana', 'optima-results' ),
+			'dc'    => __( 'District of Columbia', 'optima-results' ),
+			'md'    => __( 'Maryland', 'optima-results' ),
+			'sc'    => __( 'South Carolina', 'optima-results' ),
 			'other' => __( 'Another state', 'optima-results' ),
 		);
 	}
+
+	/**
+	 * The presets whose starting wording is only a placeholder until the
+	 * firm's counsel supplies the text. Their dashboard card stays "Not
+	 * approved" until a named approver saves real wording.
+	 */
+	public static function counsel_states(): array {
+		return array( 'la', 'dc', 'md', 'sc' );
+	}
+
+	/** The marker a placeholder carries until counsel replaces it. */
+	const VERIFY = '[VERIFY: counsel]';
 
 	/**
 	 * Starting wording per state. A sensible default the firm edits and
@@ -120,6 +144,11 @@ final class Optima_Results {
 			'fl'    => __( 'Prior results do not guarantee a similar outcome. Every case is different, and the result in any case depends on its own facts and the law that applies.', 'optima-results' ),
 			'other' => __( 'Prior results do not guarantee a similar outcome.', 'optima-results' ),
 		);
+		// New presets: no state wording is written here. The general line is
+		// marked for counsel so it is never mistaken for approved text.
+		foreach ( self::counsel_states() as $code ) {
+			$text[ $code ] = self::VERIFY . ' ' . $text['other'];
+		}
 		$out = $text[ $state ] ?? $text['other'];
 		/** Filter the starting disclaimer for a state. */
 		return (string) apply_filters( 'optima_results_default_disclaimer', $out, $state );
@@ -133,7 +162,124 @@ final class Optima_Results {
 			'disclaimer' => (string) ( $s['disclaimer'] ?? '' ),
 			// The firm's publishing line in dollars (Optima rule: default $1 million; 0 means every result may show).
 			'threshold'  => isset( $s['threshold'] ) ? max( 0, (int) $s['threshold'] ) : 1000000,
+			// Who approved the disclaimer wording, when, and for which state and text (a hash).
+			'approver'     => (string) ( $s['approver'] ?? '' ),
+			'approved_on'  => (string) ( $s['approved_on'] ?? '' ),
+			'approved_for' => (string) ( $s['approved_for'] ?? '' ),
 		);
+	}
+
+	/** The wording the site prints for this state and text, before any filter. */
+	public static function wording( string $state, string $saved ): string {
+		$saved = trim( $saved );
+		return '' !== $saved ? $saved : self::default_disclaimer( $state );
+	}
+
+	/** The fingerprint of an approval: the state and the exact wording. */
+	public static function approval_hash( string $state, string $wording ): string {
+		return md5( $state . '|' . $wording );
+	}
+
+	/**
+	 * Has a named approver saved the wording the site prints now? A change of
+	 * state or wording after the approval, or wording that still carries the
+	 * counsel marker, reads as not approved.
+	 */
+	public static function disclaimer_approved(): bool {
+		$s       = self::settings();
+		$wording = self::wording( $s['state'], $s['disclaimer'] );
+		if ( '' === trim( $s['approver'] ) || false !== strpos( $wording, self::VERIFY ) ) {
+			return false;
+		}
+		return hash_equals( self::approval_hash( $s['state'], $wording ), $s['approved_for'] );
+	}
+
+	/** Does the dashboard flag the disclaimer as unapproved? Only for the counsel presets, or wording still marked. */
+	public static function disclaimer_flagged(): bool {
+		$s = self::settings();
+		if ( false !== strpos( self::wording( $s['state'], $s['disclaimer'] ), self::VERIFY ) ) {
+			return true;
+		}
+		return in_array( $s['state'], self::counsel_states(), true ) && ! self::disclaimer_approved();
+	}
+
+	/**
+	 * Does this site need the client's consent date before a result can be
+	 * approved or shown? Florida preset: yes.
+	 */
+	public static function consent_required(): bool {
+		/** Filter whether results need a client consent date before they can be approved or shown. */
+		return (bool) apply_filters( 'optima_results_consent_required', 'fl' === self::settings()['state'] );
+	}
+
+	/** True when this site needs a consent date and the result has none. */
+	public static function consent_missing( array $r ): bool {
+		return self::consent_required() && ! self::valid_date( (string) ( $r['consent_on'] ?? '' ) );
+	}
+
+	/** The attorney's role on a result. */
+	public static function roles(): array {
+		return array(
+			'lead'  => __( 'Lead trial counsel', 'optima-results' ),
+			'co'    => __( 'Co-counsel', 'optima-results' ),
+			'other' => __( 'Other role', 'optima-results' ),
+		);
+	}
+
+	/** Whether the amount is gross or net. */
+	public static function gross_net_options(): array {
+		return array(
+			'gross' => __( 'Gross amount', 'optima-results' ),
+			'net'   => __( 'Net amount', 'optima-results' ),
+		);
+	}
+
+	/** What happened after the result. */
+	public static function post_verdict_options(): array {
+		return array(
+			'reduced'       => __( 'Reduced', 'optima-results' ),
+			'remitted'      => __( 'Remitted', 'optima-results' ),
+			'appealed'      => __( 'Appealed', 'optima-results' ),
+			'not_collected' => __( 'Not collected', 'optima-results' ),
+			'default'       => __( 'Default or uncontested', 'optima-results' ),
+		);
+	}
+
+	/** The role line on a card ("Role: Co-counsel"), or ''. */
+	public static function role_text( array $r ): string {
+		$label = self::roles()[ (string) ( $r['role'] ?? '' ) ] ?? '';
+		/* translators: %s: the attorney's role, for example Co-counsel */
+		return '' !== $label ? sprintf( __( 'Role: %s', 'optima-results' ), $label ) : '';
+	}
+
+	/** The gross or net label on a card, or ''. */
+	public static function gross_net_text( array $r ): string {
+		return self::gross_net_options()[ (string) ( $r['gross_net'] ?? '' ) ] ?? '';
+	}
+
+	/** The post-verdict line on a card ("After the result: Reduced, Appealed. Note."), or ''. */
+	public static function post_verdict_text( array $r ): string {
+		$labels = array();
+		foreach ( (array) ( $r['post_verdict'] ?? array() ) as $key ) {
+			if ( isset( self::post_verdict_options()[ $key ] ) ) {
+				$labels[] = self::post_verdict_options()[ $key ];
+			}
+		}
+		$note = trim( (string) ( $r['post_verdict_note'] ?? '' ) );
+		if ( ! $labels && '' === $note ) {
+			return '';
+		}
+		$out = $labels ? implode( ', ', $labels ) . '.' : '';
+		$out = trim( $out . ' ' . $note );
+		/* translators: %s: what happened after the result */
+		return sprintf( __( 'After the result: %s', 'optima-results' ), $out );
+	}
+
+	/** The venue as printed ("Orleans Parish, Louisiana"), or ''. */
+	public static function venue_text( array $r ): string {
+		$parts = array_filter( array( trim( (string) ( $r['venue_county'] ?? '' ) ), trim( (string) ( $r['venue_state'] ?? '' ) ) ), 'strlen' );
+		/* translators: %s: county and state */
+		return $parts ? sprintf( __( 'Venue: %s', 'optima-results' ), implode( ', ', $parts ) ) : '';
 	}
 
 	/** A result's amount in whole dollars, read from what was typed ("$1.25 million", "1250000"); 0 when none. */
@@ -205,6 +351,10 @@ final class Optima_Results {
 		if ( ! self::is_approved( (bool) ( $r['approved'] ?? false ), (string) ( $r['approver'] ?? '' ) ) ) {
 			return false;
 		}
+		// Florida preset: no result shows without the client's consent date.
+		if ( self::consent_missing( $r ) ) {
+			return false;
+		}
 		$ok = 'below' !== self::threshold_status( (string) ( $r['amount'] ?? '' ) );
 		/** Filter whether an approved result may appear on the site. */
 		return (bool) apply_filters( 'optima_results_may_publish', $ok, $r );
@@ -251,6 +401,7 @@ final class Optima_Results {
 		// The attorney is a People profile; a profile that is gone (offboarded) names nobody.
 		$attorney_id = (int) $m['attorney'];
 		$attorney    = $attorney_id && 'publish' === get_post_status( $attorney_id ) ? html_entity_decode( wp_strip_all_tags( get_the_title( $attorney_id ) ), ENT_QUOTES, 'UTF-8' ) : '';
+		$post_verdict = array_values( array_intersect( array_map( 'trim', explode( ',', $m['post_verdict'] ) ), array_keys( self::post_verdict_options() ) ) );
 		return array(
 			'id'          => $post_id,
 			'headline'    => get_the_title( $post_id ),
@@ -267,6 +418,13 @@ final class Optima_Results {
 			'approved'    => '1' === $m['approved'],
 			'approver'    => $m['approver'],
 			'approved_on' => $m['approved_on'],
+			'role'        => isset( self::roles()[ $m['role'] ] ) ? $m['role'] : '',
+			'gross_net'   => isset( self::gross_net_options()[ $m['gross_net'] ] ) ? $m['gross_net'] : '',
+			'venue_county' => $m['venue_county'],
+			'venue_state' => $m['venue_state'],
+			'post_verdict' => $post_verdict,
+			'post_verdict_note' => $m['post_verdict_note'],
+			'consent_on'  => $m['consent_on'],
 		);
 	}
 

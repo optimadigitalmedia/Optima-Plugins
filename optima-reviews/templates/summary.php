@@ -43,6 +43,15 @@ if ( ! $totals ) {
 					<?php echo esc_html( $count ); ?>
 				<?php endif; ?>
 			</span>
+			<?php $as_of = 'google' === $total['source'] ? Optima_Reviews_Render::as_of( 'google' ) : ''; ?>
+			<?php if ( '' !== $as_of ) : ?>
+				<span class="optima-reviews-summary__asof">
+					<?php
+					/* translators: %s: date the Google rating and count were last read */
+					echo esc_html( sprintf( __( 'as of %s', 'optima-reviews' ), $as_of ) );
+					?>
+				</span>
+			<?php endif; ?>
 			<?php if ( $total['write_url'] ) : ?>
 				<a class="optima-reviews-summary__write" href="<?php echo esc_url( $total['write_url'] ); ?>" target="_blank" rel="noopener">
 					<?php

@@ -136,15 +136,46 @@ final class Optima_Reviews_Render {
 			return '';
 		}
 
+		$law = Optima_Reviews_Law::is_law();
+		// North Carolina: the disclaimer before and after any quote about an outcome.
+		foreach ( $reviews as $i => $review ) {
+			$reviews[ $i ]['outcome_disclaimer'] = Optima_Reviews_Law::outcome_disclaimer( (string) $review['text'] );
+		}
+
+		// A hand-picked or capped list says so, with the way to every review (16 CFR 465.7).
+		$curated = ! empty( $query['featured'] ) || '' !== (string) $query['topic'] || (int) $query['count'] > 0;
+		$google  = Optima_Reviews_Settings::profile( 'google' );
+
 		return self::style_tag() . self::template(
 			'section',
 			array(
-				'reviews'    => $reviews,
-				'totals'     => $totals,
-				'layout'     => $opts['layout'],
-				'disclaimer' => Optima_Reviews_Settings::get()['disclaimer'],
+				'reviews'          => $reviews,
+				'totals'           => $totals,
+				'layout'           => $opts['layout'],
+				'disclaimer'       => $law ? Optima_Reviews_Law::disclaimer() : (string) Optima_Reviews_Settings::get()['disclaimer'],
+				'disclaimer_first' => $law, // Law sites: required, and printed before the list.
+				'curated'          => $curated && (bool) $reviews,
+				/** Filter the label printed above a hand-picked or capped list of reviews. */
+				'curated_label'    => (string) apply_filters( 'optima_reviews_curated_label', __( 'Selected client reviews', 'optima-reviews' ) ),
+				'all_url'          => $google['url'],
 			)
 		);
+	}
+
+	/**
+	 * The "as of" date for a platform's totals: Google's last sync when it
+	 * syncs, else the day the totals were last saved. '' when unknown.
+	 */
+	public static function as_of( string $source ): string {
+		$ts = 0;
+		if ( 'google' === $source && Optima_Reviews_Google::is_ready() ) {
+			$g  = Optima_Reviews_Google::get();
+			$ts = '' === (string) ( $g['last_error'] ?? '' ) ? (int) ( $g['last_sync'] ?? 0 ) : 0;
+		}
+		if ( ! $ts ) {
+			$ts = (int) get_option( Optima_Reviews_Settings::STAMP, 0 );
+		}
+		return $ts > 0 ? wp_date( (string) get_option( 'date_format' ), $ts ) : '';
 	}
 
 	/**

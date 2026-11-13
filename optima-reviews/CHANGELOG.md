@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.5.12 (2026-11-13)
+
+- Law-site rules for reviews. A site counts as a law firm's the way the other Optima plugins tell: the business type on Your business, Details, Optima Team's law mode, or a law rule set (the new one here, or the one saved under Case results).
+- On a law site every review shown needs a person's approval. The "New 5-star reviews" auto-publish box is hidden and ignored (its saved value is kept for the day the site stops being a law site), and a review the old option already put on the site stays hidden until someone opens it and presses Update. The Reviews screen counts any such reviews.
+- On a law site the star filter is always off (min_rating is read as 0 everywhere, the block's setting included), so no review is hidden for its rating.
+- Any hand-picked or capped list (featured, a topic, or a count limit) prints "Selected client reviews" with a "Read all reviews on Google" link to the Google profile the plugin already stores. The Google rating in the summary shows "as of" the last good sync, or the day the totals were last saved when Google is not connected.
+- The testimonial disclaimer is required on a law site and prints before the reviews, at body size in the text's own color. With no wording saved, the site prints a placeholder marked [VERIFY: counsel]; the Display section reads "Not approved" until counsel's wording is saved with a name in the new "Wording approved by" box. Sites that are not law firms keep the optional disclaimer under the reviews, as before.
+- New "Law firm rule set" under Display, with the same eight choices as Case results (North Carolina, Virginia, Florida, Louisiana, District of Columbia, Maryland, South Carolina, another state). Left on "Same as Case results" it follows the Case results setting.
+- North Carolina: the Review inbox flags any review with a "$" or a number near "settle", "verdict" or "award", and a flagged review cannot be approved (the inbox, Add all and the editor's Publish button all keep it a draft and say why). The disclaimer also prints before and after any review that talks about an outcome. Other law sites see the flag as a reminder only.
+- A theme that replaced the section or card template keeps its own markup; copy the plugin's new section.php and card.php to get the label, the link and the disclaimer placement.
+
 ## 0.5.5.11 (2026-11-12)
 
 - The reviews stylesheet now loads in the page head on Elementor pages, Elementor templates and synced patterns that use the shortcode or the block, so reviews no longer jump when the page loads.

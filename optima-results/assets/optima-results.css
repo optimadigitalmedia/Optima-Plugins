@@ -51,10 +51,21 @@
 .optima-results .optima-result__amount { font-size: 1.15em; font-weight: 600; font-variant-numeric: tabular-nums; }
 .optima-results .optima-result__description { line-height: 1.55; text-wrap: pretty; }
 .optima-results .optima-result__meta { display: flex; flex-wrap: wrap; gap: .25rem 1rem; font-size: .875em; line-height: 1.4; }
+/* The disclaimer: body size and the text's own full-contrast color (D018). */
 .optima-results .optima-result__disclaimer {
 	margin-top: auto; padding-top: .75rem; border-top: 1px solid var(--sr-border);
-	font-size: .8125em; line-height: 1.5; text-wrap: pretty;
+	font-size: 1em; line-height: 1.5; color: var(--optima-results-disclaimer-ink, inherit); opacity: 1; text-wrap: pretty;
 }
+/* A single result prints its disclaimer before the amount, so it sits under the headline. */
+.optima-results .optima-result__headline + .optima-result__disclaimer { margin-top: 0; padding-top: 0; padding-bottom: .75rem; border-top: 0; border-bottom: 1px solid var(--sr-border); }
+/* The grid's own line, before the first amount. */
+.optima-results__disclaimer {
+	margin: 0 0 var(--sr-gap); font-size: 1em; line-height: 1.5;
+	color: var(--optima-results-disclaimer-ink, inherit); opacity: 1; text-wrap: pretty;
+}
+/* Gross or net, the attorney's role and anything after the result, beside the amount. */
+.optima-results .optima-result__facts { display: flex; flex-wrap: wrap; gap: .25rem 1rem; line-height: 1.45; }
+.optima-results .optima-result__facts[hidden] { display: none; }
 
 .optima-results .screen-reader-text {
 	position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
@@ -69,3 +80,4 @@
 .optima-result__attorney { display: inline; }
 .optima-result__attorney a { color: inherit; text-decoration: underline; text-underline-offset: .15em; }
 .optima-result__attorney[hidden] { display: none; }
+.optima-result__venue[hidden] { display: none; }

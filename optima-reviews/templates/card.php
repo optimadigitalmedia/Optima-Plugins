@@ -15,6 +15,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 $optima_source = $review['source'];
 $optima_date   = Optima_Reviews_Render::date( $review['date'] );
+// North Carolina: the disclaimer before and after a quote about an outcome ('' otherwise).
+$optima_outcome = (string) ( $review['outcome_disclaimer'] ?? '' );
 ?>
 <article class="optima-review optima-review--<?php echo esc_attr( $optima_source ); ?>">
 	<div class="optima-review__top">
@@ -24,9 +26,17 @@ $optima_date   = Optima_Reviews_Render::date( $review['date'] );
 		<?php endif; ?>
 	</div>
 
+	<?php if ( '' !== $optima_outcome ) : ?>
+		<p class="optima-review__disclaimer"><?php echo esc_html( $optima_outcome ); ?></p>
+	<?php endif; ?>
+
 	<blockquote class="optima-review__text"<?php echo $review['url'] ? ' cite="' . esc_url( $review['url'] ) . '"' : ''; ?>>
 		<?php echo wpautop( esc_html( $review['text'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput -- text escaped before wpautop. ?>
 	</blockquote>
+
+	<?php if ( '' !== $optima_outcome ) : ?>
+		<p class="optima-review__disclaimer"><?php echo esc_html( $optima_outcome ); ?></p>
+	<?php endif; ?>
 
 	<footer class="optima-review__footer">
 		<?php if ( $review['photo'] ) : ?>

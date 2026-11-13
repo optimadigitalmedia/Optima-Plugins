@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.10.3 (2026-11-13)
+
+- New facts on every result, on the existing edit screen and saved with the result: the attorney's role (lead trial counsel, co-counsel or another role), whether the amount is gross or net, the venue (county or parish, and state), what happened after the result (reduced, remitted, appealed, not collected, default or uncontested, plus a short note) and the client's consent date. The card prints the gross or net label, the role and anything that happened after the result beside the amount, and the venue with the date under it. The consent date stays on file and never prints. Results saved before this release show exactly as before until these fields are filled in.
+- Florida rule set: a result cannot be approved or shown on the site without the client's consent date. Ticking "Approved by the firm" without the date saves it for review with a notice that says why, and the results lists read "Needs the client's consent date (Florida)". An approved Florida result saved earlier without a consent date stops showing until the date is added. Other states are unchanged.
+- Four more state rule sets: Louisiana, District of Columbia, Maryland and South Carolina. Their starting wording is a placeholder marked [VERIFY: counsel] (no state wording is written for them here), and the Disclaimer card reads "Not approved" until counsel's wording is saved with an approver's name.
+- A new "Wording approved by" box under the disclaimer records who approved the wording and when, for that state and that exact text. Changing the state or the wording needs a new save with the name. Wording still marked [VERIFY: counsel] never counts as approved.
+- The disclaimer now prints before the first amount: once above the results grid, and inside a single result ([optima_result id="12"]) right under the headline. Every card in the grid still carries its own line, so each result, Louisiana included, has the disclaimer with it. The disclaimer prints at body size in the text's own full-contrast color, from the design tokens.
+
 ## 0.1.10.2 (2026-11-12)
 
 - The firm's publishing threshold now holds on the site, not only in the dashboard: an approved result under the line no longer shows in the results grid or as a single result. A threshold of 0 or an empty box still means every approved result may show.

@@ -47,6 +47,9 @@ final class Optima_Results_Editor {
 	/** Set when this request held a result back, so the redirect can say why. */
 	private static bool $held = false;
 
+	/** Why it was held: 'approval' or 'consent'. */
+	private static string $held_for = '';
+
 	public static function title_placeholder( string $text, WP_Post $post ): string {
 		return Optima_Results::POST_TYPE === $post->post_type ? __( 'Headline, for example "Settlement for a client hurt in a rear-end crash"', 'optima-results' ) : $text;
 	}
@@ -135,6 +138,50 @@ final class Optima_Results_Editor {
 					<span class="sr-help"><?php esc_html_e( 'From People. The name shows on the result and the result counts on their profile. Nobody here? Add the person under Optima, People first.', 'optima-results' ); ?></span>
 				</p>
 			<?php endif; ?>
+			<div class="sr-row">
+				<p class="sr-field">
+					<label for="sr-role"><?php esc_html_e( 'Attorney\'s role', 'optima-results' ); ?></label>
+					<select id="sr-role" name="optima_result[role]">
+						<option value=""><?php esc_html_e( 'Not given', 'optima-results' ); ?></option>
+						<?php foreach ( Optima_Results::roles() as $key => $label ) : ?>
+							<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $r['role'], $key ); ?>><?php echo esc_html( $label ); ?></option>
+						<?php endforeach; ?>
+					</select>
+					<span class="sr-help"><?php esc_html_e( 'Printed on the result beside the amount.', 'optima-results' ); ?></span>
+				</p>
+				<p class="sr-field">
+					<label for="sr-gross-net"><?php esc_html_e( 'Gross or net', 'optima-results' ); ?></label>
+					<select id="sr-gross-net" name="optima_result[gross_net]">
+						<option value=""><?php esc_html_e( 'Not given', 'optima-results' ); ?></option>
+						<?php foreach ( Optima_Results::gross_net_options() as $key => $label ) : ?>
+							<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $r['gross_net'], $key ); ?>><?php echo esc_html( $label ); ?></option>
+						<?php endforeach; ?>
+					</select>
+					<span class="sr-help"><?php esc_html_e( 'Whether the amount is before or after fees and costs.', 'optima-results' ); ?></span>
+				</p>
+			</div>
+			<div class="sr-row">
+				<p class="sr-field">
+					<label for="sr-venue-county"><?php esc_html_e( 'Venue: county or parish', 'optima-results' ); ?></label>
+					<input id="sr-venue-county" type="text" name="optima_result[venue_county]" value="<?php echo esc_attr( $r['venue_county'] ); ?>" autocomplete="off">
+				</p>
+				<p class="sr-field">
+					<label for="sr-venue-state"><?php esc_html_e( 'Venue: state', 'optima-results' ); ?></label>
+					<input id="sr-venue-state" type="text" name="optima_result[venue_state]" value="<?php echo esc_attr( $r['venue_state'] ); ?>" autocomplete="off">
+					<span class="sr-help"><?php esc_html_e( 'Shown with the year under the result.', 'optima-results' ); ?></span>
+				</p>
+			</div>
+			<fieldset class="sr-field sr-post-verdict">
+				<legend><?php esc_html_e( 'After the result', 'optima-results' ); ?></legend>
+				<span class="sr-checks">
+					<?php foreach ( Optima_Results::post_verdict_options() as $key => $label ) : ?>
+						<label><input type="checkbox" name="optima_result[post_verdict][]" value="<?php echo esc_attr( $key ); ?>" data-sr-label="<?php echo esc_attr( $label ); ?>" <?php checked( in_array( $key, $r['post_verdict'], true ) ); ?>> <?php echo esc_html( $label ); ?></label>
+					<?php endforeach; ?>
+				</span>
+				<label for="sr-post-verdict-note" class="screen-reader-text"><?php esc_html_e( 'Note on what happened after the result', 'optima-results' ); ?></label>
+				<input id="sr-post-verdict-note" type="text" name="optima_result[post_verdict_note]" value="<?php echo esc_attr( $r['post_verdict_note'] ); ?>" placeholder="<?php esc_attr_e( 'Note (optional)', 'optima-results' ); ?>" autocomplete="off">
+				<span class="sr-help"><?php esc_html_e( 'Anything that changed the figure after it was reached. Printed on the result beside the amount.', 'optima-results' ); ?></span>
+			</fieldset>
 			<p class="sr-field">
 				<label for="sr-description"><?php esc_html_e( 'Short description', 'optima-results' ); ?></label>
 				<textarea id="sr-description" name="optima_result[description]" rows="4" maxlength="600"><?php echo esc_textarea( $r['description'] ); ?></textarea>
@@ -164,6 +211,22 @@ final class Optima_Results_Editor {
 				<label for="sr-approved-on"><?php esc_html_e( 'Approval date', 'optima-results' ); ?></label>
 				<input id="sr-approved-on" type="date" name="optima_result[approved_on]" value="<?php echo esc_attr( $r['approved_on'] ); ?>">
 			</p>
+			<p class="sr-field">
+				<label for="sr-consent-on"><?php esc_html_e( 'Client consent date', 'optima-results' ); ?></label>
+				<input id="sr-consent-on" type="date" name="optima_result[consent_on]" value="<?php echo esc_attr( $r['consent_on'] ); ?>">
+				<span class="sr-help">
+					<?php
+					if ( Optima_Results::consent_required() ) {
+						esc_html_e( 'Required on this site (Florida): the result cannot be approved or shown until the client\'s consent date is filled in.', 'optima-results' );
+					} else {
+						esc_html_e( 'When the client agreed to the result being published. Kept on file, never shown on the site.', 'optima-results' );
+					}
+					?>
+				</span>
+			</p>
+			<?php if ( Optima_Results::consent_missing( $r ) ) : ?>
+				<p class="sr-blocked" role="status"><?php esc_html_e( 'Not approved: Florida needs the client\'s consent date before this result can be approved or shown on the site.', 'optima-results' ); ?></p>
+			<?php endif; ?>
 			<p class="sr-help"><?php esc_html_e( 'A result goes live once the firm has approved the exact wording. Until then it saves for review.', 'optima-results' ); ?></p>
 		</div>
 		<?php
@@ -202,6 +265,10 @@ final class Optima_Results_Editor {
 		$type = sanitize_key( (string) ( $in['type'] ?? '' ) );
 		$date = sanitize_text_field( (string) ( $in['date'] ?? '' ) );
 		$on   = sanitize_text_field( (string) ( $in['approved_on'] ?? '' ) );
+		$cons = sanitize_text_field( (string) ( $in['consent_on'] ?? '' ) );
+		$role = sanitize_key( (string) ( $in['role'] ?? '' ) );
+		$gn   = sanitize_key( (string) ( $in['gross_net'] ?? '' ) );
+		$pv   = array_values( array_intersect( array_map( 'sanitize_key', (array) ( $in['post_verdict'] ?? array() ) ), array_keys( Optima_Results::post_verdict_options() ) ) );
 		return array(
 			'area'        => absint( $in['area'] ?? 0 ),
 			'new_area'    => sanitize_text_field( (string) ( $in['new_area'] ?? '' ) ),
@@ -213,7 +280,35 @@ final class Optima_Results_Editor {
 			'approver'    => sanitize_text_field( (string) ( $in['approver'] ?? '' ) ),
 			'approved_on' => Optima_Results::valid_date( $on ) ? $on : '',
 			'attorney'    => absint( $in['attorney'] ?? 0 ),
+			'role'        => isset( Optima_Results::roles()[ $role ] ) ? $role : '',
+			'gross_net'   => isset( Optima_Results::gross_net_options()[ $gn ] ) ? $gn : '',
+			'venue_county' => sanitize_text_field( (string) ( $in['venue_county'] ?? '' ) ),
+			'venue_state' => sanitize_text_field( (string) ( $in['venue_state'] ?? '' ) ),
+			'post_verdict' => $pv,
+			'post_verdict_note' => sanitize_text_field( (string) ( $in['post_verdict_note'] ?? '' ) ),
+			'consent_on'  => Optima_Results::valid_date( $cons ) ? $cons : '',
 		);
+	}
+
+	/**
+	 * Why a result may not go live, from posted or saved values: 'approval'
+	 * (no firm approval with a name), 'consent' (Florida preset, no client
+	 * consent date) or '' when it may.
+	 */
+	private static function hold_reason( bool $approved, string $approver, string $consent_on ): string {
+		if ( ! Optima_Results::is_approved( $approved, $approver ) ) {
+			return 'approval';
+		}
+		if ( Optima_Results::consent_missing( array( 'consent_on' => $consent_on ) ) ) {
+			return 'consent';
+		}
+		return '';
+	}
+
+	/** The hold reason from what is saved on a result. */
+	private static function saved_hold_reason( int $id ): string {
+		$m = Optima_Results::META;
+		return self::hold_reason( '1' === (string) get_post_meta( $id, $m['approved'], true ), (string) get_post_meta( $id, $m['approver'], true ), (string) get_post_meta( $id, $m['consent_on'], true ) );
 	}
 
 	/**
@@ -227,13 +322,14 @@ final class Optima_Results_Editor {
 		$id     = (int) ( $postarr['ID'] ?? 0 );
 		$posted = self::posted( $id );
 		if ( null !== $posted ) {
-			$ok = Optima_Results::is_approved( $posted['approved'], $posted['approver'] );
+			$why = self::hold_reason( $posted['approved'], $posted['approver'], $posted['consent_on'] );
 		} else {
-			$ok = $id && Optima_Results::is_approved( '1' === (string) get_post_meta( $id, Optima_Results::META['approved'], true ), (string) get_post_meta( $id, Optima_Results::META['approver'], true ) );
+			$why = $id ? self::saved_hold_reason( $id ) : 'approval';
 		}
-		if ( ! $ok ) {
+		if ( '' !== $why ) {
 			$data['post_status'] = 'pending';
 			self::$held          = true;
+			self::$held_for      = $why;
 		}
 		return $data;
 	}
@@ -255,6 +351,17 @@ final class Optima_Results_Editor {
 		// Only a real People profile may be named.
 		$attorney = $p['attorney'] && class_exists( 'Optima_Team' ) && Optima_Team::POST_TYPE === get_post_type( $p['attorney'] ) ? $p['attorney'] : 0;
 		update_post_meta( $post_id, $m['attorney'], (string) $attorney );
+		update_post_meta( $post_id, $m['role'], $p['role'] );
+		update_post_meta( $post_id, $m['gross_net'], $p['gross_net'] );
+		update_post_meta( $post_id, $m['venue_county'], $p['venue_county'] );
+		update_post_meta( $post_id, $m['venue_state'], $p['venue_state'] );
+		update_post_meta( $post_id, $m['post_verdict'], implode( ',', $p['post_verdict'] ) );
+		update_post_meta( $post_id, $m['post_verdict_note'], $p['post_verdict_note'] );
+		update_post_meta( $post_id, $m['consent_on'], $p['consent_on'] );
+		// Florida preset: the approval does not take without the client's consent date.
+		if ( $p['approved'] && Optima_Results::consent_missing( $p ) ) {
+			$p['approved'] = false;
+		}
 		if ( $p['approved'] ) {
 			update_post_meta( $post_id, $m['approved'], '1' );
 			// Fill in today when the approval is ticked without a date.
@@ -288,8 +395,7 @@ final class Optima_Results_Editor {
 		if ( null !== self::posted( (int) $post->ID ) ) {
 			return; // The edit screen; gate() already decided with the posted values.
 		}
-		$ok = Optima_Results::is_approved( '1' === (string) get_post_meta( $post->ID, Optima_Results::META['approved'], true ), (string) get_post_meta( $post->ID, Optima_Results::META['approver'], true ) );
-		if ( ! $ok ) {
+		if ( '' !== self::saved_hold_reason( (int) $post->ID ) ) {
 			remove_action( 'transition_post_status', array( __CLASS__, 'guard_transition' ), 10 );
 			wp_update_post(
 				array(
@@ -306,7 +412,7 @@ final class Optima_Results_Editor {
 			return $location;
 		}
 		if ( self::$held ) {
-			$location = add_query_arg( 'optima_result_held', '1', $location );
+			$location = add_query_arg( 'optima_result_held', 'consent' === self::$held_for ? 'consent' : '1', $location );
 		}
 		$r     = Optima_Results::get( $post_id );
 		$flags = Optima_Results::find_flagged( $r['headline'] . ' ' . $r['description'] );
@@ -322,7 +428,9 @@ final class Optima_Results_Editor {
 			return;
 		}
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- display only.
-		if ( ! empty( $_GET['optima_result_held'] ) ) {
+		if ( isset( $_GET['optima_result_held'] ) && 'consent' === $_GET['optima_result_held'] ) {
+			echo '<div class="notice notice-warning"><p><strong>' . esc_html__( 'Saved for review. This result is not on the site yet.', 'optima-results' ) . '</strong> ' . esc_html__( 'This site uses the Florida rule set: a result cannot be approved or shown until the client\'s consent date is filled in. Add the date, tick "Approved by the firm" again, then publish.', 'optima-results' ) . '</p></div>';
+		} elseif ( ! empty( $_GET['optima_result_held'] ) ) {
 			echo '<div class="notice notice-warning"><p><strong>' . esc_html__( 'Saved for review. This result is not on the site yet.', 'optima-results' ) . '</strong> ' . esc_html__( 'It can go live once the firm approves it: tick "Approved by the firm", add the approver\'s name, then publish.', 'optima-results' ) . '</p></div>';
 		}
 		if ( ! empty( $_GET['optima_result_words'] ) ) {
@@ -383,7 +491,9 @@ final class Optima_Results_Editor {
 		} elseif ( 'sr_attorney' === $col ) {
 			echo $r['attorney_id'] ? '<a href="' . esc_url( (string) get_edit_post_link( $r['attorney_id'] ) ) . '">' . esc_html( $r['attorney'] ) . '</a>' : '<span class="description">' . esc_html__( 'Not named', 'optima-results' ) . '</span>';
 		} elseif ( 'sr_approval' === $col ) {
-			if ( Optima_Results::is_approved( $r['approved'], $r['approver'] ) ) {
+			if ( Optima_Results::is_approved( $r['approved'], $r['approver'] ) && Optima_Results::consent_missing( $r ) ) {
+				echo '<strong>' . esc_html__( 'Needs the client\'s consent date (Florida)', 'optima-results' ) . '</strong>';
+			} elseif ( Optima_Results::is_approved( $r['approved'], $r['approver'] ) ) {
 				/* translators: 1: approver name, 2: date */
 				echo esc_html( sprintf( __( 'Approved by %1$s, %2$s', 'optima-results' ), $r['approver'], $r['approved_on'] ? date_i18n( get_option( 'date_format' ), strtotime( $r['approved_on'] . ' 12:00:00' ) ) : '' ) );
 			} else {
@@ -417,6 +527,14 @@ final class Optima_Results_Editor {
 				/* translators: %d: number of words */
 				'manyWords'  => __( '%d words may need a change before the firm approves this', 'optima-results' ),
 				'noHeadline' => __( 'Your headline shows here', 'optima-results' ),
+				'roles'      => Optima_Results::roles(),
+				'grossNet'   => Optima_Results::gross_net_options(),
+				/* translators: %s: the attorney's role */
+				'roleText'   => __( 'Role: %s', 'optima-results' ),
+				/* translators: %s: county and state */
+				'venueText'  => __( 'Venue: %s', 'optima-results' ),
+				/* translators: %s: what happened after the result */
+				'afterText'  => __( 'After the result: %s', 'optima-results' ),
 			)
 		);
 	}

@@ -249,25 +249,48 @@ final class Optima_Results_Render {
 		return array_slice( $out, 0, $limit );
 	}
 
-	/** The disclaimer as printed beside a result. */
+	/** The disclaimer as printed beside a result (every card, every state; Louisiana requires it on each result). */
 	public static function disclaimer_html(): string {
 		return '<p class="optima-result__disclaimer">' . esc_html( Optima_Results::disclaimer() ) . '</p>';
 	}
 
+	/** The disclaimer printed once above a grid, before the first amount, at body size. */
+	public static function lead_disclaimer_html(): string {
+		return '<p class="optima-results__disclaimer">' . esc_html( Optima_Results::disclaimer() ) . '</p>';
+	}
+
 	/**
 	 * One result card. $preview marks the copy shown on the edit screen, which
-	 * the editor script keeps in step with the fields.
+	 * the editor script keeps in step with the fields. $disclaimer_first prints
+	 * the card's disclaimer before its amount (a single result, where no grid
+	 * line sits above it); otherwise it closes the card.
 	 */
-	public static function card( array $r, bool $preview = false ): string {
-		$date  = Optima_Results::format_date( $r['date'] );
-		$attrs = $preview ? ' data-sr-preview' : ' data-area="' . esc_attr( $r['area_slug'] ) . '"';
+	public static function card( array $r, bool $preview = false, bool $disclaimer_first = false ): string {
+		$date  = Optima_Results::format_date( (string) ( $r['date'] ?? '' ) );
+		$attrs = $preview ? ' data-sr-preview' : ' data-area="' . esc_attr( (string) ( $r['area_slug'] ?? '' ) ) . '"';
 		$h     = '<article class="optima-result"' . $attrs . '>';
 		$h    .= '<p class="optima-result__type" data-sr="type">' . esc_html( $r['type_label'] ) . '</p>';
 		$h    .= '<h3 class="optima-result__headline" data-sr="headline">' . esc_html( '' !== $r['headline'] ? $r['headline'] : ( $preview ? __( 'Your headline shows here', 'optima-results' ) : '' ) ) . '</h3>';
+		if ( $disclaimer_first ) {
+			$h .= self::disclaimer_html();
+		}
 		$h    .= '<p class="optima-result__amount" data-sr="amount"' . ( '' === $r['amount'] ? ' hidden' : '' ) . '>' . esc_html( $r['amount'] ) . '</p>';
+		// The facts beside the amount: gross or net, the attorney's role, anything after the result.
+		$facts = array(
+			'basis' => Optima_Results::gross_net_text( $r ),
+			'role'  => Optima_Results::role_text( $r ),
+			'after' => Optima_Results::post_verdict_text( $r ),
+		);
+		$h    .= '<p class="optima-result__facts"' . ( array_filter( $facts, 'strlen' ) ? '' : ' hidden' ) . '>';
+		foreach ( $facts as $key => $text ) {
+			$h .= '<span class="optima-result__' . esc_attr( $key ) . '" data-sr="' . esc_attr( $key ) . '"' . ( '' === $text ? ' hidden' : '' ) . '>' . esc_html( $text ) . '</span>';
+		}
+		$h    .= '</p>';
 		$h    .= '<p class="optima-result__description" data-sr="description"' . ( '' === $r['description'] ? ' hidden' : '' ) . '>' . esc_html( $r['description'] ) . '</p>';
 		$h    .= '<p class="optima-result__meta"><span class="optima-result__area" data-sr="area"' . ( '' === $r['area'] ? ' hidden' : '' ) . '>' . esc_html( $r['area'] ) . '</span>';
 		$h    .= '<span class="optima-result__date" data-sr="date"' . ( '' === $date ? ' hidden' : '' ) . '>' . esc_html( $date ) . '</span>';
+		$venue = Optima_Results::venue_text( $r );
+		$h    .= '<span class="optima-result__venue" data-sr="venue"' . ( '' === $venue ? ' hidden' : '' ) . '>' . esc_html( $venue ) . '</span>';
 		// The attorney, from People: a link to the profile page while it is published.
 		$attorney = (string) ( $r['attorney'] ?? '' );
 		$link     = ! empty( $r['attorney_id'] ) ? get_permalink( (int) $r['attorney_id'] ) : '';
@@ -275,7 +298,9 @@ final class Optima_Results_Render {
 			/* translators: %s: attorney's name */
 			. ( '' !== $link ? '<a href="' . esc_url( $link ) . '">' : '' ) . esc_html( '' !== $attorney ? sprintf( __( 'Attorney: %s', 'optima-results' ), $attorney ) : '' ) . ( '' !== $link ? '</a>' : '' )
 			. '</span></p>';
-		$h    .= self::disclaimer_html();
+		if ( ! $disclaimer_first ) {
+			$h .= self::disclaimer_html();
+		}
 		$h    .= '</article>';
 		return $h;
 	}
@@ -307,6 +332,9 @@ final class Optima_Results_Render {
 			$h .= '<p class="optima-results__empty">' . esc_html__( 'Case results will appear here once the firm has approved them.', 'optima-results' ) . '</p>';
 			return $h . '</section>';
 		}
+
+		// The disclaimer before the first amount, at body size; every card keeps its own line too.
+		$h .= self::lead_disclaimer_html();
 
 		// Filter buttons for the practice areas that have results, in name order.
 		$areas = array();
@@ -354,6 +382,7 @@ final class Optima_Results_Render {
 		if ( ! Optima_Results::may_publish( $r ) ) {
 			return '';
 		}
-		return self::style_tag() . '<div class="optima-results optima-results--single">' . self::card( $r ) . '</div>';
+		// One result: its disclaimer prints before its amount, inside the card.
+		return self::style_tag() . '<div class="optima-results optima-results--single">' . self::card( $r, false, true ) . '</div>';
 	}
 }
