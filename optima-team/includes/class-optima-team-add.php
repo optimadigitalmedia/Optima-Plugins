@@ -104,7 +104,7 @@ final class Optima_Team_Add {
 	public static function clean( array $in ): array {
 		$step   = (int) ( $in['step'] ?? 1 );
 		$source = (string) ( $in['source'] ?? '' );
-		return array(
+		$state = array(
 			'step'     => isset( self::STEPS[ $step ] ) ? $step : 1,
 			'source'   => in_array( $source, array( 'setup', 'new' ), true ) ? $source : '',
 			'name'     => sanitize_text_field( (string) ( $in['name'] ?? '' ) ),
@@ -118,6 +118,17 @@ final class Optima_Team_Add {
 			'user'     => absint( $in['user'] ?? 0 ),
 			'order'    => (int) ( $in['order'] ?? 0 ),
 		);
+		// From the setup file only, and only when it carries them: practice areas and the theme's bio page.
+		if ( ! empty( $in['areas'] ) ) {
+			$state['areas'] = Optima_Team::clean_practices( (array) $in['areas'] );
+		}
+		if ( ! empty( $in['bio_url'] ) ) {
+			$state['bio_url'] = Optima_Team::site_path( (string) $in['bio_url'] );
+		}
+		if ( ! empty( $in['schema_id'] ) ) {
+			$state['schema_id'] = Optima_Team::site_path( (string) $in['schema_id'], true );
+		}
+		return $state;
 	}
 
 	/* ---------- who ---------- */
@@ -127,7 +138,7 @@ final class Optima_Team_Add {
 	 *
 	 * @param array    $people   The file's "team" section.
 	 * @param string[] $existing Names already on the site.
-	 * @return array<int, array{name:string, role:string, bio:string, email:string, branch:string, photo:string, order:int, has:string[]}>
+	 * @return array<int, array{name:string, role:string, bio:string, email:string, branch:string, photo:string, order:int, has:string[], areas:string[], bio_url:string, schema_id:string}>
 	 */
 	public static function candidates( array $people, array $existing ): array {
 		$have = array_map( 'strtolower', array_map( 'trim', $existing ) );
@@ -148,13 +159,19 @@ final class Optima_Team_Add {
 				'order'  => (int) ( $p['order'] ?? 0 ),
 			);
 			$has = array();
+			// Practice areas and the theme's bio page come along too (not listed as facts on the card).
+			$extra = array(
+				'areas'     => Optima_Team::clean_practices( $p['practice_areas'] ?? array() ),
+				'bio_url'   => Optima_Team::site_path( (string) ( $p['bio_url'] ?? '' ) ),
+				'schema_id' => Optima_Team::site_path( (string) ( $p['schema_id'] ?? '' ), true ),
+			);
 			foreach ( array( 'role', 'bio', 'email', 'photo', 'branch' ) as $key ) {
 				if ( '' !== $row[ $key ] ) {
 					$has[] = $key;
 				}
 			}
 			$row['has'] = $has;
-			$out[]      = $row;
+			$out[]      = $row + $extra;
 		}
 		return $out;
 	}
@@ -235,6 +252,7 @@ final class Optima_Team_Add {
 				$state['branch'] = '';
 				$state['photo']  = '';
 				$state['order']  = 0;
+				unset( $state['areas'], $state['bio_url'], $state['schema_id'] );
 				if ( '' === $state['name'] ) {
 					self::notice( 'error', __( 'A name is needed to add someone who is not in the setup file.', 'optima-team' ) );
 					wp_safe_redirect( self::url() );
@@ -254,9 +272,10 @@ final class Optima_Team_Add {
 					exit;
 				}
 				$state['source'] = 'setup';
-				foreach ( array( 'name', 'role', 'bio', 'email', 'branch', 'photo', 'order' ) as $key ) {
+				foreach ( array( 'name', 'role', 'bio', 'email', 'branch', 'photo', 'order', 'areas', 'bio_url', 'schema_id' ) as $key ) {
 					$state[ $key ] = $found[ $key ];
 				}
+				$state = self::clean( $state );
 				// The file's email names a WordPress user: that is the byline, unless step 2 changes it.
 				$user          = '' !== $state['email'] ? get_user_by( 'email', $state['email'] ) : false;
 				$state['user'] = $user ? (int) $user->ID : 0;
@@ -332,6 +351,9 @@ final class Optima_Team_Add {
 		$profile['user']            = $state['user'];
 		$profile['attorney']        = $state['attorney'];
 		$profile['military_branch'] = $state['branch'];
+		$profile['practice_areas']  = $state['areas'] ?? array();
+		$profile['bio_url']         = $state['bio_url'] ?? '';
+		$profile['schema_id']       = $state['schema_id'] ?? '';
 		// The sanitizer takes these two lists as one-per-line text.
 		$profile['memberships'] = '';
 		$profile['same_as']     = '';

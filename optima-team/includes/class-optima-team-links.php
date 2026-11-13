@@ -76,7 +76,7 @@ final class Optima_Team_Links {
 		$u = self::urls( $post->ID );
 		$rows = array(
 			array( __( 'Team page', 'optima-team' ), 'publish' === $post->post_status ? __( 'Listed', 'optima-team' ) : __( 'Not until published', 'optima-team' ), (string) get_post_type_archive_link( Optima_Team::POST_TYPE ) ),
-			array( __( 'Profile page', 'optima-team' ), 'publish' === $post->post_status ? (string) wp_parse_url( get_permalink( $post ), PHP_URL_PATH ) : __( 'Not until published', 'optima-team' ), 'publish' === $post->post_status ? get_permalink( $post ) : '' ),
+			array( __( 'Profile page', 'optima-team' ), 'publish' === $post->post_status ? (string) wp_parse_url( Optima_Team::public_url( $post->ID ), PHP_URL_PATH ) : __( 'Not until published', 'optima-team' ), 'publish' === $post->post_status ? Optima_Team::public_url( $post->ID ) : '' ),
 			/* translators: %d: posts */
 			array( __( 'Bylines', 'optima-team' ), sprintf( _n( '%d post', '%d posts', $c['posts'], 'optima-team' ), $c['posts'] ), $u['posts'] ),
 		);

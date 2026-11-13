@@ -29,8 +29,19 @@ final class Optima_Team_Schema {
 		return class_exists( 'Optima_Schema' ) && function_exists( 'optima_core_business' );
 	}
 
+	/**
+	 * The Person @id: the schema id the profile names (the id the theme's own
+	 * schema already gives this person), else the person's one public page
+	 * with #person. One id everywhere means one person to search engines.
+	 *
+	 * @param int $post_id Team member post ID.
+	 */
 	public static function person_id( int $post_id ): string {
-		return get_permalink( $post_id ) . '#person';
+		$id = (string) Optima_Team::profile( $post_id )['schema_id'];
+		if ( '' !== $id ) {
+			return Optima_Team::site_address( $id );
+		}
+		return Optima_Team::public_url( $post_id ) . '#person';
 	}
 
 	/**
@@ -40,7 +51,7 @@ final class Optima_Team_Schema {
 	 */
 	public static function person( int $post_id ): array {
 		$p    = Optima_Team::profile( $post_id );
-		$url  = get_permalink( $post_id );
+		$url  = Optima_Team::public_url( $post_id );
 		$node = array(
 			'@type' => 'Person',
 			'@id'   => self::person_id( $post_id ),
@@ -152,6 +163,21 @@ final class Optima_Team_Schema {
 			$node['knowsLanguage'] = $langs;
 		}
 
+		// Practice areas: each one the practice page when the site has it, else its name.
+		$knows = array();
+		foreach ( Optima_Team::practice_links( $p ) as $area ) {
+			$knows[] = '' !== $area['url']
+				? array(
+					'@type' => 'Thing',
+					'name'  => $area['name'],
+					'url'   => $area['url'],
+				)
+				: $area['name'];
+		}
+		if ( $knows ) {
+			$node['knowsAbout'] = $knows;
+		}
+
 		$same_as = $p['same_as'];
 		foreach ( $p['bar'] as $row ) {
 			if ( Optima_Team::is_law() && $p['attorney'] && '' !== $row['url'] ) {
@@ -171,6 +197,7 @@ final class Optima_Team_Schema {
 			'@id'          => get_permalink( $post_id ) . '#profilepage',
 			'url'          => get_permalink( $post_id ),
 			'name'         => html_entity_decode( wp_strip_all_tags( get_the_title( $post_id ) ), ENT_QUOTES, 'UTF-8' ),
+			'dateCreated'  => get_the_date( 'c', $post_id ),
 			'dateModified' => get_the_modified_date( 'c', $post_id ),
 			'mainEntity'   => array( '@id' => self::person_id( $post_id ) ),
 		);
@@ -186,20 +213,55 @@ final class Optima_Team_Schema {
 			return $graph;
 		}
 		if ( is_singular( Optima_Team::POST_TYPE ) ) {
-			$id                       = (int) get_queried_object_id();
-			$graph[ 'person_' . $id ]  = self::person( $id );
+			$id                        = (int) get_queried_object_id();
+			$graph                     = self::add_person( $graph, $id );
 			$graph['optima_team_page'] = self::profile_page( $id );
 			return $graph;
+		}
+		// The theme page a profile names as its bio: the person's full Person node lives here.
+		if ( is_singular() ) {
+			$here = self::path_of( (string) get_permalink( get_queried_object_id() ) );
+			foreach ( Optima_Team::bio_pages() as $member => $bio ) {
+				if ( self::path_of( Optima_Team::site_address( $bio ) ) === $here ) {
+					$graph = self::add_person( $graph, (int) $member );
+				}
+			}
 		}
 		// A blog post by a linked author: the author is the full Person.
 		if ( is_singular( 'post' ) && isset( $graph['article'] ) && Optima_Team::settings()['bylines'] ) {
 			$member = Optima_Team::member_for_user( (int) get_post_field( 'post_author', get_queried_object_id() ) );
 			if ( $member ) {
-				$graph['article']['author']    = array( '@id' => self::person_id( $member ) );
-				$graph[ 'person_' . $member ] = self::person( $member );
+				$graph['article']['author'] = array( '@id' => self::person_id( $member ) );
+				$graph                      = self::add_person( $graph, $member );
 			}
 		}
 		return $graph;
+	}
+
+	/**
+	 * Put a person's node in the graph once. When the graph already holds a node
+	 * with the same @id (the theme's setup file prints this person), the two
+	 * become one: the node already there keeps its values and gains what only
+	 * the profile has (practice areas, credentials).
+	 *
+	 * @param array $graph   Optima Core graph, keyed.
+	 * @param int   $post_id Team member post ID.
+	 */
+	public static function add_person( array $graph, int $post_id ): array {
+		$node = self::person( $post_id );
+		foreach ( $graph as $key => $existing ) {
+			if ( is_array( $existing ) && isset( $existing['@id'] ) && $existing['@id'] === $node['@id'] ) {
+				$graph[ $key ] = array_merge( $node, $existing );
+				return $graph;
+			}
+		}
+		$graph[ 'person_' . $post_id ] = $node;
+		return $graph;
+	}
+
+	/** An address's path without the trailing slash, for matching a page. */
+	private static function path_of( string $url ): string {
+		return untrailingslashit( (string) wp_parse_url( strtok( $url, '#' ), PHP_URL_PATH ) );
 	}
 
 	/** Without Optima Core: print the profile page's own graph. */

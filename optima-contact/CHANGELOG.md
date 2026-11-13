@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.11.12 (2026-11-13)
+
+- When the call bar shows, the page gets scroll-padding-bottom equal to the bar's height plus the phone's safe-area inset, so a field or link reached with the keyboard never sits under the bar (WCAG 2.2, 2.4.11 Focus Not Obscured). The body padding that keeps the last content clear of the bar stays as it was.
+- The Text button starts off on a new site (no Call buttons settings saved yet). Saved settings keep their value, and a site that saved its settings before the Text switch existed keeps Text as it was.
+- The texting setting now asks "Is this number able to receive texts and monitored?". The Text button shows only when that is answered yes.
+- Checked the event names against rule 50: the bar and the Let's talk sheet send call_click, text_click and booking_click. No change needed.
+
 ## 0.1.11.11 (2026-11-12)
 
 - The call bar and the Let's talk sheet now send call_click, text_click and booking_click (rule 50), with location call_bar or lets_talk_sheet.

@@ -58,7 +58,9 @@ final class Optima_Contact {
 			'enabled'   => 1,
 			'phone'     => $phone,
 			'text'      => '',
-			'text_off'  => 0,
+			// Text starts off on a new site: it turns on only once someone answers that the
+			// number takes texts and is monitored (Call buttons). Saved settings keep their value.
+			'text_off'  => 1,
 			'book_url'  => function_exists( 'optima_booking_url' ) ? (string) optima_booking_url() : '',
 			'label'     => "Let's talk",
 			'title'     => "Let's talk",
@@ -71,8 +73,11 @@ final class Optima_Contact {
 	}
 
 	public static function settings(): array {
-		$saved = get_option( self::OPTION, array() );
-		$s     = array_merge( self::defaults(), is_array( $saved ) ? $saved : array() );
+		$saved = get_option( self::OPTION, false );
+		if ( is_array( $saved ) && ! array_key_exists( 'text_off', $saved ) ) {
+			$saved['text_off'] = 0; // Saved before the Text switch existed: Text stays as it was.
+		}
+		$s = array_merge( self::defaults(), is_array( $saved ) ? $saved : array() );
 		// The phone is typed once, on Your business, Details (rule 45). The number this
 		// screen saved before release 3 stays in the option and is used only while
 		// Details has none.

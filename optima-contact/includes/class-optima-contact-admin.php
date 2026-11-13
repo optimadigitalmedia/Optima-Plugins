@@ -66,7 +66,8 @@ final class Optima_Contact_Admin {
 			// The phone is typed on Details now; the old saved number is kept as it was.
 			'phone'     => sanitize_text_field( (string) ( ( get_option( Optima_Contact::OPTION, array() )['phone'] ?? '' ) ) ),
 			'text'      => sanitize_text_field( (string) ( $in['text'] ?? '' ) ),
-			'text_off'  => ! empty( $in['text_off'] ) ? 1 : 0,
+			// The screen asks whether the number takes texts and is monitored; Text is on only on a yes.
+			'text_off'  => ! empty( $in['text_ask'] ) ? ( empty( $in['text_ok'] ) ? 1 : 0 ) : ( ! empty( $in['text_off'] ) ? 1 : 0 ),
 			'book_url'  => esc_url_raw( trim( (string) ( $in['book_url'] ?? '' ) ) ),
 			'label'     => sanitize_text_field( (string) ( $in['label'] ?? '' ) ),
 			'title'     => sanitize_text_field( (string) ( $in['title'] ?? '' ) ),
@@ -140,8 +141,12 @@ final class Optima_Contact_Admin {
 				<tr>
 					<th scope="row"><label for="odc-text"><?php esc_html_e( 'Texting number', 'optima-contact' ); ?></label></th>
 					<td><input id="odc-text" type="text" class="regular-text" name="<?php echo esc_attr( $o ); ?>[text]" value="<?php echo esc_attr( $s['text'] ); ?>" placeholder="<?php esc_attr_e( 'Same as the phone number', 'optima-contact' ); ?>">
-						<p><label><input type="checkbox" name="<?php echo esc_attr( $o ); ?>[text_off]" value="1" <?php checked( $s['text_off'] ); ?>> <?php esc_html_e( 'This number cannot receive texts, so leave Text off', 'optima-contact' ); ?></label></p>
-						<p class="description"><?php esc_html_e( 'Landlines usually cannot receive texts. Turn Text off unless someone reads texts at this number.', 'optima-contact' ); ?></p></td>
+						<fieldset style="margin-top:10px">
+							<legend><strong><?php esc_html_e( 'Is this number able to receive texts and monitored?', 'optima-contact' ); ?></strong></legend>
+							<input type="hidden" name="<?php echo esc_attr( $o ); ?>[text_ask]" value="1">
+							<label><input type="checkbox" name="<?php echo esc_attr( $o ); ?>[text_ok]" value="1" <?php checked( empty( $s['text_off'] ) ); ?>> <?php esc_html_e( 'Yes, it takes texts and someone reads them. Show the Text button.', 'optima-contact' ); ?></label>
+						</fieldset>
+						<p class="description"><?php esc_html_e( 'The Text button stays off until this is ticked. Landlines usually cannot receive texts, and a text nobody reads is a lost call.', 'optima-contact' ); ?></p></td>
 				</tr>
 				<tr>
 					<th scope="row"><label for="odc-book"><?php esc_html_e( 'Booking link', 'optima-contact' ); ?></label></th>

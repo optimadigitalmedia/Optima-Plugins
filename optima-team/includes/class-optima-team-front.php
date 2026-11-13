@@ -112,6 +112,12 @@ final class Optima_Team_Front {
 
 			<div class="optima-team-profile__facts">
 				<?php
+				$items = array();
+				foreach ( Optima_Team::practice_links( $p ) as $area ) {
+					$items[] = '' !== $area['url'] ? '<a href="' . esc_url( $area['url'] ) . '">' . esc_html( $area['name'] ) . '</a>' : esc_html( $area['name'] );
+				}
+				self::section( __( 'Practice areas', 'optima-team' ), $items );
+
 				if ( Optima_Team::is_law() && $p['attorney'] && $p['bar'] ) {
 					$items = array();
 					foreach ( $p['bar'] as $row ) {
