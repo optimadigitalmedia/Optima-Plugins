@@ -56,6 +56,7 @@ final class Optima_Schema {
 		if ( class_exists( 'Optima_SEO_Setup' ) ) {
 			$graph = Optima_SEO_Setup::finish_graph( $graph );
 		}
+		$graph = self::legal_service( $graph );
 		if ( empty( $graph ) ) {
 			return;
 		}
@@ -75,6 +76,24 @@ final class Optima_Schema {
 				. wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG )
 				. "</script>\n";
 		}
+	}
+
+	/**
+	 * schema.org deprecates `Attorney` for a firm: the business node prints it as
+	 * `LegalService`, wherever the type came from (a value saved on Details before
+	 * it left the list, or the theme's setup data). Nothing saved changes.
+	 *
+	 * @param array<string,array> $graph
+	 * @return array<string,array>
+	 */
+	public static function legal_service( array $graph ) {
+		if ( ! isset( $graph['business']['@type'] ) ) {
+			return $graph;
+		}
+		$types = array_map( array( 'Optima_Core_Business', 'schema_type' ), (array) $graph['business']['@type'] );
+		$types = array_values( array_unique( $types ) );
+		$graph['business']['@type'] = 1 === count( $types ) ? $types[0] : $types;
+		return $graph;
 	}
 
 	/**
@@ -100,18 +119,20 @@ final class Optima_Schema {
 		if ( ! $id ) {
 			return $graph;
 		}
-		$url  = get_permalink( $id );
-		$node = array(
+		$url     = get_permalink( $id );
+		$private = class_exists( 'Optima_SEO_Head' ) && Optima_SEO_Head::is_private( $id );
+		$node    = array(
 			'@type'         => 'WebPage',
 			'@id'           => $url . '#webpage',
 			'url'           => $url,
-			'name'          => wp_strip_all_tags( get_the_title( $id ) ),
+			// A password-protected page never names itself in public markup.
+			'name'          => $private ? Optima_SEO_Head::private_title() : wp_strip_all_tags( get_the_title( $id ) ),
 			'isPartOf'      => array( '@id' => home_url( '/#website' ) ),
 			'about'         => array( '@id' => home_url( '/#business' ) ),
 			'datePublished' => get_the_date( 'c', $id ),
 			'dateModified'  => get_the_modified_date( 'c', $id ),
 		);
-		if ( has_excerpt( $id ) ) {
+		if ( ! $private && has_excerpt( $id ) ) {
 			$node['description'] = wp_strip_all_tags( get_the_excerpt( $id ) );
 		}
 		$graph['webpage'] = $node;
@@ -164,7 +185,7 @@ final class Optima_Schema {
 	 */
 	private static function business_node() {
 		$b    = optima_core_business();
-		$type = ( '' !== $b['business_type'] ) ? $b['business_type'] : 'LocalBusiness';
+		$type = ( '' !== $b['business_type'] ) ? Optima_Core_Business::schema_type( $b['business_type'] ) : 'LocalBusiness';
 
 		$node = array(
 			'@type' => $type,
@@ -223,22 +244,45 @@ final class Optima_Schema {
 		return $node;
 	}
 
+	/**
+	 * The WebSite node. No SearchAction: Google retired the sitelinks search box
+	 * it fed, and a site search page is not a page anyone should land on from
+	 * search. `alternateName` (a DBA or a short name people search for) prints
+	 * only when set (see alternate_name()).
+	 */
 	private static function website_node() {
-		return array(
-			'@type'           => 'WebSite',
-			'@id'             => home_url( '/#website' ),
-			'url'             => home_url( '/' ),
-			'name'            => get_bloginfo( 'name' ),
-			'publisher'       => array( '@id' => home_url( '/#business' ) ),
-			'potentialAction' => array(
-				'@type'       => 'SearchAction',
-				'target'      => array(
-					'@type'       => 'EntryPoint',
-					'urlTemplate' => home_url( '/?s={search_term_string}' ),
-				),
-				'query-input' => 'required name=search_term_string',
-			),
+		$node = array(
+			'@type'     => 'WebSite',
+			'@id'       => home_url( '/#website' ),
+			'url'       => home_url( '/' ),
+			'name'      => get_bloginfo( 'name' ),
+			'publisher' => array( '@id' => home_url( '/#business' ) ),
 		);
+		$alt = self::alternate_name();
+		if ( $alt ) {
+			$node['alternateName'] = 1 === count( $alt ) ? $alt[0] : $alt;
+		}
+		return $node;
+	}
+
+	/**
+	 * Other names the site goes by, for WebSite `alternateName`: what an operator
+	 * typed on Search and AI, SEO (one per line), else `seo.alternate_name` in the
+	 * theme's optima-setup.json (a string or a list). A theme can also set it as
+	 * `seo.schema.website.alternateName`, which is laid over this node and wins.
+	 *
+	 * @return string[]
+	 */
+	public static function alternate_name() {
+		$names = array();
+		if ( class_exists( 'Optima_Core_SEO_Settings' ) ) {
+			$names = self::lines( (string) Optima_Core_SEO_Settings::value( 'alternate_name' ) );
+		}
+		if ( ! $names && class_exists( 'Optima_SEO_Setup' ) && Optima_SEO_Setup::active() ) {
+			$given = Optima_SEO_Setup::data()['alternate_name'] ?? '';
+			$names = array_values( array_filter( array_map( 'trim', array_map( 'strval', array_filter( (array) $given, 'is_scalar' ) ) ), 'strlen' ) );
+		}
+		return array_values( array_unique( array_map( 'sanitize_text_field', $names ) ) );
 	}
 
 	public static function clear_cache() {

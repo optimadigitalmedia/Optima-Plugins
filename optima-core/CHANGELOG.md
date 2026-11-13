@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.6.0.15 (2026-11-13)
+
+- **Law firms are LegalService, never Attorney.** Your business, Details no longer offers Attorney as a business type, because schema.org deprecates it for a firm. A site that saved Attorney keeps its saved value (it shows as its own choice with a note to pick Law firm), and the schema prints it as LegalService. The same goes for a business type of Attorney in the theme's setup data. Nothing saved changes.
+- **WebSite schema: no search box, an optional other name.** The WebSite entry no longer carries a SearchAction. Google retired the sitelinks search box it fed. It can now carry `alternateName` (the name a business trades under, or a short name people type), printed only when set: typed on Search and AI, SEO (new optional field, one name per line), else `seo.alternate_name` in the theme's optima-setup.json. A theme's `seo.schema.website.alternateName` still works and wins.
+- **Sitemap: testimonials and FAQs stay out.** They are quotes and answers shown inside pages, so their post types (Core's, or the same types from another plugin) no longer get a sitemap, and a single testimonial or FAQ page is marked noindex to match. The list can be changed with the `optima_core_sitemap_skip_types` filter. Noindexed archives, terms, author archives and pages (1.6.0.13) and empty taxonomies (WordPress leaves those out) already stayed out; a thank-you page stays out once it is noindexed in the SEO box or the theme's `seo.pages`.
+- **Embeds name the organization.** When another site embeds or previews a page (oEmbed), the author is the business name and the site's address, never the WordPress user who made the page or their author archive.
+- **Private pages stay private.** A password-protected page shows a generic title in public: its `<title>`, share title and Twitter title read "Private page" with the site name, it prints no description or image alt text, its schema WebPage is named "Private page", and it is marked noindex. Its oEmbed answer is a plain link titled "Private page" with no embed code or picture, its embed view shows the same title, and it prints no oEmbed discovery links. This holds even when the theme prints its own head. The words can be changed with the `optima_core_private_title` filter.
+
 ## 1.6.0.14 (2026-11-12)
 
 - **Site health, Page descriptions:** a page whose address has a description in the theme's setup data (`optima-setup.json`, `seo.pages`) no longer counts as missing one. Core already prints that description; the old check told people to type one into the SEO box, which would have overridden the approved words. (From PR #26.)

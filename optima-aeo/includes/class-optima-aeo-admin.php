@@ -129,7 +129,7 @@ final class Optima_AEO_Admin {
 								<label style="display:block;margin:4px 0;padding-left:<?php echo (int) ( count( get_post_ancestors( $p ) ) * 18 ); ?>px"><input type="checkbox" name="<?php echo esc_attr( $o ); ?>[pages][]" value="<?php echo (int) $p->ID; ?>" <?php checked( in_array( (int) $p->ID, $s['pages'], true ) ); ?>> <?php echo esc_html( get_the_title( $p ) ); ?></label>
 							<?php endforeach; ?>
 						</fieldset>
-							<p class="description"><?php esc_html_e( 'None ticked lists the main pages automatically. Pages hidden from search, password protected or forwarded to another address are always left out.', 'optima-aeo' ); ?></p></td>
+							<p class="description"><?php esc_html_e( 'None ticked lists the main pages automatically: the home page, then the pages in the site menus, then the rest by page order and title. Pages hidden from search, password protected or forwarded to another address are always left out, and so are leftovers such as a 404 page or a copy whose address ends in -2 or -copy.', 'optima-aeo' ); ?></p></td>
 					</tr>
 					<tr>
 						<th scope="row"><label for="optima-aeo-posts"><?php esc_html_e( 'Recent posts to list', 'optima-aeo' ); ?></label></th>

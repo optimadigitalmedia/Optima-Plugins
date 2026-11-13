@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.4.11 (2026-11-13)
+
+- **/llms.txt describes each page with its current words.** The line after a link now comes from the page's SEO description, then the homepage description on the home page, then the theme's description for that address (optima-setup.json), and only then the excerpt or the opening of the page's own text. An excerpt carried over from an old site is no longer used when a current description exists.
+- **Leftover pages are never listed.** A page kept as a 404 (404, 404-2, page-not-found), a copy whose address ends in -2 or -copy, a second page called home that is not the front page, and a page under a trashed parent are left out of every list. The `optima_aeo_llms_leftover` filter can change that.
+- **Real pages first.** With no pages ticked, the list is the home page, then the pages in the site's menus (the main menu first, in menu order), then every other top-level page by page order and title, each followed by its children. Pages that are left out are dropped before the list is cut to 30, so a leftover can no longer push a real page off the list or show ahead of one.
+- The "Pages to list" help line says how the automatic list is built and what is left out.
+
 ## 0.2.4.10 (2026-11-12)
 
 - **/llms.txt lists only final addresses.** A page or post is listed only when it is published, public, has no password, is not hidden from search (its own switch or the theme's seo section), does not name another page as its canonical, and has no stored redirect in Optima Redirects. Pages such as an old contact or results address that forward elsewhere drop out. Only saved settings are read; no web requests are made when the guide is built.

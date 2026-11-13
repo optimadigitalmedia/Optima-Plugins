@@ -5,7 +5,8 @@
  * it (noindexed pages stay out, so what we tell crawlers to index and what we
  * submit always agree: the SEO box's noindex, and the robots rules in the
  * theme's optima-setup.json seo.pages, for pages, terms, whole archive kinds
- * and author archives) and guard it: if robots.txt ends up with no Sitemap
+ * and author archives; testimonials and FAQs, which show inside pages, never
+ * get a sitemap of their own) and guard it: if robots.txt ends up with no Sitemap
  * line (an SEO plugin switched core's off, or a leftover setting), we add the
  * one that works. Finding it happens in a daily background check, so serving
  * robots.txt never waits on a web request.
@@ -27,6 +28,8 @@ final class Optima_SEO_Sitemap {
 
 	public static function init() {
 		add_filter( 'wp_sitemaps_posts_query_args', array( __CLASS__, 'exclude_noindex' ), 10, 2 );
+		// Testimonials and FAQs (Core's, or the same types from another plugin) are quotes and answers shown inside pages.
+		add_filter( 'wp_sitemaps_post_types', array( __CLASS__, 'drop_skipped_types' ) );
 		// The theme's noindexed archives (seo.pages ":category", ":tag", ":author", ":archive", term paths).
 		add_filter( 'wp_sitemaps_taxonomies', array( __CLASS__, 'drop_noindex_taxonomies' ) );
 		add_filter( 'wp_sitemaps_taxonomies_query_args', array( __CLASS__, 'exclude_noindex_terms' ), 10, 2 );
@@ -79,6 +82,35 @@ final class Optima_SEO_Sitemap {
 		}
 		update_option( self::FOUND_OPTION, $found, false );
 		return $found;
+	}
+
+	/**
+	 * Post types that never get a sitemap or an indexable single page:
+	 * testimonials and FAQs, whoever registers them. Filter
+	 * `optima_core_sitemap_skip_types` to change the list.
+	 *
+	 * @return string[]
+	 */
+	public static function skipped_types(): array {
+		$types = (array) apply_filters( 'optima_core_sitemap_skip_types', array( 'testimonial', 'testimonials', 'faq', 'faqs' ) );
+		return array_values( array_filter( array_map( 'sanitize_key', array_map( 'strval', $types ) ) ) );
+	}
+
+	/** True on a single testimonial or FAQ (the head marks it noindex to match the sitemap). */
+	public static function is_skipped_single(): bool {
+		$types = self::skipped_types();
+		return $types && is_singular( $types );
+	}
+
+	/** Leave testimonial and FAQ post types out of wp-sitemap.xml. */
+	public static function drop_skipped_types( $post_types ) {
+		if ( ! is_array( $post_types ) ) {
+			return $post_types;
+		}
+		foreach ( self::skipped_types() as $type ) {
+			unset( $post_types[ $type ] );
+		}
+		return $post_types;
 	}
 
 	/**
