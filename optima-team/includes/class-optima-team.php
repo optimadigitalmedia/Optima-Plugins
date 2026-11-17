@@ -79,6 +79,7 @@ final class Optima_Team {
 			'contact' => 0,
 			'columns' => 3,
 			'bylines' => 1,
+			'consult' => '', // Release 2: the free consultation page (a path on this site); '' = the firm offers none.
 		);
 	}
 
@@ -124,13 +125,59 @@ final class Optima_Team {
 		);
 	}
 
-	/** Columns in each repeatable group. */
+	/** Columns in each repeatable group. A row needs its first column. */
 	public static function groups(): array {
 		return array(
-			'bar'       => array( 'state', 'year', 'number', 'url' ),
-			'education' => array( 'school', 'degree', 'year' ),
-			'awards'    => array( 'name', 'year', 'issuer' ),
+			'bar'            => array( 'state', 'year', 'number', 'url' ),
+			'education'      => array( 'school', 'degree', 'year' ),
+			// Release 2: how the award is worded, the issuer's own page on how it is
+			// given, and whether a fee was paid for it (a paid award never prints on a law site).
+			'awards'         => array( 'name', 'year', 'issuer', 'wording', 'standards_url', 'fee_paid' ),
+			// Release 2: board certification by a named certifying body.
+			'certifications' => array( 'name', 'body', 'year', 'url' ),
 		);
+	}
+
+	/** How an award is worded on the page: "Named to", "Included in", "Selected for". */
+	public static function award_wordings(): array {
+		return array(
+			'named'    => __( 'Named to', 'optima-team' ),
+			'included' => __( 'Included in', 'optima-team' ),
+			'selected' => __( 'Selected for', 'optima-team' ),
+		);
+	}
+
+	/**
+	 * The team groups, in the order the team grid lists them: attorneys first,
+	 * then the people who are not lawyers, grouped by what they do.
+	 */
+	public static function team_groups(): array {
+		return array(
+			'attorney'        => __( 'Attorneys', 'optima-team' ),
+			'intake'          => __( 'Intake', 'optima-team' ),
+			'case_management' => __( 'Case management', 'optima-team' ),
+			'paralegal'       => __( 'Paralegals', 'optima-team' ),
+			'client_care'     => __( 'Client care', 'optima-team' ),
+		);
+	}
+
+	/**
+	 * A person's group: the one saved on the profile, else attorney for anyone
+	 * marked as an attorney, else '' (no group).
+	 *
+	 * @param array $p A profile.
+	 */
+	public static function group_of( array $p ): string {
+		$group = (string) ( $p['group'] ?? '' );
+		if ( isset( self::team_groups()[ $group ] ) ) {
+			return $group;
+		}
+		return ! empty( $p['attorney'] ) ? 'attorney' : '';
+	}
+
+	/** Is this person an attorney (the attorney flag, or the attorney group)? */
+	public static function is_attorney( array $p ): bool {
+		return ! empty( $p['attorney'] ) || 'attorney' === (string) ( $p['group'] ?? '' );
 	}
 
 	public static function empty_profile(): array {
@@ -149,9 +196,14 @@ final class Optima_Team {
 			'bar'             => array(),
 			'education'       => array(),
 			'awards'          => array(),
+			'certifications'  => array(),
 			'practice_areas'  => array(),
 			'bio_url'         => '',
 			'schema_id'       => '',
+			// Release 2.
+			'bar_name'        => '', // The name as it appears on the bar roll (from the setup file).
+			'group'           => '', // A team_groups() key, or '' (attorney when the attorney flag is on).
+			'offices'         => array(), // Office ids from the setup file's offices[].
 		);
 	}
 
@@ -186,6 +238,10 @@ final class Optima_Team {
 		$out['practice_areas']  = self::clean_practices( $in['practice_areas'] ?? array(), (string) ( $in['practice_other'] ?? '' ) );
 		$out['bio_url']         = self::site_path( (string) ( $in['bio_url'] ?? '' ) );
 		$out['schema_id']       = self::site_path( (string) ( $in['schema_id'] ?? '' ), true );
+		$out['bar_name']        = sanitize_text_field( (string) ( $in['bar_name'] ?? '' ) );
+		$group                  = sanitize_key( (string) ( $in['group'] ?? '' ) );
+		$out['group']           = isset( self::team_groups()[ $group ] ) ? $group : '';
+		$out['offices']         = self::clean_offices( $in['offices'] ?? array() );
 
 		$urls = array();
 		foreach ( self::lines( (string) ( $in['same_as'] ?? '' ) ) as $line ) {
@@ -202,11 +258,19 @@ final class Optima_Team {
 				$row   = (array) $row;
 				$clean = array();
 				foreach ( $cols as $col ) {
-					$value = (string) ( $row[ $col ] ?? '' );
-					if ( 'url' === $col ) {
+					$value = $row[ $col ] ?? '';
+					$value = is_bool( $value ) ? ( $value ? 'yes' : 'no' ) : (string) $value;
+					if ( 'url' === $col || 'standards_url' === $col ) {
 						$clean[ $col ] = esc_url_raw( trim( $value ), array( 'https', 'http' ) );
 					} elseif ( 'year' === $col ) {
 						$clean[ $col ] = preg_match( '/^\d{4}$/', trim( $value ) ) ? trim( $value ) : '';
+					} elseif ( 'wording' === $col ) {
+						$clean[ $col ] = self::wording_key( $value );
+					} elseif ( 'fee_paid' === $col ) {
+						$yes           = array( 'yes', 'y', 'true', '1' );
+						$no            = array( 'no', 'n', 'false', '0' );
+						$flag          = strtolower( trim( $value ) );
+						$clean[ $col ] = in_array( $flag, $yes, true ) ? 'yes' : ( in_array( $flag, $no, true ) ? 'no' : '' );
 					} else {
 						$clean[ $col ] = sanitize_text_field( $value );
 					}
@@ -231,6 +295,138 @@ final class Optima_Team {
 			}
 		}
 		return $out;
+	}
+
+	/** An award wording key from a key or the words themselves ("Included in"). */
+	public static function wording_key( string $value ): string {
+		$value = strtolower( trim( sanitize_text_field( $value ) ) );
+		if ( isset( self::award_wordings()[ $value ] ) ) {
+			return $value;
+		}
+		foreach ( self::award_wordings() as $key => $words ) {
+			if ( strtolower( $words ) === $value || 0 === strpos( $value, $key ) ) {
+				return $key;
+			}
+		}
+		return '';
+	}
+
+	/* ---------- awards and certifications ---------- */
+
+	/**
+	 * May this award print? On a law site an award the firm or the lawyer paid
+	 * a fee for is never printed (page or schema); the profile screen says why.
+	 *
+	 * @param array $row An award row.
+	 */
+	public static function award_printable( array $row ): bool {
+		return ! ( self::is_law() && 'yes' === (string) ( $row['fee_paid'] ?? '' ) );
+	}
+
+	/** The awards that may print, in their saved order. */
+	public static function printable_awards( array $p ): array {
+		return array_values( array_filter( (array) $p['awards'], array( __CLASS__, 'award_printable' ) ) );
+	}
+
+	/**
+	 * One award as a line: "Included in Best Lawyers, Issuer, 2025", or the
+	 * old "Name, Issuer, 2025" when no wording is set.
+	 *
+	 * @param array $row An award row.
+	 */
+	public static function award_line( array $row ): string {
+		$name    = (string) ( $row['name'] ?? '' );
+		$wording = self::award_wordings()[ (string) ( $row['wording'] ?? '' ) ] ?? '';
+		if ( '' !== $wording ) {
+			$name = $wording . ' ' . $name;
+		}
+		return implode( ', ', array_filter( array( $name, (string) ( $row['issuer'] ?? '' ), (string) ( $row['year'] ?? '' ) ), 'strlen' ) );
+	}
+
+	/**
+	 * The honor the at-a-glance card leads with: the first printable award
+	 * that carries a year (the setup file's order is the firm's order).
+	 */
+	public static function headline_award( array $p ): array {
+		foreach ( self::printable_awards( $p ) as $row ) {
+			if ( '' !== (string) ( $row['year'] ?? '' ) ) {
+				return $row;
+			}
+		}
+		return array();
+	}
+
+	/**
+	 * One certification as a line: "Board certified in Civil Trial Law by the
+	 * Florida Bar, 2019". With no body it reads "Certified in X".
+	 *
+	 * @param array $row A certification row.
+	 */
+	public static function certification_line( array $row ): string {
+		$name = (string) ( $row['name'] ?? '' );
+		$body = (string) ( $row['body'] ?? '' );
+		$line = '' !== $body
+			/* translators: 1: what the person is certified in, 2: the certifying body. */
+			? sprintf( __( 'Board certified in %1$s by %2$s', 'optima-team' ), $name, $body )
+			/* translators: %s: what the person is certified in. */
+			: sprintf( __( 'Certified in %s', 'optima-team' ), $name );
+		return '' !== (string) ( $row['year'] ?? '' ) ? $line . ', ' . $row['year'] : $line;
+	}
+
+	/* ---------- offices ---------- */
+
+	/** Office ids: a list, or a comma separated string from the setup file. */
+	public static function clean_offices( $list ): array {
+		$items = is_array( $list ) ? $list : preg_split( '/[,\s]+/', (string) $list );
+		$out   = array();
+		foreach ( (array) $items as $item ) {
+			$id = sanitize_key( (string) $item );
+			if ( '' !== $id && ! in_array( $id, $out, true ) ) {
+				$out[] = $id;
+			}
+		}
+		return array_slice( $out, 0, 20 );
+	}
+
+	/**
+	 * The firm's offices: id => office row. Read from the `optima_offices`
+	 * filter when a plugin provides one (Optima Core's Offices tab), else from
+	 * the setup file's offices[] section. Empty on a one-office site.
+	 *
+	 * @return array<string, array>
+	 */
+	public static function offices(): array {
+		static $offices = null;
+		if ( null !== $offices ) {
+			return $offices;
+		}
+		// Optima Core's office list (filled from the setup file by Optima Build), else the setup file itself.
+		$rows = get_option( 'optima_core_offices', array() );
+		$rows = is_array( $rows ) ? $rows : array();
+		if ( ! $rows && class_exists( 'Optima_Hub_Setup' ) ) {
+			$rows = (array) ( Optima_Hub_Setup::data()['offices'] ?? array() );
+		}
+		/** Filter the firm's offices (rows shaped like the setup file's offices[]). */
+		$rows    = (array) apply_filters( 'optima_offices', $rows );
+		$offices = array();
+		foreach ( $rows as $key => $row ) {
+			$row = (array) $row;
+			$id  = sanitize_key( (string) ( $row['id'] ?? ( is_string( $key ) ? $key : '' ) ) );
+			if ( '' !== $id ) {
+				$offices[ $id ] = $row;
+			}
+		}
+		return $offices;
+	}
+
+	/** An office's name, or ''. */
+	public static function office_name( string $id ): string {
+		$row = self::offices()[ $id ] ?? array();
+		if ( ! $row ) {
+			return '';
+		}
+		$name = (string) ( $row['name'] ?? '' );
+		return '' !== $name ? $name : (string) ( $row['city'] ?? '' );
 	}
 
 	/* ---------- practice areas ---------- */
@@ -317,8 +513,8 @@ final class Optima_Team {
 		foreach ( (array) $p['practice_areas'] as $item ) {
 			$item = (string) $item;
 			$slug = self::is_slug( $item ) ? $item : sanitize_title( $item );
-			$page = '' !== $slug ? get_page_by_path( $slug, OBJECT, 'page' ) : null;
-			$url  = ( $page instanceof WP_Post && 'publish' === $page->post_status ) ? (string) get_permalink( $page ) : '';
+			$page = '' !== $slug ? self::practice_page( $slug ) : null;
+			$url  = $page ? (string) get_permalink( $page ) : '';
 			if ( isset( $known[ $item ] ) ) {
 				$name = $known[ $item ];
 			} elseif ( self::is_slug( $item ) ) {
@@ -332,6 +528,82 @@ final class Optima_Team {
 			);
 		}
 		return $out;
+	}
+
+	/**
+	 * The published practice page for a slug: the page at that address
+	 * ("truck-accidents" or "truck-accidents/underride-crashes"), else a page
+	 * whose `_optima_practice` field names the slug, else the one page with
+	 * that last address part under any parent. Null when there is none.
+	 *
+	 * @param string $slug A practice slug.
+	 */
+	public static function practice_page( string $slug ): ?WP_Post {
+		static $cache = array();
+		$slug = trim( $slug, '/' );
+		if ( '' === $slug || ! self::is_slug( $slug ) ) {
+			return null;
+		}
+		if ( array_key_exists( $slug, $cache ) ) {
+			return $cache[ $slug ];
+		}
+		$page = get_page_by_path( $slug, OBJECT, 'page' );
+		if ( ! ( $page instanceof WP_Post && 'publish' === $page->post_status ) ) {
+			$page  = null;
+			$found = get_posts(
+				array(
+					'post_type'      => 'page',
+					'post_status'    => 'publish',
+					'posts_per_page' => 1,
+					'no_found_rows'  => true,
+					'meta_key'       => '_optima_practice', // phpcs:ignore WordPress.DB.SlowDBQuery
+					'meta_value'     => $slug, // phpcs:ignore WordPress.DB.SlowDBQuery
+				)
+			);
+			if ( $found ) {
+				$page = $found[0];
+			} else {
+				$base  = basename( $slug );
+				$found = get_posts(
+					array(
+						'post_type'      => 'page',
+						'post_status'    => 'publish',
+						'name'           => $base,
+						'posts_per_page' => 2,
+						'no_found_rows'  => true,
+					)
+				);
+				$page  = 1 === count( $found ) ? $found[0] : null;
+			}
+		}
+		$cache[ $slug ] = $page;
+		return $page;
+	}
+
+	/** The practice page address for a slug, or ''. */
+	public static function practice_url( string $slug ): string {
+		$page = self::practice_page( $slug );
+		return $page ? (string) get_permalink( $page ) : '';
+	}
+
+	/**
+	 * Does a person handle this practice? The slug itself, a sub-practice of
+	 * an area they hold ("truck-accidents/underride-crashes" for
+	 * "truck-accidents"), or the parent of one they hold.
+	 *
+	 * @param array  $p    A profile.
+	 * @param string $slug A practice slug.
+	 */
+	public static function handles( array $p, string $slug ): bool {
+		$slug = trim( $slug, '/' );
+		foreach ( (array) $p['practice_areas'] as $item ) {
+			$item = (string) $item;
+			$item = self::is_slug( $item ) ? $item : sanitize_title( $item );
+			if ( $item === $slug || 0 === strpos( $slug, $item . '/' ) || 0 === strpos( $item, $slug . '/' ) ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/* ---------- one public address per person ---------- */

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.11.3 (2026-11-13)
+
+- Ten new template slots for the law-site page layer: breadcrumb, state-law, practice-results, practice-reviews, practice-attorneys, related-guides, next-steps, office-card, bio-glance and bio-results. Each prints only what its plugin attaches. When a theme passes no variant, optima_slot() fills it from the layout recipe's blocks.
+- New optima_layout( $key, $default ), next to optima_slot(): reads the layout recipe (hero, home_order, practice_order, blocks, concept) with dotted keys such as blocks.results.
+- Fill from theme now carries the new setup file sections. offices[] fills Optima Core's office list (optima_core_offices) by office id, blanks only, never removing an office. law fills Optima Results' state preset and publishing threshold only while they are unset or still the default, so an approved disclaimer is never moved. languages and layout are mirrored whole as optima_languages and optima_layout_recipe, and cleared when the theme drops them.
+- Fill from theme keeps seo.alternate_name (a string or a list), so Optima Core can print WebSite alternateName.
+- Team rows now fill practice_areas, bio_url and schema_id into blank fields of existing profiles. The team section runs once more so sites that already filled it get these.
+- The Call buttons section also carries the What happens next steps, reply time and free consultation flag.
+- Site health has a Page tree row: pages under a trashed parent, a second published page titled Home that is not the front page, and published content whose address ends in -copy or -2.
+
 ## 0.7.11.2 (2026-11-12)
 
 - The feature catalog now comes from the version-list branch, not from main: catalog-test.json on the test channel, catalog.json (sent out by Promote) on stable. A catalog change reaches the test site first, like a release. The bundled catalog.json is still the fallback.

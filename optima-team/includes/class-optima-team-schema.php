@@ -134,6 +134,27 @@ final class Optima_Team_Schema {
 				$credentials[] = $license;
 			}
 		}
+		// Board certification by a named body (release 2).
+		foreach ( (array) $p['certifications'] as $row ) {
+			$cert = array(
+				'@type'              => 'EducationalOccupationalCredential',
+				'name'               => (string) $row['name'],
+				'credentialCategory' => 'certification',
+			);
+			if ( '' !== (string) ( $row['body'] ?? '' ) ) {
+				$cert['recognizedBy'] = array(
+					'@type' => 'Organization',
+					'name'  => (string) $row['body'],
+				);
+			}
+			if ( '' !== (string) ( $row['year'] ?? '' ) ) {
+				$cert['dateCreated'] = (string) $row['year'];
+			}
+			if ( '' !== (string) ( $row['url'] ?? '' ) ) {
+				$cert['url'] = (string) $row['url'];
+			}
+			$credentials[] = $cert;
+		}
 		if ( $credentials ) {
 			$node['hasCredential'] = $credentials;
 		}
@@ -150,9 +171,10 @@ final class Optima_Team_Schema {
 			);
 		}
 
+		// A paid award never prints on a law site, in the schema either.
 		$awards = array();
-		foreach ( $p['awards'] as $row ) {
-			$awards[] = implode( ', ', array_filter( array( $row['name'], $row['issuer'], $row['year'] ) ) );
+		foreach ( Optima_Team::printable_awards( $p ) as $row ) {
+			$awards[] = Optima_Team::award_line( $row );
 		}
 		if ( $awards ) {
 			$node['award'] = $awards;
@@ -226,6 +248,17 @@ final class Optima_Team_Schema {
 					$graph = self::add_person( $graph, (int) $member );
 				}
 			}
+		}
+		// A post whose byline names a profile (release 2): that Person is the author, no login needed.
+		$byline = is_singular() && isset( $graph['article'] ) && class_exists( 'Optima_Team_Byline' ) ? Optima_Team_Byline::get( (int) get_queried_object_id() ) : 0;
+		if ( $byline ) {
+			$graph['article']['author'] = array(
+				'@id'  => self::person_id( $byline ),
+				'@type' => 'Person',
+				'name' => html_entity_decode( wp_strip_all_tags( get_the_title( $byline ) ), ENT_QUOTES, 'UTF-8' ),
+				'url'  => Optima_Team::public_url( $byline ),
+			);
+			return self::add_person( $graph, $byline );
 		}
 		// A blog post by a linked author: the author is the full Person.
 		if ( is_singular( 'post' ) && isset( $graph['article'] ) && Optima_Team::settings()['bylines'] ) {

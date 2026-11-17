@@ -166,6 +166,8 @@ final class Optima_Results {
 			'approver'     => (string) ( $s['approver'] ?? '' ),
 			'approved_on'  => (string) ( $s['approved_on'] ?? '' ),
 			'approved_for' => (string) ( $s['approved_for'] ?? '' ),
+			// Release 2: the results page (a path on this site) that "See all ... results" links to; '' = find it.
+			'page'         => (string) ( $s['page'] ?? '' ),
 		);
 	}
 

@@ -130,8 +130,11 @@ final class Optima_Schema {
 			'isPartOf'      => array( '@id' => home_url( '/#website' ) ),
 			'about'         => array( '@id' => home_url( '/#business' ) ),
 			'datePublished' => get_the_date( 'c', $id ),
-			'dateModified'  => get_the_modified_date( 'c', $id ),
+			'dateModified'  => Optima_Core_Content_Changed::formatted( $id, 'c' ),
 		);
+		if ( isset( $graph['breadcrumb']['@id'] ) ) {
+			$node['breadcrumb'] = array( '@id' => $graph['breadcrumb']['@id'] );
+		}
 		if ( ! $private && has_excerpt( $id ) ) {
 			$node['description'] = wp_strip_all_tags( get_the_excerpt( $id ) );
 		}
@@ -354,7 +357,7 @@ final class Optima_Schema {
 			'mainEntityOfPage' => get_permalink( $id ),
 			'headline'         => get_the_title( $id ),
 			'datePublished'    => get_the_date( 'c', $id ),
-			'dateModified'     => get_the_modified_date( 'c', $id ),
+			'dateModified'     => Optima_Core_Content_Changed::formatted( $id, 'c' ),
 			'author'           => array(
 				'@type' => 'Person',
 				'name'  => get_the_author_meta( 'display_name', (int) get_post_field( 'post_author', $id ) ),

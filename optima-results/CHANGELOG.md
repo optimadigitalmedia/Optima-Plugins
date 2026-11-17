@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.10.4 (2026-11-13)
+
+- The practice-results slot for practice pages: the results tagged with the page's practice area, newest first, the disclaimer before the first figure, then "See all {practice} results" linking to the results page filtered to that area. The results page is set under Case results (Results page), or found at /case-results/ or /results/.
+- The bio-results slot for bio pages: the results that name the attorney, with the disclaimer first.
+- Each card links its practice area to the practice page when the site has one, and the attorney's name to the person's one bio.
+- Three layouts a theme can pick (variant grid, ledger or feature), on the slots and as [optima_results variant="..."].
+- [optima_results attorney="12"] shows only the results that name that People profile (its ID or address name).
+- One order everywhere: the result's year, newest first, then its date, then the date it was added. The grid, the slots, the Case results list and the WordPress list all use it.
+
 ## 0.1.10.3 (2026-11-13)
 
 - New facts on every result, on the existing edit screen and saved with the result: the attorney's role (lead trial counsel, co-counsel or another role), whether the amount is gross or net, the venue (county or parish, and state), what happened after the result (reduced, remitted, appealed, not collected, default or uncontested, plus a short note) and the client's consent date. The card prints the gross or net label, the role and anything that happened after the result beside the amount, and the venue with the date under it. The consent date stays on file and never prints. Results saved before this release show exactly as before until these fields are filled in.

@@ -10,7 +10,8 @@
  *
  * Format (every section optional):
  * {
- *   "team":    [ { "name", "role", "bio", "email", "military_branch", "photo", "order" } ],
+ *   "team":    [ { "name", "role", "bio", "email", "military_branch", "photo", "order",
+ *                  "practice_areas", "bio_url", "schema_id" } ],
  *   "reviews": { "business", "headline", "ask", "photo", "card_headline", "google_review_url",
  *                "background", "text_color", "accent", "heading_font", "body_font", "label_font" },
  *   "chat":    { "name", "team", "notify", "book_url", "work_url", "photo_1", "photo_2" },
@@ -24,8 +25,21 @@
  *                "pick_heading", "spot_label", "spot_sub", "spot_url", "logo", "share_card", "share_links",
  *                "people": [ { "name", "slug", "title", "email", "intro", "pick", "tags", "photo", "share" } ],
  *                "links": [ { "label", "sub", "url" } ] },
- *   "seo":     { "site": {...}, "pages": { "/": {...} }, "schema": {...} }
+ *   "seo":     { "site": {...}, "pages": { "/": {...} }, "schema": {...}, "alternate_name": "..." | [ "..." ] },
+ *   "offices": [ { "id", "name", "street", "suite", "city", "state", "zip", "phone", "place_id",
+ *                  "geo": { "lat", "lng" }, "gbp_url", "hours": [ { "days", "opens", "closes" } ],
+ *                  "phone_hours", "timezone", "photo", "parking", "entrance", "courthouses",
+ *                  "practices", "primary" } ],
+ *   "law":       { "state": "FL", "states": [ "FL" ], "threshold": 1000000 },
+ *   "languages": [ "en" ],
+ *   "layout":    { "hero", "home_order", "practice_order", "blocks": {...}, "concept" }
  * }
+ * "offices" fills Optima Core's office list (option optima_core_offices) by
+ * office id, blanks only, and never removes an office. "law" fills Optima
+ * Results' state preset and publishing threshold while they are unset or
+ * still the default. "languages" and "layout" are the theme's own data and
+ * are mirrored whole, like "seo": optima_languages and optima_layout_recipe
+ * (read with optima_layout(), defined beside optima_slot()).
  * The "seo" section is the theme's SEO head and JSON-LD as data, for Optima Core
  * (docs/plugin-first.md, section 3a). Unlike the other sections it is a mirror:
  * it is copied whole into the option Optima Core reads, every time the theme
@@ -46,6 +60,9 @@ final class Optima_Hub_Setup {
 	const DONE  = 'optima_hub_setup_done';  // section => hash of what was applied.
 	const MEDIA = 'optima_hub_setup_media'; // theme path => attachment ID.
 	const SEO_OPTION = 'optima_core_seo_setup'; // the seo section, as Optima Core reads it (Optima_SEO_Setup::OPTION).
+	const OFFICES_OPTION   = 'optima_core_offices';  // the offices section, as Optima Core reads it.
+	const LANGUAGES_OPTION = 'optima_languages';     // the languages section (BCP 47 codes).
+	const LAYOUT_OPTION    = 'optima_layout_recipe'; // the layout section (Optima_Hub_Owns::LAYOUT_OPTION).
 
 	public static function boot(): void {
 		add_action( 'admin_init', array( __CLASS__, 'run' ), 30 );
@@ -95,12 +112,18 @@ final class Optima_Hub_Setup {
 			'cards'   => array( __CLASS__, 'cards' ),
 			'contact' => array( __CLASS__, 'contact' ),
 			'seo'     => array( __CLASS__, 'seo' ),
+			'offices'   => array( __CLASS__, 'offices' ),
+			'law'       => array( __CLASS__, 'law' ),
+			'languages' => array( __CLASS__, 'languages' ),
+			'layout'    => array( __CLASS__, 'layout' ),
 		);
-		// The theme dropped its seo section: Optima Core goes back to its own defaults.
-		if ( empty( $data['seo'] ) && isset( $done['seo'] ) ) {
-			delete_option( self::SEO_OPTION );
-			unset( $done['seo'] );
-			update_option( self::DONE, $done, false );
+		// The theme dropped a mirrored section: whatever reads it goes back to its own defaults.
+		foreach ( array( 'seo' => self::SEO_OPTION, 'languages' => self::LANGUAGES_OPTION, 'layout' => self::LAYOUT_OPTION ) as $section => $option ) {
+			if ( empty( $data[ $section ] ) && isset( $done[ $section ] ) ) {
+				delete_option( $option );
+				unset( $done[ $section ] );
+				update_option( self::DONE, $done, false );
+			}
 		}
 		$changed = false;
 		foreach ( $jobs as $section => $job ) {
@@ -108,7 +131,8 @@ final class Optima_Hub_Setup {
 				continue;
 			}
 			// The reviews section reruns once after 0.4.4, when untouched defaults started counting as blank.
-			$hash = md5( (string) wp_json_encode( $data[ $section ] ) . ( 'reviews' === $section ? '|defaults-blank' : '' ) . ( 'seo' === $section ? '|' . self::theme_version() : '' ) );
+			// The team section reruns once after release 2, when practice areas, the bio address and the schema id started filling.
+			$hash = md5( (string) wp_json_encode( $data[ $section ] ) . ( 'reviews' === $section ? '|defaults-blank' : '' ) . ( 'seo' === $section ? '|' . self::theme_version() : '' ) . ( 'team' === $section ? '|r2-profile-links' : '' ) );
 			if ( ( $done[ $section ] ?? '' ) === $hash ) {
 				continue;
 			}
@@ -168,6 +192,11 @@ final class Optima_Hub_Setup {
 				'email'           => $email,
 				'user'            => $user ? $user->ID : 0,
 				'military_branch' => (string) ( $p['military_branch'] ?? '' ),
+				// Release 1 follow-up: the profile's practice areas (knowsAbout), bio page and schema id.
+				// Optima Team's sanitizer cleans each one; a Team version without them ignores them.
+				'practice_areas'  => is_array( $p['practice_areas'] ?? null ) ? array_values( array_filter( array_map( 'strval', array_filter( $p['practice_areas'], 'is_scalar' ) ), 'strlen' ) ) : (string) ( $p['practice_areas'] ?? '' ),
+				'bio_url'         => (string) ( $p['bio_url'] ?? '' ),
+				'schema_id'       => (string) ( $p['schema_id'] ?? '' ),
 			);
 			foreach ( $add as $key => $value ) {
 				if ( empty( $profile[ $key ] ) && ! empty( $value ) ) {
@@ -245,7 +274,8 @@ final class Optima_Hub_Setup {
 			return false;
 		}
 		$fill = array();
-		foreach ( array( 'phone', 'text', 'label', 'title', 'subtitle', 'text_note', 'book_note' ) as $key ) {
+		// step_1 to step_3, steps_response and steps_free: the "What happens next" block (Optima Contact 0.1.11.13).
+		foreach ( array( 'phone', 'text', 'label', 'title', 'subtitle', 'text_note', 'book_note', 'step_1', 'step_2', 'step_3', 'steps_response', 'steps_free' ) as $key ) {
 			if ( isset( $in[ $key ] ) && is_scalar( $in[ $key ] ) ) {
 				$fill[ $key ] = sanitize_text_field( (string) $in[ $key ] );
 			}
@@ -428,6 +458,14 @@ final class Optima_Hub_Setup {
 		if ( isset( $in['schema'] ) && is_array( $in['schema'] ) ) {
 			$out['schema'] = self::clean_tree( $in['schema'] );
 		}
+		// Other names the site goes by (a DBA, a short name), for WebSite alternateName.
+		// Optima Core reads seo.alternate_name as a string or a list (Optima_Schema::alternate_name()).
+		if ( isset( $in['alternate_name'] ) ) {
+			$names = array_values( array_filter( array_map( 'sanitize_text_field', array_map( 'strval', array_filter( (array) $in['alternate_name'], 'is_scalar' ) ) ), 'strlen' ) );
+			if ( $names ) {
+				$out['alternate_name'] = is_array( $in['alternate_name'] ) ? $names : $names[0];
+			}
+		}
 		$out['theme'] = array(
 			'stylesheet' => get_stylesheet(),
 			'version'    => self::theme_version(),
@@ -442,6 +480,226 @@ final class Optima_Hub_Setup {
 			Optima_SEO_Setup::flush();
 		}
 		return true;
+	}
+
+	/* ---------- release 2: offices, law, languages, layout ---------- */
+
+	/**
+	 * The firm's offices, into Optima Core's office list. Merged by office id:
+	 * a new office is added, an office already there only has its blank fields
+	 * filled, and an office the file no longer names is kept (an operator
+	 * removes it). Runs once Optima Core is on, since Core prints the offices.
+	 */
+	private static function offices( array $in ): bool {
+		if ( ! self::core_active() ) {
+			return false;
+		}
+		$option = self::offices_option();
+		$saved  = get_option( $option, array() );
+		$saved  = is_array( $saved ) ? $saved : array();
+		// Keep whatever shape Core stores: a plain list, or a map keyed by office id.
+		$keyed  = $saved && array_keys( $saved ) !== range( 0, count( $saved ) - 1 );
+		$by_id  = array();
+		foreach ( $saved as $key => $office ) {
+			if ( is_array( $office ) ) {
+				$id           = sanitize_key( (string) ( $office['id'] ?? ( is_string( $key ) ? $key : '' ) ) );
+				$by_id[ '' !== $id ? $id : 'office-' . count( $by_id ) ] = $office;
+			}
+		}
+		$dirty = false;
+		foreach ( $in as $raw ) {
+			if ( ! is_array( $raw ) ) {
+				continue;
+			}
+			$office = self::clean_office( $raw );
+			if ( '' === $office['id'] ) {
+				continue;
+			}
+			$id = $office['id'];
+			if ( ! isset( $by_id[ $id ] ) ) {
+				$by_id[ $id ] = $office;
+				$dirty        = true;
+				continue;
+			}
+			foreach ( $office as $key => $value ) {
+				$current = $by_id[ $id ][ $key ] ?? null;
+				$blank   = null === $current || '' === $current || array() === $current || ( 'geo' === $key && is_array( $current ) && ! array_filter( $current ) );
+				if ( $blank && '' !== $value && array() !== $value && ! ( 'geo' === $key && ! array_filter( $value ) ) && ! ( 'primary' === $key && false === $value ) ) {
+					$by_id[ $id ][ $key ] = $value;
+					$dirty                = true;
+				}
+			}
+		}
+		if ( $dirty ) {
+			update_option( $option, $keyed ? $by_id : array_values( $by_id ) );
+		}
+		return true;
+	}
+
+	/** The option name Optima Core keeps its offices in. */
+	private static function offices_option(): string {
+		foreach ( array( 'Optima_Core_Offices', 'Optima_Offices' ) as $class ) {
+			if ( class_exists( $class, false ) && defined( $class . '::OPTION' ) ) {
+				return (string) constant( $class . '::OPTION' );
+			}
+		}
+		return self::OFFICES_OPTION;
+	}
+
+	/** Is Optima Core running? */
+	private static function core_active(): bool {
+		return class_exists( 'Optima_Core_Business', false ) || class_exists( 'Optima_SEO_Head', false );
+	}
+
+	/** One office in the release 2 contract shape, every field cleaned. */
+	public static function clean_office( array $in ): array {
+		$text = static fn( $key ) => sanitize_text_field( (string) ( is_scalar( $in[ $key ] ?? '' ) ? ( $in[ $key ] ?? '' ) : '' ) );
+		$id   = sanitize_key( (string) ( $in['id'] ?? '' ) );
+		if ( '' === $id ) {
+			$id = sanitize_title( (string) ( $in['name'] ?? '' ) );
+		}
+		$geo  = (array) ( $in['geo'] ?? array() );
+		$lat  = is_numeric( $geo['lat'] ?? null ) ? (float) $geo['lat'] : 0.0;
+		$lng  = is_numeric( $geo['lng'] ?? null ) ? (float) $geo['lng'] : 0.0;
+		$zone = (string) ( $in['timezone'] ?? '' );
+		$tel  = (string) preg_replace( '/[^0-9+().\-\s]/', '', $text( 'phone' ) );
+		$ph   = $in['phone_hours'] ?? '';
+		if ( is_array( $ph ) ) {
+			$ph = self::clean_hours( $ph );
+		} else {
+			$ph = '24/7' === trim( (string) $ph ) ? '24/7' : '';
+		}
+		return array(
+			'id'          => $id,
+			'name'        => $text( 'name' ),
+			'street'      => $text( 'street' ),
+			'suite'       => $text( 'suite' ),
+			'city'        => $text( 'city' ),
+			'state'       => strtoupper( substr( preg_replace( '/[^A-Za-z]/', '', $text( 'state' ) ), 0, 2 ) ),
+			'zip'         => (string) preg_replace( '/[^0-9\-]/', '', $text( 'zip' ) ),
+			'phone'       => trim( $tel ),
+			'place_id'    => (string) preg_replace( '/[^A-Za-z0-9_\-]/', '', (string) ( $in['place_id'] ?? '' ) ),
+			'geo'         => ( $lat || $lng ) && abs( $lat ) <= 90 && abs( $lng ) <= 180 ? array( 'lat' => $lat, 'lng' => $lng ) : array(),
+			'gbp_url'     => esc_url_raw( (string) ( $in['gbp_url'] ?? '' ), array( 'https' ) ),
+			'hours'       => self::clean_hours( (array) ( $in['hours'] ?? array() ) ),
+			'phone_hours' => $ph,
+			'timezone'    => in_array( $zone, timezone_identifiers_list(), true ) ? $zone : '',
+			'photo'       => ! empty( $in['photo'] ) && is_string( $in['photo'] ) ? self::url( $in['photo'] ) : '',
+			'parking'     => sanitize_textarea_field( (string) ( is_scalar( $in['parking'] ?? '' ) ? ( $in['parking'] ?? '' ) : '' ) ),
+			'entrance'    => sanitize_textarea_field( (string) ( is_scalar( $in['entrance'] ?? '' ) ? ( $in['entrance'] ?? '' ) : '' ) ),
+			'courthouses' => array_values( array_filter( array_map( 'sanitize_text_field', array_map( 'strval', array_filter( (array) ( $in['courthouses'] ?? array() ), 'is_scalar' ) ) ), 'strlen' ) ),
+			'practices'   => array_values( array_unique( array_filter( array_map( 'sanitize_title', array_map( 'strval', array_filter( (array) ( $in['practices'] ?? array() ), 'is_scalar' ) ) ) ) ) ),
+			'primary'     => ! empty( $in['primary'] ),
+		);
+	}
+
+	/** Opening hours rows: { days: [ "Mo", ... ], opens: "08:30", closes: "17:30" }. */
+	private static function clean_hours( array $rows ): array {
+		$days = array( 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su' );
+		$out  = array();
+		foreach ( $rows as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+			$picked = array_values( array_intersect( $days, array_map( static fn( $d ) => ucfirst( strtolower( substr( (string) $d, 0, 2 ) ) ), array_filter( (array) ( $row['days'] ?? array() ), 'is_scalar' ) ) ) );
+			$opens  = (string) ( $row['opens'] ?? '' );
+			$closes = (string) ( $row['closes'] ?? '' );
+			$time   = '/^(([01]\d|2[0-3]):[0-5]\d|24:00)$/';
+			if ( $picked && preg_match( $time, $opens ) && preg_match( $time, $closes ) ) {
+				$out[] = array(
+					'days'   => $picked,
+					'opens'  => $opens,
+					'closes' => $closes,
+				);
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * The firm's bar state and publishing threshold, into Optima Results. The
+	 * state preset is set only while nobody has chosen one (never saved, or
+	 * still the default with no disclaimer typed and no approver named), so a
+	 * disclaimer someone approved is never moved to another state. The
+	 * threshold is set while it is unsaved or still the $1 million default.
+	 * A state without its own preset is left for the operator.
+	 */
+	private static function law( array $in ): bool {
+		if ( ! class_exists( 'Optima_Results', false ) ) {
+			return false;
+		}
+		$raw   = get_option( Optima_Results::OPTION, null );
+		$raw   = is_array( $raw ) ? $raw : array();
+		$now   = Optima_Results::settings();
+		$next  = $now;
+		$state = strtolower( sanitize_key( (string) ( $in['state'] ?? '' ) ) );
+		$open  = ! isset( $raw['state'] ) || ( 'nc' === $now['state'] && '' === trim( $now['disclaimer'] ) && '' === trim( $now['approver'] ) );
+		if ( '' !== $state && 'other' !== $state && isset( Optima_Results::states()[ $state ] ) && $open && $state !== $now['state'] ) {
+			$next['state'] = $state;
+		}
+		if ( isset( $in['threshold'] ) && is_numeric( $in['threshold'] ) && ( ! isset( $raw['threshold'] ) || 1000000 === (int) $raw['threshold'] ) ) {
+			$next['threshold'] = max( 0, (int) $in['threshold'] );
+		}
+		if ( $next !== $now ) {
+			// Saved through Optima Results' own sanitizer, so the approval stamp stays its rules.
+			update_option( Optima_Results::OPTION, $next );
+		}
+		return true;
+	}
+
+	/** The site's languages (BCP 47 codes such as "en", "es"), mirrored whole. */
+	private static function languages( array $in ): bool {
+		$codes = array();
+		foreach ( $in as $code ) {
+			$code = is_scalar( $code ) ? (string) preg_replace( '/[^A-Za-z0-9\-]/', '', (string) $code ) : '';
+			if ( '' !== $code && strlen( $code ) <= 35 && ! in_array( $code, $codes, true ) ) {
+				$codes[] = $code;
+			}
+		}
+		update_option( self::LANGUAGES_OPTION, $codes, false );
+		return true;
+	}
+
+	/**
+	 * The layout recipe (hero, section orders, block variants, concept),
+	 * mirrored whole: it is the theme's design data, never typed in WordPress.
+	 * Read with optima_layout().
+	 */
+	private static function layout( array $in ): bool {
+		update_option( self::LAYOUT_OPTION, self::clean_layout( $in ), true );
+		if ( class_exists( 'Optima_Hub_Owns', false ) ) {
+			Optima_Hub_Owns::flush_layout();
+		}
+		return true;
+	}
+
+	/** The layout section cleaned: known keys by type, anything else kept as plain data. */
+	public static function clean_layout( array $in ): array {
+		$out = array();
+		foreach ( $in as $key => $value ) {
+			$key = sanitize_key( (string) $key );
+			if ( '' === $key ) {
+				continue;
+			}
+			if ( in_array( $key, array( 'home_order', 'practice_order' ), true ) ) {
+				$out[ $key ] = array_values( array_unique( array_filter( array_map( 'sanitize_key', array_map( 'strval', array_filter( (array) $value, 'is_scalar' ) ) ) ) ) );
+			} elseif ( 'blocks' === $key && is_array( $value ) ) {
+				$out['blocks'] = array();
+				foreach ( $value as $block => $variant ) {
+					$block = sanitize_key( (string) $block );
+					if ( '' !== $block && is_scalar( $variant ) ) {
+						$out['blocks'][ $block ] = sanitize_key( (string) $variant );
+					}
+				}
+			} elseif ( 'hero' === $key && is_scalar( $value ) ) {
+				$out['hero'] = sanitize_key( (string) $value );
+			} elseif ( is_scalar( $value ) ) {
+				$out[ $key ] = sanitize_text_field( (string) $value );
+			} elseif ( is_array( $value ) ) {
+				$out[ $key ] = self::clean_tree( $value );
+			}
+		}
+		return $out;
 	}
 
 	/** One site or page entry: known keys only, each cleaned for what it holds. */

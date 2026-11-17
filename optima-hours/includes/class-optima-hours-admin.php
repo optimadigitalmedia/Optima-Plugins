@@ -100,6 +100,26 @@ final class Optima_Hours_Admin {
 			);
 		}
 		$bar = (string) ( $in['bar'] ?? 'off' );
+		// Phones answered: its own seven days, the same fields as the office hours.
+		$phone_days = array();
+		foreach ( array_keys( Optima_Hours::days() ) as $key ) {
+			$d      = (array) ( $in['phones']['days'][ $key ] ?? array() );
+			$ranges = array( array( (string) ( $d['open1'] ?? '' ), (string) ( $d['close1'] ?? '' ) ) );
+			if ( ! empty( $d['split'] ) ) {
+				$ranges[] = array( (string) ( $d['open2'] ?? '' ), (string) ( $d['close2'] ?? '' ) );
+			}
+			$phone_days[ $key ] = array(
+				'open'   => ! empty( $d['open'] ) ? 1 : 0,
+				'ranges' => Optima_Hours::clean_ranges( $ranges ),
+			);
+		}
+		$phones = Optima_Hours::clean_phones(
+			array(
+				'mode' => (string) ( $in['phones']['mode'] ?? 'off' ),
+				'days' => $phone_days,
+			)
+		);
+		$zone = Optima_Hours::clean_zone( (string) ( $in['timezone'] ?? '' ) );
 		// phpcs:enable
 		update_option(
 			Optima_Hours::OPTION,
@@ -107,9 +127,12 @@ final class Optima_Hours_Admin {
 				'confirmed' => ! empty( $in['confirmed'] ) ? 1 : 0,
 				'bar'       => in_array( $bar, array( 'off', 'day', 'week' ), true ) ? $bar : 'off',
 				'days'      => $days,
+				'timezone'  => $zone,
+				'phones'    => $phones,
 			)
 		);
-		self::back( 'saved' );
+		$asked = isset( $in['phones']['mode'] ) && 'hours' === $in['phones']['mode'];
+		self::back( $asked && 'off' === $phones['mode'] ? 'nophones' : 'saved' );
 	}
 
 	public static function add(): void {
@@ -248,6 +271,7 @@ final class Optima_Hours_Admin {
 			'nodate'  => array( 'error', __( 'Pick the date of the closure, then add it again.', 'optima-hours' ) ),
 			'notimes' => array( 'error', __( 'Special hours need an opening and a closing time.', 'optima-hours' ) ),
 		);
+		$texts['nophones'] = array( 'error', __( 'Phones answered was set to these hours with no day open, so it is not set. Tick at least one day.', 'optima-hours' ) );
 		if ( isset( $texts[ $msg ] ) ) {
 			printf( '<div class="notice notice-%1$s is-dismissible"><p>%2$s</p></div>', esc_attr( $texts[ $msg ][0] ), esc_html( $texts[ $msg ][1] ) );
 		}
@@ -324,6 +348,39 @@ final class Optima_Hours_Admin {
 						<?php
 						foreach ( Optima_Hours::ordered_days() as $key ) {
 							self::day_row( $key, $s['days'][ $key ] );
+						}
+						?>
+					</div>
+					<p class="shh-field">
+						<label for="shh-timezone"><strong><?php esc_html_e( 'Time zone', 'optima-hours' ); ?></strong></label><br>
+						<select id="shh-timezone" name="optima_hours[timezone]">
+							<option value=""><?php echo esc_html( sprintf( /* translators: %s: WordPress time zone. */ __( 'Same as WordPress (%s)', 'optima-hours' ), wp_timezone_string() ) ); ?></option>
+							<?php foreach ( timezone_identifiers_list() as $zone ) : ?>
+								<option value="<?php echo esc_attr( $zone ); ?>" <?php selected( $s['timezone'], $zone ); ?>><?php echo esc_html( $zone ); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</p>
+					<p class="description">
+						<?php
+						/* translators: %s: short time zone name, e.g. ET. */
+						echo esc_html( sprintf( __( 'Every hours line on the site ends with it, for example 8:30 am to 5:30 pm %s. The "Open now" line follows it too.', 'optima-hours' ), Optima_Hours::zone_label() ) );
+						?>
+					</p>
+				</section>
+
+				<section class="sh-box">
+					<h2 class="sh-title"><?php esc_html_e( 'Phones answered', 'optima-hours' ); ?></h2>
+					<p class="description"><?php esc_html_e( 'When someone answers the phone, if that differs from the office hours. It shows under the hours table and tells search engines when to call (the intake contact in the schema). It never changes the office hours.', 'optima-hours' ); ?></p>
+					<fieldset class="shh-radios">
+						<legend class="screen-reader-text"><?php esc_html_e( 'When the phones are answered', 'optima-hours' ); ?></legend>
+						<label><input type="radio" name="optima_hours[phones][mode]" value="off" <?php checked( 'off', $s['phones']['mode'] ); ?>> <?php esc_html_e( 'Not set', 'optima-hours' ); ?></label>
+						<label><input type="radio" name="optima_hours[phones][mode]" value="always" <?php checked( 'always', $s['phones']['mode'] ); ?>> <?php esc_html_e( 'Around the clock, every day (24/7)', 'optima-hours' ); ?></label>
+						<label><input type="radio" name="optima_hours[phones][mode]" value="hours" <?php checked( 'hours', $s['phones']['mode'] ); ?>> <?php esc_html_e( 'These hours', 'optima-hours' ); ?></label>
+					</fieldset>
+					<div class="shh-days shh-phone-days">
+						<?php
+						foreach ( Optima_Hours::ordered_days() as $key ) {
+							self::day_row( $key, $s['phones']['days'][ $key ], 'optima_hours[phones][days]', 'shp-' );
 						}
 						?>
 					</div>
@@ -476,13 +533,13 @@ final class Optima_Hours_Admin {
 	}
 
 	/** One day: open box, first range, optional second range. */
-	private static function day_row( string $key, array $day ): void {
+	private static function day_row( string $key, array $day, string $base = 'optima_hours[days]', string $prefix = 'shh-' ): void {
 		$label  = Optima_Hours::day_label( $key );
-		$name   = 'optima_hours[days][' . $key . ']';
+		$name   = $base . '[' . $key . ']';
 		$r1     = $day['ranges'][0] ?? array( '09:00', '17:00' );
 		$r2     = $day['ranges'][1] ?? array( '', '' );
 		$split  = isset( $day['ranges'][1] );
-		$id     = 'shh-' . $key;
+		$id     = $prefix . $key;
 		?>
 		<fieldset class="shh-day <?php echo $day['open'] ? 'is-open' : 'is-closed'; ?>" data-day="<?php echo esc_attr( $key ); ?>">
 			<legend class="screen-reader-text"><?php echo esc_html( $label ); ?></legend>

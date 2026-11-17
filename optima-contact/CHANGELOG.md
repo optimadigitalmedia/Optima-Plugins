@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.11.13 (2026-11-13)
+
+- New "What happens next" block: three numbered steps in the next-steps slot (home, practice, contact and thank-you templates), as a row or a timeline. The theme passes the variant; a theme that passes none gets the one its layout recipe names.
+- The steps are typed on Call buttons. Blank steps keep starting wording that promises nothing: "We read your message and call you back.", "A member of our intake team asks a few questions about what happened." and "If we can help, we set up a time with our team. If we cannot, we tell you so." Step 2 adds "The call is free and private." only when the firm ticks Free consultation.
+- An optional reply time ("within 1 business hour") prints only when the firm sets one. A reply time that says guaranteed is not saved.
+- Shortcodes for pages without slots: [optima_next_steps variant="timeline"] and [optima_office id="primary"], which prints an office's address with a Get directions link.
+- Get directions opens Google Maps directions to the office's Place ID and address, and sends directions_click (rule 50). Offices come from Optima Core's office list, or from the theme's optima-setup.json offices[] while that list is empty. A site without offices works as before.
+- The block styles use only --optima-* tokens and print once beside the first block.
+
 ## 0.1.11.12 (2026-11-13)
 
 - When the call bar shows, the page gets scroll-padding-bottom equal to the bar's height plus the phone's safe-area inset, so a field or link reached with the keyboard never sits under the bar (WCAG 2.2, 2.4.11 Focus Not Obscured). The body padding that keeps the last content clear of the bar stays as it was.

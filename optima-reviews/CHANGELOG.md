@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.5.13 (2026-11-13)
+
+- The practice-reviews slot for practice pages: approved reviews whose topic belongs to the page's practice area, each with "Read about our {practice} work" linking the practice page. A topic belongs to the practice page with its own address unless Display, Topics and practice pages names another. With no practice (home, office pages) it shows the featured reviews. The "Selected client reviews" label, the Google link and the law-site disclaimer from 0.5.5.12 come with it.
+- A quote layout (one large quote per row) beside grid and list, for the slot and as [optima_reviews layout="quote"].
+- A theme that replaced card.php keeps its own markup; copy the plugin's card.php to get the practice link.
+
 ## 0.5.5.12 (2026-11-13)
 
 - Law-site rules for reviews. A site counts as a law firm's the way the other Optima plugins tell: the business type on Your business, Details, Optima Team's law mode, or a law rule set (the new one here, or the one saved under Case results).

@@ -48,6 +48,9 @@ final class Optima_Results_Render {
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_early' ) );
 		add_shortcode( 'optima_results', array( __CLASS__, 'grid' ) );
 		add_shortcode( 'optima_result', array( __CLASS__, 'single' ) );
+		// Release 2 page layer: the theme's slots (contract section 3).
+		add_action( 'optima_slot_practice-results', array( __CLASS__, 'slot_practice' ) );
+		add_action( 'optima_slot_bio-results', array( __CLASS__, 'slot_bio' ) );
 	}
 
 	public static function register_assets(): void {
@@ -232,21 +235,183 @@ final class Optima_Results_Render {
 				),
 			);
 		}
+		$attorney = (int) ( $args['attorney'] ?? 0 );
+		if ( $attorney < 0 ) {
+			return array(); // An attorney was named and no profile matches.
+		}
+		if ( $attorney ) {
+			$q['meta_query']['attorney'] = array(
+				'key'   => Optima_Results::META['attorney'],
+				'value' => (string) $attorney,
+			);
+		}
 		$out = array();
 		foreach ( get_posts( $q ) as $post ) {
 			$r = Optima_Results::get( (int) $post->ID );
 			if ( Optima_Results::may_publish( $r ) ) {
+				$r['post_date'] = (string) $post->post_date;
 				$out[] = $r;
 			}
 		}
-		// Newest result date first; results without a date keep their order at the end.
-		usort(
-			$out,
-			static function ( array $x, array $y ): int {
-				return strcmp( $y['date'], $x['date'] );
-			}
-		);
+		usort( $out, array( __CLASS__, 'newest_first' ) );
 		return array_slice( $out, 0, $limit );
+	}
+
+	/**
+	 * The one order everywhere: the result's year, newest first, then its full
+	 * date, then the date it was added. Results without a date go last.
+	 */
+	public static function newest_first( array $x, array $y ): int {
+		$xy = substr( (string) ( $x['date'] ?? '' ), 0, 4 );
+		$yy = substr( (string) ( $y['date'] ?? '' ), 0, 4 );
+		return array( $yy, (string) ( $y['date'] ?? '' ), (string) ( $y['post_date'] ?? '' ) ) <=> array( $xy, (string) ( $x['date'] ?? '' ), (string) ( $x['post_date'] ?? '' ) );
+	}
+
+	/* ------------------------------------------------------------------ */
+	/* Practice pages and the results page                                 */
+	/* ------------------------------------------------------------------ */
+
+	/**
+	 * The published practice page for a practice slug, or ''. Optima Team's
+	 * lookup when it is on (the page at that address, the page whose practice
+	 * field names it, or the one page with that last address part), else the
+	 * page at that address.
+	 */
+	public static function practice_url( string $slug ): string {
+		$slug = trim( sanitize_text_field( $slug ), '/' );
+		if ( '' === $slug ) {
+			return '';
+		}
+		if ( function_exists( 'optima_practice_url' ) ) {
+			return (string) optima_practice_url( $slug );
+		}
+		if ( class_exists( 'Optima_Team' ) && method_exists( 'Optima_Team', 'practice_url' ) ) {
+			return Optima_Team::practice_url( $slug );
+		}
+		$page = get_page_by_path( $slug, OBJECT, 'page' );
+		return ( $page instanceof WP_Post && 'publish' === $page->post_status ) ? (string) get_permalink( $page ) : '';
+	}
+
+	/** A practice area's name for a sentence: the results area's own name, else the shared list's, else the slug in words. */
+	public static function practice_name( string $slug ): string {
+		$term = get_term_by( 'slug', sanitize_title( basename( $slug ) ), Optima_Results::TAXONOMY );
+		if ( $term && ! is_wp_error( $term ) ) {
+			return $term->name;
+		}
+		if ( class_exists( 'Optima_Team' ) && isset( Optima_Team::practices()[ $slug ] ) ) {
+			return Optima_Team::practices()[ $slug ];
+		}
+		return ucfirst( str_replace( array( '-', '/' ), array( ' ', ', ' ), basename( $slug ) ) );
+	}
+
+	/**
+	 * The results page: the one saved under Case results, else a published
+	 * page at /case-results/ or /results/. '' when there is none.
+	 */
+	public static function results_page_url(): string {
+		$saved = (string) Optima_Results::settings()['page'];
+		if ( '' !== $saved ) {
+			return home_url( $saved );
+		}
+		foreach ( array( 'case-results', 'results' ) as $path ) {
+			$page = get_page_by_path( $path, OBJECT, 'page' );
+			if ( $page instanceof WP_Post && 'publish' === $page->post_status ) {
+				return (string) get_permalink( $page );
+			}
+		}
+		return '';
+	}
+
+	/* ------------------------------------------------------------------ */
+	/* Slots                                                               */
+	/* ------------------------------------------------------------------ */
+
+	/** The variant a theme asks for, or the grid. */
+	private static function variant( $args ): string {
+		$v = (string) ( is_array( $args ) ? ( $args['variant'] ?? '' ) : '' );
+		return in_array( $v, array( 'grid', 'ledger', 'feature' ), true ) ? $v : 'grid';
+	}
+
+	/**
+	 * practice-results: results tagged with the practice slug, newest first,
+	 * the disclaimer before the first figure, then "See all {practice}
+	 * results" on the results page filtered to that area. Prints nothing when
+	 * the area has no result the site may show.
+	 *
+	 * @param array $args { practice: slug, limit: int, variant: grid|ledger|feature }.
+	 */
+	public static function slot_practice( $args = array() ): void {
+		$args     = is_array( $args ) ? $args : array();
+		$practice = trim( sanitize_text_field( (string) ( $args['practice'] ?? '' ) ), '/' );
+		$limit    = max( 1, min( 24, (int) ( $args['limit'] ?? 3 ) ) );
+		$results  = self::query(
+			array(
+				'area'  => '' !== $practice ? sanitize_title( basename( $practice ) ) : '',
+				'limit' => $limit,
+			)
+		);
+		if ( ! $results ) {
+			return;
+		}
+		$more = '';
+		$page = self::results_page_url();
+		if ( '' !== $page ) {
+			$area = '' !== $practice ? sanitize_title( basename( $practice ) ) : '';
+			$more = '<p class="optima-results__more"><a href="' . esc_url( '' !== $area ? add_query_arg( 'result_area', $area, $page ) : $page ) . '">'
+				. esc_html(
+					'' !== $area
+						/* translators: %s: practice area, for example Truck accidents */
+						? sprintf( __( 'See all %s results', 'optima-results' ), self::lower_first( self::practice_name( $practice ) ) )
+						: __( 'See all case results', 'optima-results' )
+				) . '</a></p>';
+		}
+		echo self::block( $results, self::variant( $args ), $more ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in block().
+	}
+
+	/**
+	 * bio-results: results where the attorney is this person (a People
+	 * profile), newest first, with the disclaimer before the first figure.
+	 *
+	 * @param array $args { attorney: profile post id, limit: int, variant }.
+	 */
+	public static function slot_bio( $args = array() ): void {
+		$args     = is_array( $args ) ? $args : array();
+		$attorney = absint( $args['attorney'] ?? 0 );
+		if ( ! $attorney && class_exists( 'Optima_Team_Blocks' ) ) {
+			$attorney = Optima_Team_Blocks::current_person();
+		}
+		if ( ! $attorney ) {
+			return;
+		}
+		$results = self::query(
+			array(
+				'attorney' => $attorney,
+				'limit'    => max( 1, min( 24, (int) ( $args['limit'] ?? 6 ) ) ),
+			)
+		);
+		if ( ! $results ) {
+			return;
+		}
+		echo self::block( $results, self::variant( $args ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in block().
+	}
+
+	/** "Truck accidents" as "truck accidents" in a sentence (an acronym stays as typed). */
+	private static function lower_first( string $name ): string {
+		return preg_match( '/^\p{Lu}\p{Ll}/u', $name ) ? mb_strtolower( mb_substr( $name, 0, 1 ) ) . mb_substr( $name, 1 ) : $name;
+	}
+
+	/**
+	 * Results as a slot block: the disclaimer first, then the cards in the
+	 * variant's layout (each card keeps its own line), then $after.
+	 */
+	public static function block( array $results, string $variant = 'grid', string $after = '' ): string {
+		$h  = self::style_tag() . '<section class="optima-results optima-results--' . esc_attr( $variant ) . '" aria-label="' . esc_attr__( 'Case results', 'optima-results' ) . '">';
+		$h .= self::lead_disclaimer_html();
+		$h .= '<div class="optima-results__grid">';
+		foreach ( $results as $r ) {
+			$h .= self::card( $r );
+		}
+		return $h . '</div>' . $after . '</section>';
 	}
 
 	/** The disclaimer as printed beside a result (every card, every state; Louisiana requires it on each result). */
@@ -287,13 +452,17 @@ final class Optima_Results_Render {
 		}
 		$h    .= '</p>';
 		$h    .= '<p class="optima-result__description" data-sr="description"' . ( '' === $r['description'] ? ' hidden' : '' ) . '>' . esc_html( $r['description'] ) . '</p>';
-		$h    .= '<p class="optima-result__meta"><span class="optima-result__area" data-sr="area"' . ( '' === $r['area'] ? ' hidden' : '' ) . '>' . esc_html( $r['area'] ) . '</span>';
+		// The area links its practice page when the site has one (release 2).
+		$area_url = ( ! $preview && '' !== (string) ( $r['area_slug'] ?? '' ) ) ? self::practice_url( (string) $r['area_slug'] ) : '';
+		$h    .= '<p class="optima-result__meta"><span class="optima-result__area" data-sr="area"' . ( '' === $r['area'] ? ' hidden' : '' ) . '>'
+			. ( '' !== $area_url ? '<a href="' . esc_url( $area_url ) . '">' . esc_html( $r['area'] ) . '</a>' : esc_html( $r['area'] ) ) . '</span>';
 		$h    .= '<span class="optima-result__date" data-sr="date"' . ( '' === $date ? ' hidden' : '' ) . '>' . esc_html( $date ) . '</span>';
 		$venue = Optima_Results::venue_text( $r );
 		$h    .= '<span class="optima-result__venue" data-sr="venue"' . ( '' === $venue ? ' hidden' : '' ) . '>' . esc_html( $venue ) . '</span>';
 		// The attorney, from People: a link to the profile page while it is published.
 		$attorney = (string) ( $r['attorney'] ?? '' );
-		$link     = ! empty( $r['attorney_id'] ) ? get_permalink( (int) $r['attorney_id'] ) : '';
+		// The person's one bio: the theme's bio page when the profile names one.
+		$link     = ! empty( $r['attorney_id'] ) ? ( class_exists( 'Optima_Team' ) ? Optima_Team::public_url( (int) $r['attorney_id'] ) : get_permalink( (int) $r['attorney_id'] ) ) : '';
 		$h       .= '<span class="optima-result__attorney" data-sr="attorney"' . ( '' === $attorney ? ' hidden' : '' ) . '>'
 			/* translators: %s: attorney's name */
 			. ( '' !== $link ? '<a href="' . esc_url( $link ) . '">' : '' ) . esc_html( '' !== $attorney ? sprintf( __( 'Attorney: %s', 'optima-results' ), $attorney ) : '' ) . ( '' !== $link ? '</a>' : '' )
@@ -306,24 +475,28 @@ final class Optima_Results_Render {
 	}
 
 	/**
-	 * [optima_results area="car-accidents" limit="12" filters="yes" heading="Case results"]
+	 * [optima_results area="car-accidents" attorney="12" limit="12" filters="yes" heading="Case results" variant="grid|ledger|feature"]
 	 */
 	public static function grid( $atts ): string {
 		$a = shortcode_atts(
 			array(
-				'area'    => '',
-				'limit'   => 100,
-				'filters' => 'yes',
-				'heading' => '',
+				'area'     => '',
+				'attorney' => '',
+				'limit'    => 100,
+				'filters'  => 'yes',
+				'heading'  => '',
+				'variant'  => 'grid',
 			),
 			(array) $atts,
 			'optima_results'
 		);
 
-		$results = self::query( $a );
+		$a['attorney'] = self::attorney_id( (string) $a['attorney'] );
+		$results       = self::query( $a );
+		$variant       = self::variant( $a );
 
 		$uid = 'optima-results-' . wp_unique_id();
-		$h   = self::style_tag() . '<section class="optima-results" id="' . esc_attr( $uid ) . '"' . ( '' !== $a['heading'] ? ' aria-labelledby="' . esc_attr( $uid ) . '-h"' : ' aria-label="' . esc_attr__( 'Case results', 'optima-results' ) . '"' ) . '>';
+		$h   = self::style_tag() . '<section class="optima-results optima-results--' . esc_attr( $variant ) . '" id="' . esc_attr( $uid ) . '"' . ( '' !== $a['heading'] ? ' aria-labelledby="' . esc_attr( $uid ) . '-h"' : ' aria-label="' . esc_attr__( 'Case results', 'optima-results' ) . '"' ) . '>';
 		if ( '' !== $a['heading'] ) {
 			$h .= '<h2 class="optima-results__heading" id="' . esc_attr( $uid ) . '-h">' . esc_html( $a['heading'] ) . '</h2>';
 		}
@@ -369,6 +542,41 @@ final class Optima_Results_Render {
 		}
 		$h .= '</div>';
 		return $h . '</section>';
+	}
+
+	/** The attorney attribute: a profile ID, or a profile's name or address slug. 0 when none matches. */
+	private static function attorney_id( string $value ): int {
+		$value = trim( $value );
+		if ( '' === $value ) {
+			return 0;
+		}
+		if ( ctype_digit( $value ) ) {
+			return (int) $value;
+		}
+		$found = get_posts(
+			array(
+				'post_type'      => 'optima_team',
+				'post_status'    => 'publish',
+				'name'           => sanitize_title( $value ),
+				'posts_per_page' => 1,
+				'fields'         => 'ids',
+				'no_found_rows'  => true,
+			)
+		);
+		if ( ! $found ) {
+			$found = get_posts(
+				array(
+					'post_type'      => 'optima_team',
+					'post_status'    => 'publish',
+					'title'          => sanitize_text_field( $value ),
+					'posts_per_page' => 1,
+					'fields'         => 'ids',
+					'no_found_rows'  => true,
+				)
+			);
+		}
+		// An attorney named but not found shows nothing rather than every result.
+		return $found ? (int) $found[0] : -1;
 	}
 
 	/** [optima_result id="12"]: one approved result at or above the firm's threshold, with the disclaimer. */

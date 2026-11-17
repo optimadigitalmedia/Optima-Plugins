@@ -32,6 +32,7 @@ final class Optima_Reviews_Render {
 		. '.optima-reviews-summary,.optima-reviews-summary__item{display:flex;flex-wrap:wrap;align-items:center}'
 		. '.optima-reviews__list{display:grid;gap:20px;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))}'
 		. '.optima-reviews--list .optima-reviews__list{grid-template-columns:1fr;max-width:760px}'
+		. '.optima-reviews--quote .optima-reviews__list{grid-template-columns:1fr;max-width:820px}'
 		. '.optima-reviews--row .optima-reviews__list{display:flex;overflow-x:auto}'
 		. '.optima-reviews--row .optima-review{flex:0 0 min(86%,360px)}'
 		. '.optima-review{display:flex;flex-direction:column;gap:16px;margin:0;padding:24px}'
@@ -52,6 +53,8 @@ final class Optima_Reviews_Render {
 		add_shortcode( 'optima_review_summary', array( __CLASS__, 'shortcode_summary' ) );
 
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_early' ) );
+		// Release 2 page layer: the practice-reviews slot (contract section 3).
+		add_action( 'optima_slot_practice-reviews', array( __CLASS__, 'slot_practice' ) );
 
 		register_block_type(
 			OPTIMA_REVIEWS_DIR . 'assets/block',
@@ -71,7 +74,7 @@ final class Optima_Reviews_Render {
 		$source = sanitize_key( (string) ( $raw['source'] ?? '' ) );
 
 		return array(
-			'layout'     => in_array( $layout, array( 'grid', 'row', 'list' ), true ) ? $layout : 'grid',
+			'layout'     => in_array( $layout, array( 'grid', 'row', 'list', 'quote' ), true ) ? $layout : 'grid',
 			'count'      => max( 0, (int) ( $raw['count'] ?? 0 ) ),
 			'source'     => Optima_Reviews_Sources::exists( $source ) ? $source : '',
 			'featured'   => $bool( $raw['featured'] ?? false ),
@@ -123,6 +126,7 @@ final class Optima_Reviews_Render {
 			'featured'   => $opts['featured'],
 			'min_rating' => $opts['min_rating'],
 			'topic'      => $opts['topic'] ?? '',
+			'topics'     => (array) ( $opts['topics'] ?? array() ),
 		);
 		$reviews = Optima_Reviews_Query::reviews( $query );
 		if ( ! $reviews && '' !== $query['topic'] && 'featured' === ( $opts['fallback'] ?? 'featured' ) ) {
@@ -143,7 +147,13 @@ final class Optima_Reviews_Render {
 		}
 
 		// A hand-picked or capped list says so, with the way to every review (16 CFR 465.7).
-		$curated = ! empty( $query['featured'] ) || '' !== (string) $query['topic'] || (int) $query['count'] > 0;
+		$curated = ! empty( $query['featured'] ) || '' !== (string) $query['topic'] || $query['topics'] || (int) $query['count'] > 0;
+		// Practice pages: each review links the practice page it belongs to.
+		if ( ! empty( $opts['practice_link']['url'] ) ) {
+			foreach ( $reviews as $i => $review ) {
+				$reviews[ $i ]['practice_link'] = $opts['practice_link'];
+			}
+		}
 		$google  = Optima_Reviews_Settings::profile( 'google' );
 
 		return self::style_tag() . self::template(
@@ -160,6 +170,75 @@ final class Optima_Reviews_Render {
 				'all_url'          => $google['url'],
 			)
 		);
+	}
+
+	/**
+	 * practice-reviews: approved reviews whose topic maps to the practice slug
+	 * (Display, Topics and practice pages; a topic maps to its own slug by
+	 * default). Each card reads "Read about our {practice} work" with a link to
+	 * the practice page. The curated label, the Google link and the law-site
+	 * disclaimer come with the section as in release 1. With no practice (home,
+	 * office pages) it shows the featured reviews. Prints nothing when there
+	 * are no reviews for the practice.
+	 *
+	 * @param array $args { practice: slug|'', limit: int, variant: grid|list|quote }.
+	 */
+	public static function slot_practice( $args = array() ): void {
+		$args     = is_array( $args ) ? $args : array();
+		$practice = Optima_Reviews_Settings::clean_practice( (string) ( $args['practice'] ?? '' ) );
+		$variant  = in_array( (string) ( $args['variant'] ?? '' ), array( 'grid', 'list', 'quote' ), true ) ? (string) $args['variant'] : 'grid';
+		$opts     = self::options(
+			array(
+				'layout'   => $variant,
+				'count'    => max( 1, min( 12, (int) ( $args['limit'] ?? 3 ) ) ),
+				'featured' => '' === $practice ? '1' : '0',
+				'summary'  => '0',
+				'fallback' => 'none',
+			)
+		);
+		if ( '' !== $practice ) {
+			$topics = Optima_Reviews_Settings::topics_for_practice( $practice );
+			if ( ! $topics ) {
+				return;
+			}
+			$opts['topics'] = $topics;
+			$url            = self::practice_url( $practice );
+			if ( '' !== $url ) {
+				$opts['practice_link'] = array(
+					'url'  => $url,
+					'name' => self::practice_name( $practice, $topics ),
+				);
+			}
+		}
+		echo self::section( $opts ); // phpcs:ignore WordPress.Security.EscapeOutput -- built from escaped templates.
+	}
+
+	/** The published practice page for a slug, or '' (Optima Team's lookup when it is on). */
+	public static function practice_url( string $slug ): string {
+		if ( function_exists( 'optima_practice_url' ) ) {
+			return (string) optima_practice_url( $slug );
+		}
+		if ( class_exists( 'Optima_Team' ) && method_exists( 'Optima_Team', 'practice_url' ) ) {
+			return Optima_Team::practice_url( $slug );
+		}
+		$page = get_page_by_path( $slug, OBJECT, 'page' );
+		return ( $page instanceof WP_Post && 'publish' === $page->post_status ) ? (string) get_permalink( $page ) : '';
+	}
+
+	/** A practice's name for "Read about our ... work": the shared list's, else the topic's, else the slug in words. */
+	public static function practice_name( string $slug, array $topics = array() ): string {
+		$name = '';
+		if ( class_exists( 'Optima_Team' ) && isset( Optima_Team::practices()[ $slug ] ) ) {
+			$name = Optima_Team::practices()[ $slug ];
+		} elseif ( in_array( $slug, $topics, true ) ) {
+			$term = get_term_by( 'slug', $slug, Optima_Reviews_Topics::TAX );
+			$name = $term && ! is_wp_error( $term ) ? $term->name : '';
+		}
+		if ( '' === $name ) {
+			$name = str_replace( array( '-', '/' ), array( ' ', ', ' ), basename( $slug ) );
+		}
+		// In a sentence: "truck accidents", but an acronym or a name stays as written.
+		return preg_match( '/^\p{Lu}\p{Ll}/u', $name ) ? mb_strtolower( mb_substr( $name, 0, 1 ) ) . mb_substr( $name, 1 ) : $name;
 	}
 
 	/**

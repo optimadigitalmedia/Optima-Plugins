@@ -114,6 +114,10 @@ final class Optima_Team_Offboard {
 				'no_found_rows'  => true,
 			)
 		) : array();
+		// Posts whose Byline box names the person count as posts under their byline too.
+		if ( class_exists( 'Optima_Team_Byline' ) ) {
+			$posts = array_values( array_unique( array_merge( array_map( 'intval', $posts ), array_map( 'intval', Optima_Team_Byline::posts_for( $person ) ) ) ) );
+		}
 		$results = post_type_exists( 'optima_result' ) ? get_posts(
 			array(
 				'post_type'      => 'optima_result',

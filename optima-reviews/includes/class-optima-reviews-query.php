@@ -53,8 +53,10 @@ final class Optima_Reviews_Query {
 				'featured'   => false,
 				'min_rating' => 0,
 				'topic'      => '',
+				'topics'     => array(), // Release 2: any of these topic slugs (the practice-reviews slot).
 			)
 		);
+		$args['topics'] = array_values( array_filter( array_map( 'sanitize_title', (array) $args['topics'] ) ) );
 
 		// Law sites: no star filter hides lower ratings (rating-based suppression),
 		// and only reviews a person approved show.
@@ -106,6 +108,13 @@ final class Optima_Reviews_Query {
 				'taxonomy' => Optima_Reviews_Topics::TAX,
 				'field'    => 'slug',
 				'terms'    => sanitize_title( (string) $args['topic'] ),
+			);
+		}
+		if ( $args['topics'] ) {
+			$tax_query[] = array(
+				'taxonomy' => Optima_Reviews_Topics::TAX,
+				'field'    => 'slug',
+				'terms'    => $args['topics'],
 			);
 		}
 
