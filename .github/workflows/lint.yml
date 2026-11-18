@@ -9,10 +9,6 @@ jobs:
   php-syntax:
     name: PHP syntax check
     runs-on: ubuntu-latest
-    # PHP 8.6 shipped Nov 19, 2026; until the setup action offers a stable
-    # build it runs but cannot fail the check. Drop the exception once it is
-    # green, then keep every Optima site off 8.6 until it is.
-    continue-on-error: ${{ matrix.php-version == '8.6' }}
     strategy:
       fail-fast: false
       matrix:
