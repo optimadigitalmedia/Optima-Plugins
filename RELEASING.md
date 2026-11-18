@@ -75,6 +75,40 @@ channel-aware updater as a normal release. After every site runs it:
 To go back to the old flow, set the file to `stable` again. Test releases
 already published stay test releases until promoted.
 
+## Checks before anything ships
+
+The Release workflow's first job runs the uniform check, the Optima Core
+contract, the client-names check on every tracked file, the updater and
+catalog copy checks, the "Run workflow" list check, and every test in
+`tools/tests` that runs without WordPress (`tools/tests/run-all.sh`). If any
+fails, nothing is tagged, built or listed.
+
+The "Run workflow" plugin list is written from the plugin folders:
+`python3 tools/release/dispatch-list.py` after adding a plugin (the Lint
+workflow fails until it is run).
+
+## Download safety
+
+- **Pinned addresses.** The updater (and Optima Build) only installs a zip
+  from `https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/`
+  (`Optima_Plugin_Updater::DOWNLOAD_PREFIX`). A release listed anywhere else
+  is skipped, and an update of an Optima plugin from any other address is
+  refused.
+- **Checksums.** `releases.json` lists each zip's `sha256` (GitHub's digest of
+  the uploaded asset, checked against the zip the Release job built). Sites
+  download the zip, compare, and only then let WordPress unpack it; a mismatch
+  stops the install with an error and a line in the PHP error log. A release
+  listed without a `sha256` still installs, with a log line.
+- **The catalog goes through the channels.** Optima Build reads the feature
+  catalog from the `version-list` branch, never from `main`:
+  `catalog-test.json` (written from the released commit on every run) on the
+  test channel, `catalog.json` on stable. On the test switch only Promote
+  copies `catalog-test.json` to `catalog.json`; on the stable switch every run
+  writes both. The copy bundled in Optima Build is the fallback.
+
+The updater copy every plugin ships is refreshed with
+`bash tools/updater/sync.sh` (`--check` lists copies that differ).
+
 ## Rules
 
 Releases are immutable once published: never re-tag a shipped version, and
@@ -92,6 +126,8 @@ The repo must stay **public** so sites can download releases without a token.
 - `php tools/tests/release-channel.php`: which version each channel is offered.
 - `bash tools/tests/promote-dry-run.sh`: what Promote picks, on made-up releases.
 - `RELEASES_JSON=<file> bash tools/release/promote.sh`: a dry run on any release list.
+- `bash tools/tests/feed-build.sh`: the version list and catalog the workflows publish, on made-up data.
+- `bash tools/tests/run-all.sh`: every test above and the rest of `tools/tests` that needs no WordPress.
 
 The updater's source copy is `tools/updater/class-optima-plugin-updater.php`;
 every plugin ships an identical copy, and the Lint workflow fails when one differs.

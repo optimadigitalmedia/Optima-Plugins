@@ -15,8 +15,14 @@
 		newArea: $( 'sr-new-area' ),
 		amount: $( 'sr-amount' ),
 		description: $( 'sr-description' ),
-		date: $( 'sr-date' )
+		date: $( 'sr-date' ),
+		role: $( 'sr-role' ),
+		grossNet: $( 'sr-gross-net' ),
+		venueCounty: $( 'sr-venue-county' ),
+		venueState: $( 'sr-venue-state' ),
+		afterNote: $( 'sr-post-verdict-note' )
 	};
+	var afterBoxes = Array.prototype.slice.call( document.querySelectorAll( 'input[name="optima_result[post_verdict][]"]' ) );
 	var flags = $( 'sr-flags' );
 
 	function set( key, text ) {
@@ -93,10 +99,30 @@
 		set( 'amount', fields.amount ? fields.amount.value.trim() : '' );
 		set( 'description', fields.description ? fields.description.value.trim() : '' );
 		set( 'date', fields.date ? monthYear( fields.date.value ) : '' );
+		var role = fields.role && cfg.roles ? ( cfg.roles[ fields.role.value ] || '' ) : '';
+		set( 'role', role && cfg.roleText ? cfg.roleText.replace( '%s', role ) : '' );
+		set( 'basis', fields.grossNet && cfg.grossNet ? ( cfg.grossNet[ fields.grossNet.value ] || '' ) : '' );
+		var venue = [ fields.venueCounty, fields.venueState ].map( function ( el ) {
+			return el ? el.value.trim() : '';
+		} ).filter( Boolean ).join( ', ' );
+		set( 'venue', venue && cfg.venueText ? cfg.venueText.replace( '%s', venue ) : '' );
+		var after = afterBoxes.filter( function ( box ) {
+			return box.checked;
+		} ).map( function ( box ) {
+			return box.getAttribute( 'data-sr-label' );
+		} );
+		var afterText = ( after.length ? after.join( ', ' ) + '.' : '' ) + ( fields.afterNote && fields.afterNote.value.trim() ? ' ' + fields.afterNote.value.trim() : '' );
+		set( 'after', afterText.trim() && cfg.afterText ? cfg.afterText.replace( '%s', afterText.trim() ) : '' );
+		if ( preview ) {
+			var facts = preview.querySelector( '.optima-result__facts' );
+			if ( facts ) {
+				facts.hidden = ! facts.querySelector( '[data-sr]:not([hidden])' );
+			}
+		}
 		checkWords();
 	}
 
-	[ title, fields.type, fields.area, fields.newArea, fields.amount, fields.description, fields.date ].forEach( function ( el ) {
+	[ title, fields.type, fields.area, fields.newArea, fields.amount, fields.description, fields.date, fields.role, fields.grossNet, fields.venueCounty, fields.venueState, fields.afterNote ].concat( afterBoxes ).forEach( function ( el ) {
 		if ( el ) {
 			el.addEventListener( 'input', update );
 			el.addEventListener( 'change', update );

@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.7.11.3 (2026-11-13)
+
+- Ten new template slots for the law-site page layer: breadcrumb, state-law, practice-results, practice-reviews, practice-attorneys, related-guides, next-steps, office-card, bio-glance and bio-results. Each prints only what its plugin attaches. When a theme passes no variant, optima_slot() fills it from the layout recipe's blocks.
+- New optima_layout( $key, $default ), next to optima_slot(): reads the layout recipe (hero, home_order, practice_order, blocks, concept) with dotted keys such as blocks.results.
+- Fill from theme now carries the new setup file sections. offices[] fills Optima Core's office list (optima_core_offices) by office id, blanks only, never removing an office. law fills Optima Results' state preset and publishing threshold only while they are unset or still the default, so an approved disclaimer is never moved. languages and layout are mirrored whole as optima_languages and optima_layout_recipe, and cleared when the theme drops them.
+- Fill from theme keeps seo.alternate_name (a string or a list), so Optima Core can print WebSite alternateName.
+- Team rows now fill practice_areas, bio_url and schema_id into blank fields of existing profiles. The team section runs once more so sites that already filled it get these.
+- The Call buttons section also carries the What happens next steps, reply time and free consultation flag.
+- Site health has a Page tree row: pages under a trashed parent, a second published page titled Home that is not the front page, and published content whose address ends in -copy or -2.
+
+## 0.7.11.2 (2026-11-12)
+
+- The feature catalog now comes from the version-list branch, not from main: catalog-test.json on the test channel, catalog.json (sent out by Promote) on stable. A catalog change reaches the test site first, like a release. The bundled catalog.json is still the fallback.
+- Turn on and Go back install only a zip from the Optima Plugins releases, and check it against the sha256 in the version list before installing, whichever plugin's updater copy loaded first. A mismatch installs nothing and shows an error.
+- Go back says plainly when the earlier release is no longer listed, instead of failing inside the installer.
+- Site health's checks of the site's own pages now verify the HTTPS certificate on live sites and host staging addresses. Only a copy on someone's own computer (localhost, .local, .test, a private IP, or the environment set to local or development) skips the check. Core's https_local_ssl_verify filter can still change it for one site.
+- Deleting the plugin also clears the test channel's cached catalog.
+- Updates install only from the Optima Plugins release downloads (https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/). A release listed at any other address is skipped, and an update of an Optima plugin from any other address is refused with an error.
+- Every download is checked against the sha256 published in the version list before WordPress unpacks it. A mismatch deletes the file, stops the install with an error and writes a line to the PHP error log.
+- A release listed without a sha256 (one published before checksums were recorded) still installs as before, with a line in the PHP error log saying no checksum was checked.
+- Automatic updates run only for a package from the Optima Plugins releases.
+- The GitHub API fallback reads each asset's digest as its sha256, so the check works on that path too.
+
 ## 0.7.11.1 (2026-11-05)
 
 - Updates polish: Site setup and Content updates leave the Build tab row (they are blocks on Updates); their tab shows only while that screen is open.

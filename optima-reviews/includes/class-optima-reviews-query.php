@@ -53,8 +53,18 @@ final class Optima_Reviews_Query {
 				'featured'   => false,
 				'min_rating' => 0,
 				'topic'      => '',
+				'topics'     => array(), // Release 2: any of these topic slugs (the practice-reviews slot).
 			)
 		);
+		$args['topics'] = array_values( array_filter( array_map( 'sanitize_title', (array) $args['topics'] ) ) );
+
+		// Law sites: no star filter hides lower ratings (rating-based suppression),
+		// and only reviews a person approved show.
+		$law = class_exists( 'Optima_Reviews_Law' ) && Optima_Reviews_Law::is_law();
+		if ( $law ) {
+			$args['min_rating'] = 0;
+		}
+		$args['_law'] = $law;
 
 		$key    = 'reviews:' . md5( wp_json_encode( $args ) ) . ':' . wp_cache_get_last_changed( self::CACHE_GROUP );
 		$cached = wp_cache_get( $key, self::CACHE_GROUP );
@@ -84,12 +94,27 @@ final class Optima_Reviews_Query {
 			);
 		}
 
+		if ( $law ) {
+			// Added by the old auto-publish option, never by a person: hidden until someone saves it.
+			$meta_query[] = array(
+				'key'     => Optima_Reviews_Law::META_AUTO,
+				'compare' => 'NOT EXISTS',
+			);
+		}
+
 		$tax_query = array();
 		if ( '' !== (string) $args['topic'] ) {
 			$tax_query[] = array(
 				'taxonomy' => Optima_Reviews_Topics::TAX,
 				'field'    => 'slug',
 				'terms'    => sanitize_title( (string) $args['topic'] ),
+			);
+		}
+		if ( $args['topics'] ) {
+			$tax_query[] = array(
+				'taxonomy' => Optima_Reviews_Topics::TAX,
+				'field'    => 'slug',
+				'terms'    => $args['topics'],
 			);
 		}
 

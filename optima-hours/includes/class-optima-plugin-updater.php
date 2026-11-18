@@ -21,6 +21,14 @@
  * the OPTIMA_HUB_CHANNEL constant in wp-config.php; without Optima Build a
  * site is always on stable.
  *
+ * Download safety: a package is only ever taken from this repo's own release
+ * downloads (DOWNLOAD_PREFIX); an offer pointing anywhere else is dropped, and
+ * an update of an Optima plugin from anywhere else is refused. When the version
+ * list carries a sha256 for the zip (the Release workflow records one for each
+ * release), the downloaded file must match it before WordPress unpacks it; a
+ * mismatch stops the install. A release listed without a sha256 (one published
+ * before checksums were recorded) still installs, and the site logs that it did.
+ *
  * This file ships identically inside every plugin in the suite so each one can
  * update itself even when the others are inactive. The first copy to load wins;
  * they are released together and kept in sync. The source copy is
@@ -74,6 +82,29 @@ final class Optima_Plugin_Updater {
 
 	/** The version list the Release workflow publishes (see .github/workflows/release.yml). */
 	const FEED_URL = 'https://raw.githubusercontent.com/optimadigitalmedia/Optima-Plugins/version-list/releases.json';
+
+	/**
+	 * Every package must start with this: the repo's own release downloads.
+	 * A version list that names any other address is ignored for that release.
+	 */
+	const DOWNLOAD_PREFIX = 'https://github.com/' . self::REPO . '/releases/download/';
+
+	/** This copy pins download addresses and checks each zip's sha256 (Optima Build can look for it). */
+	const CHECKSUMS = true;
+
+	/**
+	 * Plugin files (folder/file.php) this copy serves, so a download for one of
+	 * them from anywhere but DOWNLOAD_PREFIX can be refused.
+	 * @var array<string, string>
+	 */
+	private static $plugins = array();
+
+	/**
+	 * Whether the download check is hooked yet (once per request, however many
+	 * plugins boot this copy).
+	 * @var bool
+	 */
+	private static $download_hooked = false;
 
 	/**
 	 * The shared list for this request, so each copy reads it at most once.
@@ -134,6 +165,12 @@ final class Optima_Plugin_Updater {
 		add_filter( 'plugins_api', array( $updater, 'details' ), 10, 3 );
 		add_action( 'upgrader_process_complete', array( $updater, 'flush' ), 10, 0 );
 		add_filter( 'auto_update_plugin', array( $updater, 'auto_update' ), 10, 2 );
+
+		self::$plugins[ plugin_basename( $file ) ] = $slug;
+		if ( ! self::$download_hooked ) {
+			self::$download_hooked = true;
+			add_filter( 'upgrader_pre_download', array( __CLASS__, 'pre_download' ), 10, 4 );
+		}
 	}
 
 	/**
@@ -156,7 +193,129 @@ final class Optima_Plugin_Updater {
 		if ( defined( 'OPTIMA_DISABLE_AUTO_UPDATES' ) && OPTIMA_DISABLE_AUTO_UPDATES ) {
 			return $update;
 		}
+		// Only ever install on its own a package from this repo's releases.
+		if ( ! isset( $item->package ) || ! self::is_release_url( (string) $item->package ) ) {
+			return false;
+		}
 		return true;
+	}
+
+	/**
+	 * Whether an address is one of this repo's release downloads.
+	 *
+	 * @param string $url Package address.
+	 * @return bool
+	 */
+	public static function is_release_url( string $url ): bool {
+		if ( 0 !== strpos( $url, self::DOWNLOAD_PREFIX ) ) {
+			return false;
+		}
+		// <tag>/<file>.zip and nothing else: no dot segments, query or fragment.
+		return 1 === preg_match( '#^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+\.zip$#', substr( $url, strlen( self::DOWNLOAD_PREFIX ) ) )
+			&& false === strpos( $url, '..' );
+	}
+
+	/**
+	 * Check a download before WordPress unpacks it (the upgrader_pre_download
+	 * filter, hooked once for every Optima plugin).
+	 *
+	 * - A package from this repo's releases with a sha256 in the version list:
+	 *   downloaded here and checked. A mismatch deletes the file and stops the
+	 *   install with an error.
+	 * - The same without a sha256 (an older release): WordPress downloads it as
+	 *   usual, and the site logs that no checksum was checked.
+	 * - An update of an Optima plugin from any other web address: refused.
+	 * - Anything else (other plugins, themes, a zip uploaded by hand): untouched.
+	 *
+	 * @param mixed  $reply      False, or what an earlier filter returned.
+	 * @param string $package    The package address or path.
+	 * @param mixed  $upgrader   The WP_Upgrader running.
+	 * @param array  $hook_extra What is being upgraded.
+	 * @return mixed False to let WordPress download, a file path, or WP_Error.
+	 */
+	public static function pre_download( $reply, $package, $upgrader = null, $hook_extra = array() ) {
+		if ( false !== $reply || ! is_string( $package ) || '' === $package ) {
+			return $reply;
+		}
+		if ( ! self::is_release_url( $package ) ) {
+			$plugin = is_array( $hook_extra ) && isset( $hook_extra['plugin'] ) ? (string) $hook_extra['plugin'] : '';
+			if ( '' !== $plugin && isset( self::$plugins[ $plugin ] ) && preg_match( '#^[a-z][a-z0-9+.-]*://#i', $package ) ) {
+				self::log( 'Refused an update of ' . self::$plugins[ $plugin ] . ' from ' . $package . ': not a release of ' . self::REPO . '.' );
+				return new WP_Error( 'optima_updater_source', 'This update was refused: Optima plugins only install from the Optima Plugins releases.' );
+			}
+			return $reply;
+		}
+
+		$expected = self::expected_sha256( $package );
+		if ( '' === $expected ) {
+			self::log( 'No sha256 listed for ' . $package . '; installing it without a checksum check (a release from before checksums were recorded).' );
+			return $reply;
+		}
+
+		if ( ! function_exists( 'download_url' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+		if ( is_object( $upgrader ) && isset( $upgrader->skin ) && is_object( $upgrader->skin ) && method_exists( $upgrader->skin, 'feedback' ) ) {
+			$upgrader->skin->feedback( 'downloading_package', $package );
+		}
+		$file = download_url( $package, 300 );
+		if ( is_wp_error( $file ) ) {
+			return $file;
+		}
+		$actual = (string) hash_file( 'sha256', $file );
+		if ( ! hash_equals( $expected, $actual ) ) {
+			wp_delete_file( $file );
+			self::log( 'Checksum mismatch for ' . $package . ': the version list says ' . $expected . ', the download is ' . $actual . '. Install stopped.' );
+			return new WP_Error( 'optima_updater_checksum', 'This update was stopped: the downloaded file does not match the checksum published with the release. Nothing was changed. Try again later; if it keeps failing, tell the web team.' );
+		}
+		return $file;
+	}
+
+	/**
+	 * The sha256 the version list gives for one package address, or '' when it
+	 * gives none (or the address is not in the list).
+	 *
+	 * @param string $package Package address.
+	 * @return string Lower-case hex, or ''.
+	 */
+	public static function expected_sha256( string $package ): string {
+		foreach ( self::feed() as $release ) {
+			foreach ( (array) ( $release['assets'] ?? array() ) as $asset ) {
+				if ( is_array( $asset ) && isset( $asset['browser_download_url'] ) && $package === $asset['browser_download_url'] ) {
+					return self::clean_sha256( $asset['sha256'] ?? '' );
+				}
+			}
+		}
+		return '';
+	}
+
+	/**
+	 * A sha256 as 64 lower-case hex characters, or '' for anything else.
+	 * GitHub's API writes it as "sha256:<hex>"; the version list as plain hex.
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string
+	 */
+	private static function clean_sha256( $value ): string {
+		$value = strtolower( trim( (string) $value ) );
+		if ( 0 === strpos( $value, 'sha256:' ) ) {
+			$value = substr( $value, 7 );
+		}
+		return 1 === preg_match( '/^[0-9a-f]{64}$/', $value ) ? $value : '';
+	}
+
+	/**
+	 * Note an update safety event in the PHP error log, and let Optima Build
+	 * (or anything else) pick it up through the optima_updater_log action.
+	 *
+	 * @param string $message What happened.
+	 * @return void
+	 */
+	private static function log( string $message ): void {
+		error_log( 'Optima updater: ' . $message ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- an update safety record, kept on purpose.
+		if ( function_exists( 'do_action' ) ) {
+			do_action( 'optima_updater_log', $message );
+		}
 	}
 
 	/**
@@ -223,7 +382,10 @@ final class Optima_Plugin_Updater {
 	 * @param array  $releases  Release list (tag_name, draft, prerelease, body, assets).
 	 * @param string $slug      Plugin folder name.
 	 * @param bool   $with_test Also consider pre-releases.
-	 * @return array{version:string,package:string,notes:string,prerelease:bool}|null
+	 * Only a zip under DOWNLOAD_PREFIX counts; a release whose zip is listed at
+	 * any other address is skipped as not installable.
+	 *
+	 * @return array{version:string,package:string,notes:string,prerelease:bool,sha256:string}|null
 	 */
 	public static function pick( array $releases, string $slug, bool $with_test ): ?array {
 		// GitHub sorts by tag name as text ("v0.4.9" before "v0.4.11"), so
@@ -244,18 +406,19 @@ final class Optima_Plugin_Updater {
 				continue;
 			}
 
-			$package = self::zip_url( $release, $slug );
-			if ( null === $package ) {
-				continue; // Tagged but no built asset; not installable.
+			$asset = self::zip_asset( $release, $slug );
+			if ( null === $asset ) {
+				continue; // Tagged but no built asset from this repo; not installable.
 			}
 
 			$version = substr( (string) $release['tag_name'], strlen( $prefix ) );
 			if ( null === $best || version_compare( $version, $best['version'], '>' ) ) {
 				$best = array(
 					'version'    => $version,
-					'package'    => $package,
+					'package'    => $asset['url'],
 					'notes'      => isset( $release['body'] ) ? (string) $release['body'] : '',
 					'prerelease' => ! empty( $release['prerelease'] ),
+					'sha256'     => $asset['sha256'],
 				);
 			}
 		}
@@ -324,7 +487,7 @@ final class Optima_Plugin_Updater {
 	/**
 	 * The newest published release for this plugin.
 	 *
-	 * @return array{version:string,package:string,notes:string,prerelease:bool}|null
+	 * @return array{version:string,package:string,notes:string,prerelease:bool,sha256:string}|null
 	 *         Null when there is no usable release or the lookup failed.
 	 */
 	private function latest_release(): ?array {
@@ -347,7 +510,7 @@ final class Optima_Plugin_Updater {
 	 * Ask GitHub for this plugin's releases and pick the newest usable one for
 	 * this site's channel.
 	 *
-	 * @return array{version:string,package:string,notes:string,prerelease:bool}|null
+	 * @return array{version:string,package:string,notes:string,prerelease:bool,sha256:string}|null
 	 */
 	private function fetch_release(): ?array {
 		return self::pick( self::feed(), $this->slug, 'test' === self::channel() );
@@ -415,7 +578,12 @@ final class Optima_Plugin_Updater {
 			$assets = array();
 			foreach ( (array) ( $release['assets'] ?? array() ) as $asset ) {
 				if ( isset( $asset['name'], $asset['browser_download_url'] ) ) {
-					$assets[] = array( 'name' => (string) $asset['name'], 'browser_download_url' => (string) $asset['browser_download_url'] );
+					// The version list writes sha256; GitHub's API (the fallback) writes digest.
+					$assets[] = array(
+						'name'                 => (string) $asset['name'],
+						'browser_download_url' => (string) $asset['browser_download_url'],
+						'sha256'               => self::clean_sha256( $asset['sha256'] ?? ( $asset['digest'] ?? '' ) ),
+					);
 				}
 			}
 			$list[] = array(
@@ -432,20 +600,29 @@ final class Optima_Plugin_Updater {
 	}
 
 	/**
-	 * The download URL of a release's plugin zip.
+	 * The download address and sha256 of a release's plugin zip.
 	 *
-	 * @param array  $release Release payload from the GitHub API.
+	 * @param array  $release Release payload from the version list or the GitHub API.
 	 * @param string $slug    Plugin folder name.
-	 * @return string|null Null when the release carries no matching asset.
+	 * @return array{url:string,sha256:string}|null Null when the release carries
+	 *         no matching asset under DOWNLOAD_PREFIX.
 	 */
-	private static function zip_url( array $release, string $slug ): ?string {
+	private static function zip_asset( array $release, string $slug ): ?array {
 		if ( empty( $release['assets'] ) || ! is_array( $release['assets'] ) ) {
 			return null;
 		}
 		foreach ( $release['assets'] as $asset ) {
-			if ( isset( $asset['name'], $asset['browser_download_url'] ) && $slug . '.zip' === $asset['name'] ) {
-				return (string) $asset['browser_download_url'];
+			if ( ! is_array( $asset ) || ! isset( $asset['name'], $asset['browser_download_url'] ) || $slug . '.zip' !== $asset['name'] ) {
+				continue;
 			}
+			$url = (string) $asset['browser_download_url'];
+			if ( ! self::is_release_url( $url ) ) {
+				continue;
+			}
+			return array(
+				'url'    => $url,
+				'sha256' => self::clean_sha256( $asset['sha256'] ?? ( $asset['digest'] ?? '' ) ),
+			);
 		}
 		return null;
 	}

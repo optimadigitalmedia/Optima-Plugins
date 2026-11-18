@@ -8,7 +8,9 @@
      --optima-team-gap      grid gap */
 
 .optima-team-profile,
-.optima-team-grid {
+.optima-team-grid,
+.optima-team-glance,
+.optima-team-group {
 	--optima-team-accent: var(--wp--preset--color--primary, currentColor);
 	--optima-team-muted: color-mix(in srgb, currentColor 72%, transparent);
 	--optima-team-line: color-mix(in srgb, currentColor 16%, transparent);
@@ -87,3 +89,40 @@
 /* Reviewed by: one line at the end of a page, printed through the theme's before-close slot. */
 .optima-reviewed { margin: var(--optima-team-gap, 1.5rem) 0 0; font-size: .9rem; color: var(--optima-team-muted, inherit); }
 .optima-reviewed a { color: var(--optima-team-accent, inherit); text-decoration: underline; text-underline-offset: .15em; }
+
+/* ---- Release 2: awards, groups, the at-a-glance card, attorneys by practice ---- */
+.optima-team-standards { font-size: .9em; white-space: nowrap; }
+.optima-team-group { margin: 1.5em 0 .5em; text-wrap: balance; }
+.optima-team-group + .optima-team-grid { margin-top: .5em; }
+
+.optima-team-glance {
+	display: grid; gap: var(--optima-team-gap); margin: 0 0 var(--optima-team-gap);
+	padding: clamp(18px, 3vw, 28px); border: 1px solid var(--optima-line, var(--optima-team-line));
+	border-radius: var(--optima-radius-md, var(--optima-team-radius)); background: var(--optima-surface, transparent); color: var(--optima-ink, inherit);
+}
+.optima-team-glance *, .optima-team-attorneys * { box-sizing: border-box; }
+@media (min-width: 700px) {
+	.optima-team-glance--split { grid-template-columns: minmax(180px, 280px) 1fr; align-items: start; }
+}
+.optima-team-glance__photo img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--optima-radius-md, var(--optima-team-radius)); }
+.optima-team-glance__name { margin: 0 0 12px; font-family: var(--optima-font-display, inherit); font-size: 1.35em; font-weight: 700; line-height: 1.25; text-wrap: balance; }
+.optima-team-glance__facts { display: grid; gap: 10px; margin: 0; }
+.optima-team-glance__facts > div { display: grid; gap: 2px; }
+@media (min-width: 600px) {
+	.optima-team-glance__facts > div { grid-template-columns: 11em 1fr; gap: 12px; }
+}
+.optima-team-glance__facts dt { margin: 0; font-size: .85em; font-weight: 600; color: var(--optima-ink-2, var(--optima-team-muted)); }
+.optima-team-glance__facts dd { margin: 0; line-height: 1.5; overflow-wrap: anywhere; }
+.optima-team-glance a { color: var(--optima-accent, var(--optima-team-accent)); text-underline-offset: .18em; }
+.optima-team-glance__actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 0; }
+.optima-team-glance .optima-team-cta {
+	display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 10px 22px;
+	border: 2px solid var(--optima-accent, currentColor); border-radius: var(--optima-button-radius, 980px);
+	font-weight: var(--optima-button-weight, 700); text-decoration: none; color: var(--optima-accent, inherit); background: transparent;
+}
+.optima-team-glance .optima-team-cta--primary { background: var(--optima-accent, currentColor); color: var(--optima-accent-ink, inherit); }
+.optima-team-glance .optima-team-cta:focus-visible { outline: 3px solid var(--optima-accent, currentColor); outline-offset: 2px; }
+
+.optima-team-attorneys { --optima-team-accent: var(--optima-accent, currentColor); --optima-team-muted: var(--optima-ink-2, inherit); --optima-team-line: var(--optima-line, currentColor); --optima-team-radius: var(--optima-radius-md, 12px); --optima-team-gap: clamp(16px, 3vw, 32px); }
+.optima-team-attorneys--horizontal .optima-team-card { flex-direction: row; align-items: flex-start; }
+.optima-team-attorneys--horizontal .optima-team-card__photo { flex: 0 0 min(36%, 140px); }

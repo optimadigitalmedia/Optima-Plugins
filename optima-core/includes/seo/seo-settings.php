@@ -4,6 +4,8 @@
  * still lives in the Optima SEO box; these are the site-wide fallbacks:
  *  - default_image: the share image used when a page has no featured image.
  *  - home_description: meta description for the front page.
+ *  - alternate_name: other names the site goes by (a DBA, a short name), one per
+ *    line, printed as the WebSite schema's alternateName only when set.
  *
  * @package Optima_Core
  */
@@ -21,6 +23,7 @@ final class Optima_Core_SEO_Settings {
 		return array(
 			'default_image'    => 'Default share image URL (used when a page has no featured image)',
 			'home_description' => 'Homepage meta description',
+			'alternate_name'   => 'Other names people search for',
 		);
 	}
 
@@ -48,6 +51,8 @@ final class Optima_Core_SEO_Settings {
 		return array(
 			'default_image'    => isset( $input['default_image'] ) ? esc_url_raw( $input['default_image'] ) : '',
 			'home_description' => isset( $input['home_description'] ) ? sanitize_textarea_field( $input['home_description'] ) : '',
+			// A save from an older form that did not show the field keeps the saved value.
+			'alternate_name'   => isset( $input['alternate_name'] ) ? sanitize_textarea_field( $input['alternate_name'] ) : (string) self::value( 'alternate_name' ),
 		);
 	}
 }

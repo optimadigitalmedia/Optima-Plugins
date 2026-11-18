@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.3.10 (2026-11-12)
+
+- **jQuery stays in the head unless a site turns the move on.** Moving jQuery to the footer is now a per-site choice (Image optimizer, Page speed, off by default), because Elementor widgets and third-party embeds call jQuery inside the page and broke when it moved. Gravity Forms stylesheets still load without holding up the first paint.
+- **Never moved on Elementor or NitroPack sites.** The move stays off whenever Elementor or NitroPack is active, and the screen says why in one line ("jQuery stays in the head because this site runs Elementor"). `OPTIMA_JQUERY_IN_FOOTER` in wp-config.php or the `optima_jquery_in_footer` filter can still force it either way.
+- **Image optimization pauses while NitroPack runs (Optima Playbook 5.28: never two tools on one job).** New uploads, the library sweep and the smaller copies all stand down, with a one-line notice on the Image optimizer and sweep screens. Settings are kept for when NitroPack is removed; the `optima_optimize_pause_images` filter can override.
+- Updates install only from the Optima Plugins release downloads (https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/). A release listed at any other address is skipped, and an update of an Optima plugin from any other address is refused with an error.
+- Every download is checked against the sha256 published in the version list before WordPress unpacks it. A mismatch deletes the file, stops the install with an error and writes a line to the PHP error log.
+- A release listed without a sha256 (one published before checksums were recorded) still installs as before, with a line in the PHP error log saying no checksum was checked.
+- Automatic updates run only for a package from the Optima Plugins releases.
+- The GitHub API fallback reads each asset's digest as its sha256, so the check works on that path too.
+
 ## 0.9.3.9 (2026-11-05)
 
 - Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).

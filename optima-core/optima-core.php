@@ -3,7 +3,7 @@
  * Plugin Name:       Optima Core
  * Plugin URI:        https://optimadigitalmedia.com
  * Description:       The Optima engine for a client site: business identity, content model (post types, fields, Block Bindings), the JSON-LD schema graph, and the in-house SEO head tags and sitemap tuning. One plugin, one Optima dashboard. The Yoast replacement, built to survive any future redesign.
- * Version:           1.6.0.12
+ * Version:           1.6.0.16
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Author:            Optima Digital
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OPTIMA_CORE_VERSION', '1.6.0.12' );
+define( 'OPTIMA_CORE_VERSION', '1.6.0.16' );
 define( 'OPTIMA_CORE_DIR', plugin_dir_path( __FILE__ ) );
 define( 'OPTIMA_CORE_FILE', __FILE__ );
 
@@ -45,6 +45,16 @@ require_once OPTIMA_CORE_DIR . 'includes/block-bindings.php';
 require_once OPTIMA_CORE_DIR . 'includes/business.php';
 require_once OPTIMA_CORE_DIR . 'includes/universal-types.php';
 
+/* ---- Release 2 page layer: offices, breadcrumbs, primary practice, content date ---- */
+require_once OPTIMA_CORE_DIR . 'includes/offices.php';
+require_once OPTIMA_CORE_DIR . 'includes/breadcrumbs.php';
+require_once OPTIMA_CORE_DIR . 'includes/practice.php';
+require_once OPTIMA_CORE_DIR . 'includes/content-changed.php';
+Optima_Core_Offices::init();
+Optima_Core_Breadcrumbs::init();
+Optima_Core_Practice::init();
+Optima_Core_Content_Changed::init();
+
 /* ---- Editable pages: words and photos on the page, layout locked (theme opt-in) ---- */
 require_once OPTIMA_CORE_DIR . 'includes/editable-pages.php';
 
@@ -61,6 +71,7 @@ require_once OPTIMA_CORE_DIR . 'includes/seo/class-seo-head.php';
 require_once OPTIMA_CORE_DIR . 'includes/seo/class-seo-setup.php';
 require_once OPTIMA_CORE_DIR . 'includes/seo/class-seo-box.php';
 require_once OPTIMA_CORE_DIR . 'includes/seo/class-seo-sitemap.php';
+require_once OPTIMA_CORE_DIR . 'includes/seo/class-seo-oembed.php';
 
 /* ---- SEO global defaults, the unified Optima admin, and the update tracker ---- */
 require_once OPTIMA_CORE_DIR . 'includes/seo/seo-settings.php';
@@ -132,6 +143,7 @@ Optima_SEO_Head::init();
 Optima_SEO_Setup::init();
 Optima_SEO_Box::init();
 Optima_SEO_Sitemap::init();
+Optima_SEO_OEmbed::init();
 Optima_Schema_Conflicts::init();
 
 /* The one Optima menu (Dashboard / Business / SEO). */

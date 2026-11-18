@@ -9,6 +9,17 @@
  * shown on the page and emailed. If the visitor closes the tab halfway, a
  * scheduled job finishes the run ten minutes later.
  *
+ * Speed: a visitor's request waits at most 20 seconds for Google's speed
+ * tool. If it has not answered, the step moves to a scheduled job (the same
+ * FINISH hook, run now, with a 60-second wait), the request returns "pending"
+ * at once, and the page asks again every few seconds. After SPEED_WAIT seconds
+ * with no answer, speed is left out of the score so the report can finish.
+ *
+ * Limits on public use: three checks an hour and IP_DAY (six) a day from one
+ * address (kept as a salted hash, never the address itself), three a day per
+ * email, and 40 a day for the whole site. A visitor over a limit never uses up
+ * the site's daily allowance.
+ *
  * @package Optima_Sitecheck
  */
 
@@ -24,12 +35,26 @@ final class Optima_Sitecheck {
 	const STEPS  = array( 'basics', 'speed', 'crawlers', 'photos' );
 	const FINISH = 'optima_sitecheck_finish';
 
+	/** Seconds the page waits on a background speed test before leaving speed out. */
+	const SPEED_WAIT = 150;
+
+	/** Checks a day from one visitor address (below the site's 40). */
+	const IP_DAY = 6;
+
+	/** Checks a day for the whole site. */
+	const SITE_DAY = 40;
+
 	public static function boot(): void {
 		add_action( 'init', array( __CLASS__, 'register_type' ) );
 		add_action( 'rest_api_init', array( __CLASS__, 'routes' ) );
 		add_shortcode( 'optima_site_check', array( __CLASS__, 'shortcode' ) );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'maybe_assets' ) );
-		add_action( self::FINISH, array( __CLASS__, 'finish_late' ) );
+		add_action( self::FINISH, array( __CLASS__, 'finish_late' ), 10, 2 );
+	}
+
+	/** Plugin switched off: no finishing or speed jobs left behind. */
+	public static function deactivate(): void {
+		wp_unschedule_hook( self::FINISH );
 	}
 
 	/** @return array<string, mixed> */
@@ -43,7 +68,22 @@ final class Optima_Sitecheck {
 			'psi_key'    => (string) ( $s['psi_key'] ?? '' ),
 			'hold'       => ! empty( $s['hold'] ),
 			'page'       => (int) ( $s['page'] ?? 0 ),
+			// Days a saved check is kept; 0 keeps them, with a reason.
+			'retention'        => isset( $s['retention'] ) ? max( 0, (int) $s['retention'] ) : self::RETENTION_DAYS,
+			'retention_reason' => (string) ( $s['retention_reason'] ?? '' ),
 		);
+	}
+
+	/** The suite's form-entry policy: personal details go after 90 days unless the site records why it keeps them. */
+	const RETENTION_DAYS = 90;
+
+	/** Days to keep saved checks, or 0 to keep them (only with a recorded reason). */
+	public static function retention_days(): int {
+		$s = self::settings();
+		if ( 0 === $s['retention'] && '' === trim( $s['retention_reason'] ) ) {
+			return self::RETENTION_DAYS;
+		}
+		return $s['retention'];
 	}
 
 	/** Google's speed tool key: wp-config's OPTIMA_SITECHECK_PSI_KEY wins over the setting. */
@@ -211,15 +251,24 @@ final class Optima_Sitecheck {
 		);
 	}
 
-	/** Count a request against a limit. True when the limit is already used up. */
-	private static function over( string $key, int $max, int $ttl ): bool {
-		$key = 'optima_ssc_' . md5( $key . wp_salt( 'nonce' ) );
-		$n   = (int) get_transient( $key );
-		if ( $n >= $max ) {
-			return true;
-		}
-		set_transient( $key, $n + 1, $ttl );
-		return false;
+	/** The transient for a limit. The key is a salted hash, so no address or email is stored. */
+	private static function limit_key( string $key ): string {
+		return 'optima_ssc_' . md5( $key . wp_salt( 'nonce' ) );
+	}
+
+	/** True when this limit is already used up. Reads only. */
+	private static function used_up( string $key, int $max ): bool {
+		$v = get_transient( self::limit_key( $key ) );
+		return ( is_array( $v ) ? (int) ( $v['n'] ?? 0 ) : (int) $v ) >= $max;
+	}
+
+	/** Count one request against a limit. The window starts at the first request and does not slide. */
+	private static function count( string $key, int $ttl ): void {
+		$k     = self::limit_key( $key );
+		$v     = get_transient( $k );
+		$n     = is_array( $v ) ? (int) ( $v['n'] ?? 0 ) : (int) $v;
+		$until = is_array( $v ) && ! empty( $v['until'] ) ? (int) $v['until'] : time() + $ttl;
+		set_transient( $k, array( 'n' => $n + 1, 'until' => $until ), max( 1, $until - time() ) );
 	}
 
 	/**
@@ -262,9 +311,21 @@ final class Optima_Sitecheck {
 		if ( ! is_email( $email ) ) {
 			return new WP_Error( 'optima_ssc_email', __( 'Add your email so we can send the full report.', 'optima-sitecheck' ), array( 'status' => 400 ) );
 		}
-		$ip = (string) ( $_SERVER['REMOTE_ADDR'] ?? '' );
-		if ( self::over( 'ip' . $ip, 3, HOUR_IN_SECONDS ) || self::over( 'em' . strtolower( $email ), 3, DAY_IN_SECONDS ) || self::over( 'all', 40, DAY_IN_SECONDS ) ) {
-			return new WP_Error( 'optima_ssc_slow', __( 'We\'ve run a lot of checks in a short time. Please try again in an hour, or email us and we\'ll run it for you.', 'optima-sitecheck' ), array( 'status' => 429 ) );
+		$ip     = (string) ( $_SERVER['REMOTE_ADDR'] ?? '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- hashed, never stored.
+		$limits = array(
+			// Per visitor first, so someone over their own limit never uses up the site's allowance.
+			array( 'ip' . $ip, 3, HOUR_IN_SECONDS ),
+			array( 'ipday' . $ip, self::IP_DAY, DAY_IN_SECONDS ),
+			array( 'em' . strtolower( $email ), 3, DAY_IN_SECONDS ),
+			array( 'all', self::SITE_DAY, DAY_IN_SECONDS ),
+		);
+		foreach ( $limits as $l ) {
+			if ( self::used_up( $l[0], $l[1] ) ) {
+				return new WP_Error( 'optima_ssc_slow', __( 'We\'ve run a lot of checks in a short time. Please try again in an hour, or email us and we\'ll run it for you.', 'optima-sitecheck' ), array( 'status' => 429 ) );
+			}
+		}
+		foreach ( $limits as $l ) {
+			self::count( $l[0], $l[2] );
 		}
 		$host = (string) wp_parse_url( $url, PHP_URL_HOST );
 		$id   = wp_insert_post(
@@ -302,6 +363,14 @@ final class Optima_Sitecheck {
 			return new WP_Error( 'optima_ssc_bad', __( 'This check has expired. Please start a new one.', 'optima-sitecheck' ), array( 'status' => 403 ) );
 		}
 		$rows = self::run_step( $id, $step );
+		if ( isset( $rows['pending'] ) ) {
+			// Google's speed tool is still working in the background: the page asks again shortly.
+			return array(
+				'step'    => $step,
+				'ok'      => true,
+				'pending' => true,
+			);
+		}
 		$out  = array(
 			'step' => $step,
 			'ok'   => ! isset( $rows['fatal'] ),
@@ -320,11 +389,25 @@ final class Optima_Sitecheck {
 		return $out;
 	}
 
-	/** Run one step once and store it. Returns its rows, or ['fatal' => message]. */
-	public static function run_step( int $id, string $step ): array {
+	/**
+	 * Run one step once and store it. Returns its rows, ['fatal' => message],
+	 * or ['pending' => true] while the speed test runs in the background.
+	 * $background is true only in the scheduled job, never in a visitor's request.
+	 */
+	public static function run_step( int $id, string $step, bool $background = false ): array {
 		$done = get_post_meta( $id, '_ssc_step_' . $step, true );
 		if ( is_array( $done ) ) {
 			return $done;
+		}
+		if ( 'speed' === $step && ! $background ) {
+			$queued = (int) get_post_meta( $id, '_ssc_speed_queued', true );
+			if ( $queued && time() - $queued < self::SPEED_WAIT ) {
+				return array( 'pending' => true );
+			}
+			if ( $queued ) {
+				// The background run never answered: leave speed out so the report can finish.
+				return self::store_step( $id, $step, array( Optima_Sitecheck_Checks::speed_skipped() ) );
+			}
 		}
 		if ( function_exists( 'set_time_limit' ) ) {
 			@set_time_limit( 120 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors -- some hosts disable it.
@@ -334,7 +417,15 @@ final class Optima_Sitecheck {
 			$base = (string) get_post_meta( $id, '_ssc_base', true );
 			$url  = '' !== $base ? $base : $url;
 		}
-		$rows = Optima_Sitecheck_Checks::step( $step, $url );
+		$rows = Optima_Sitecheck_Checks::step( $step, $url, $background );
+		if ( isset( $rows['pending'] ) ) {
+			update_post_meta( $id, '_ssc_speed_queued', time() );
+			if ( ! wp_next_scheduled( self::FINISH, array( $id, 'speed' ) ) ) {
+				wp_schedule_single_event( time(), self::FINISH, array( $id, 'speed' ) );
+			}
+			spawn_cron(); // Start it now; the page's next poll also nudges cron.
+			return $rows;
+		}
 		if ( isset( $rows['fatal'] ) ) {
 			update_post_meta( $id, '_ssc_status', 'unreachable' );
 			if ( add_post_meta( $id, '_ssc_final', 1, true ) ) {
@@ -346,7 +437,25 @@ final class Optima_Sitecheck {
 			update_post_meta( $id, '_ssc_base', (string) $rows['base'] );
 			unset( $rows['base'] );
 		}
-		update_post_meta( $id, '_ssc_step_' . $step, $rows );
+		return self::store_step( $id, $step, $rows );
+	}
+
+	/**
+	 * Save a step's rows unless another run already did (first answer wins, so
+	 * a late background speed test never rewrites a finished report). Returns
+	 * the rows that are stored.
+	 */
+	private static function store_step( int $id, string $step, array $rows ): array {
+		$key = '_ssc_step_' . $step;
+		if ( add_post_meta( $id, $key, $rows, true ) ) {
+			return $rows;
+		}
+		wp_cache_delete( $id, 'post_meta' );
+		$stored = get_post_meta( $id, $key, true );
+		if ( is_array( $stored ) ) {
+			return $stored;
+		}
+		update_post_meta( $id, $key, $rows );
 		return $rows;
 	}
 
@@ -362,6 +471,7 @@ final class Optima_Sitecheck {
 			update_post_meta( $id, '_ssc_total', $report['total'] );
 			update_post_meta( $id, '_ssc_checked', time() );
 			wp_clear_scheduled_hook( self::FINISH, array( $id ) );
+			wp_clear_scheduled_hook( self::FINISH, array( $id, 'speed' ) );
 			if ( self::settings()['hold'] ) {
 				update_post_meta( $id, '_ssc_status', 'held' );
 			} else {
@@ -414,13 +524,23 @@ final class Optima_Sitecheck {
 		);
 	}
 
-	/** The safety net when a visitor closes the tab before the last step. */
-	public static function finish_late( int $id ): void {
-		if ( get_post_meta( $id, '_ssc_final', true ) ) {
+	/**
+	 * The scheduled job. With $only = 'speed' it runs the speed test a visitor's
+	 * request handed over; with no $only it is the safety net when a visitor
+	 * closes the tab before the last step.
+	 */
+	public static function finish_late( $id, $only = '' ): void {
+		$id   = (int) $id;
+		$post = $id ? get_post( $id ) : null;
+		if ( ! $post || self::CPT !== $post->post_type || get_post_meta( $id, '_ssc_final', true ) ) { // Deleted (privacy request or clean-up) or already sent.
 			return;
 		}
-		foreach ( self::STEPS as $step ) {
-			$rows = self::run_step( $id, $step );
+		if ( function_exists( 'set_time_limit' ) ) {
+			@set_time_limit( 180 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors -- some hosts disable it.
+		}
+		$steps = 'speed' === $only ? array( 'speed' ) : self::STEPS;
+		foreach ( $steps as $step ) {
+			$rows = self::run_step( $id, $step, true );
 			if ( isset( $rows['fatal'] ) ) {
 				return;
 			}

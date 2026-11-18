@@ -142,7 +142,11 @@ final class Optima_Reviews_Inbox {
 		$detail    = (string) get_post_meta( $post->ID, Optima_Reviews_Post_Type::META_DETAIL, true );
 		$suggested = Optima_Reviews_Topics::suggest( $post->post_content );
 		$website   = Optima_Reviews_Notes::from_website( $post->ID );
-		$allowed   = Optima_Reviews_Notes::can_publish( $post->ID );
+		$consented = Optima_Reviews_Notes::can_publish( $post->ID );
+		// Law sites flag money and outcome figures; North Carolina will not approve them.
+		$flagged   = Optima_Reviews_Law::is_law() && Optima_Reviews_Law::money_flag( $post->post_content );
+		$blocked   = Optima_Reviews_Law::block_reason( $post->ID );
+		$allowed   = $consented && '' === $blocked;
 		$source    = Optima_Reviews_Sources::label( (string) get_post_meta( $post->ID, Optima_Reviews_Post_Type::META_SOURCE, true ) );
 		?>
 		<form class="srk-box srk-item is-new" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
@@ -160,11 +164,17 @@ final class Optima_Reviews_Inbox {
 					<span class="srk-note" style="margin:0;"><?php echo esc_html( $date ); ?></span>
 				<?php endif; ?>
 			</p>
+			<?php if ( $flagged ) : ?>
+				<p class="srk-itemhead">
+					<span class="srk-pill is-private"><?php esc_html_e( 'Flagged: mentions a dollar amount or an outcome figure', 'optima-reviews' ); ?></span>
+				</p>
+				<p class="srk-note"><?php echo esc_html( '' !== $blocked ? $blocked : __( 'Check it against your state\'s rules on testimonials before you approve it.', 'optima-reviews' ) ); ?></p>
+			<?php endif; ?>
 			<blockquote class="srk-quote"><?php echo wpautop( esc_html( $post->post_content ) ); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped before wpautop. ?></blockquote>
 			<p class="srk-itemhead">
 				<strong><?php echo esc_html( get_the_title( $post ) . ( '' !== $detail ? ', ' . $detail : '' ) ); ?></strong>
 				<?php if ( $website ) : ?>
-					<?php if ( $allowed ) : ?>
+					<?php if ( $consented ) : ?>
 						<span class="srk-pill is-ok"><?php esc_html_e( 'OK to show on the site', 'optima-reviews' ); ?></span>
 					<?php else : ?>
 						<span class="srk-pill is-private"><?php esc_html_e( 'Private: not OK to show', 'optima-reviews' ); ?></span>
@@ -191,6 +201,8 @@ final class Optima_Reviews_Inbox {
 					<label style="margin-right:8px;"><input type="checkbox" name="featured" value="1" /> <?php esc_html_e( 'Featured', 'optima-reviews' ); ?></label>
 					<button type="submit" name="do" value="add" class="button button-primary"><?php esc_html_e( 'Approve and add to site', 'optima-reviews' ); ?></button>
 					<button type="submit" name="do" value="skip" class="button"><?php esc_html_e( 'Skip', 'optima-reviews' ); ?></button>
+				<?php elseif ( '' !== $blocked ) : ?>
+					<button type="submit" name="do" value="skip" class="button button-primary"><?php esc_html_e( 'Skip', 'optima-reviews' ); ?></button>
 				<?php else : ?>
 					<button type="submit" name="do" value="skip" class="button button-primary"><?php esc_html_e( 'Mark as read', 'optima-reviews' ); ?></button>
 				<?php endif; ?>
@@ -213,7 +225,7 @@ final class Optima_Reviews_Inbox {
 		if ( 'add_all' === $do ) {
 			$added = 0;
 			foreach ( self::items() as $post ) {
-				if ( current_user_can( 'publish_post', $post->ID ) && self::add( $post->ID, Optima_Reviews_Topics::suggest( $post->post_content ), false ) ) {
+				if ( current_user_can( 'publish_post', $post->ID ) && Optima_Reviews_Notes::can_publish( $post->ID ) && '' === Optima_Reviews_Law::block_reason( $post->ID ) && self::add( $post->ID, Optima_Reviews_Topics::suggest( $post->post_content ), false ) ) {
 					++$added;
 				}
 			}
@@ -240,6 +252,10 @@ final class Optima_Reviews_Inbox {
 			}
 			if ( ! Optima_Reviews_Notes::can_publish( $id ) ) {
 				self::back( __( 'This note is private. The client did not say it was OK to show it on the site.', 'optima-reviews' ), 'error' );
+			}
+			$blocked = Optima_Reviews_Law::block_reason( $id );
+			if ( '' !== $blocked ) {
+				self::back( $blocked, 'error' );
 			}
 			$topics = array_map( 'intval', (array) ( $_POST['topics'] ?? array() ) );
 			self::add( $id, $topics, ! empty( $_POST['featured'] ) );

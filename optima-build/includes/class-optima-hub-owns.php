@@ -36,8 +36,29 @@ final class Optima_Hub_Owns {
 		'account-privacy' => 'optima-build',
 	);
 
-	/** The fixed spots a theme offers for plugin blocks. */
-	const SLOTS = array( 'header', 'after-hero', 'before-close', 'footer', 'footer-contact', 'body-end' );
+	/**
+	 * The fixed spots a theme offers for plugin blocks. The second line is the
+	 * law-site page layer (release 2 contract, section 3): each is filled by
+	 * one plugin and prints nothing while that plugin is off.
+	 */
+	const SLOTS = array(
+		'header', 'after-hero', 'before-close', 'footer', 'footer-contact', 'body-end',
+		'breadcrumb', 'state-law', 'practice-results', 'practice-reviews', 'practice-attorneys', 'related-guides', 'next-steps', 'office-card', 'bio-glance', 'bio-results',
+	);
+
+	/** Slot => its key in the layout recipe's "blocks" (where the slot's variant is named). */
+	const VARIANT_KEYS = array(
+		'practice-results'   => 'results',
+		'practice-reviews'   => 'reviews',
+		'practice-attorneys' => 'attorneys',
+		'state-law'          => 'state_law',
+		'next-steps'         => 'next_steps',
+		'office-card'        => 'office',
+		'related-guides'     => 'guides',
+	);
+
+	/** The option Optima Build fills from optima-setup.json "layout" (Optima_Hub_Setup::layout()). */
+	const LAYOUT_OPTION = 'optima_layout_recipe';
 
 	/** @var array<string,bool>|null Active plugin slugs, read once per request. */
 	private static $active = null;
@@ -85,6 +106,13 @@ final class Optima_Hub_Owns {
 		if ( ! in_array( $name, self::SLOTS, true ) ) {
 			return;
 		}
+		// A theme that passes no variant gets the one its layout recipe names (layout.blocks).
+		if ( ! isset( $args['variant'] ) && isset( self::VARIANT_KEYS[ $name ] ) ) {
+			$variant = self::layout( 'blocks.' . self::VARIANT_KEYS[ $name ], '' );
+			if ( is_string( $variant ) && '' !== $variant ) {
+				$args['variant'] = $variant;
+			}
+		}
 		/**
 		 * Plugins attach their block to a slot here.
 		 *
@@ -96,6 +124,47 @@ final class Optima_Hub_Owns {
 	/** True when at least one plugin attached to a slot. */
 	public static function slot_has( string $name ): bool {
 		return in_array( $name, self::SLOTS, true ) && has_action( 'optima_slot_' . $name );
+	}
+
+	/** @var array|null The layout recipe, read once per request. */
+	private static $layout = null;
+
+	/**
+	 * One value from the site's layout recipe (optima-setup.json "layout",
+	 * stored by Optima Build as the optima_layout_recipe option). A dotted key
+	 * reads inside it: 'hero', 'home_order', 'blocks.results'. Before Build has
+	 * stored the recipe (no operator has opened the dashboard since the theme
+	 * changed), it reads the theme's setup file directly.
+	 *
+	 * @param string $key     The key, dotted for nested values ('' for the whole recipe).
+	 * @param mixed  $default What to return when the recipe does not set it.
+	 * @return mixed
+	 */
+	public static function layout( string $key = '', $default = null ) {
+		if ( null === self::$layout ) {
+			$saved = get_option( self::LAYOUT_OPTION, null );
+			if ( is_array( $saved ) ) {
+				self::$layout = $saved;
+			} elseif ( class_exists( 'Optima_Hub_Setup', false ) ) {
+				$raw          = Optima_Hub_Setup::data()['layout'] ?? array();
+				self::$layout = is_array( $raw ) ? Optima_Hub_Setup::clean_layout( $raw ) : array();
+			} else {
+				self::$layout = array();
+			}
+		}
+		$value = self::$layout;
+		foreach ( '' === $key ? array() : explode( '.', $key ) as $part ) {
+			if ( ! is_array( $value ) || ! array_key_exists( $part, $value ) ) {
+				return $default;
+			}
+			$value = $value[ $part ];
+		}
+		return ( '' === $value || array() === $value ) ? $default : $value;
+	}
+
+	/** Forget the cached recipe (after Build stores a new one). */
+	public static function flush_layout(): void {
+		self::$layout = null;
 	}
 }
 
@@ -110,6 +179,20 @@ if ( ! function_exists( 'optima_slot' ) ) {
 	/** Renders the plugin blocks attached to a fixed theme spot. */
 	function optima_slot( string $name, array $args = array() ): void {
 		Optima_Hub_Owns::slot( $name, $args );
+	}
+}
+
+if ( ! function_exists( 'optima_layout' ) ) {
+	/**
+	 * One value from the site's layout recipe (optima-setup.json "layout"), for
+	 * themes and plugins: optima_layout( 'blocks.results', 'grid' ).
+	 *
+	 * @param string $key     Dotted key inside the recipe.
+	 * @param mixed  $default Returned when the recipe does not set it.
+	 * @return mixed
+	 */
+	function optima_layout( string $key, $default = null ) {
+		return Optima_Hub_Owns::layout( $key, $default );
 	}
 }
 

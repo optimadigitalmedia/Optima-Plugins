@@ -14,6 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * Gated by the optimize_uploads setting, which defaults OFF. Until Optima turns
  * it on for a site, the callback returns immediately and nothing is optimized.
+ * It also stands down while NitroPack is active (Optima_Optimize::images_paused()).
  * Optimization happens in place; the attachment metadata is returned unchanged.
  */
 final class Optima_Optimize_Pipeline {
@@ -52,7 +53,7 @@ final class Optima_Optimize_Pipeline {
 	 */
 	public function filter_big_image_threshold( $threshold ) {
 		$settings = get_option( 'optima_optimize_settings', array() );
-		if ( empty( $settings['optimize_uploads'] ) ) {
+		if ( empty( $settings['optimize_uploads'] ) || Optima_Optimize::images_paused() ) {
 			return $threshold;
 		}
 		$max = isset( $settings['max_dimension'] ) ? (int) $settings['max_dimension'] : 1920;
@@ -72,7 +73,8 @@ final class Optima_Optimize_Pipeline {
 		}
 
 		$settings = get_option( 'optima_optimize_settings', array() );
-		if ( empty( $settings['optimize_uploads'] ) ) {
+		// NitroPack optimizes images itself; never run two optimizers on one site.
+		if ( empty( $settings['optimize_uploads'] ) || Optima_Optimize::images_paused() ) {
 			return $metadata;
 		}
 

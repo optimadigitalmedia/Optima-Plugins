@@ -6,6 +6,14 @@
  * is offboarded the name comes off and the page goes on the Inbox for a new
  * reviewer.
  *
+ * The line and the schema print only for a complete record: the reviewer, the
+ * review date, and the version of the page the review covers (a fingerprint
+ * of its title, words and excerpt, taken when the review is recorded). When
+ * the page changes after that, nothing prints and People lists the page as
+ * "Review out of date" until the reviewer signs off on the new words. A record
+ * from before versions were kept covers the page while it has not been
+ * changed after the review date. A date is never filled in for anyone.
+ *
  * @package Optima_Team
  */
 
@@ -17,6 +25,8 @@ final class Optima_Team_Reviewed {
 
 	const META_WHO  = '_optima_reviewed_by';
 	const META_WHEN = '_optima_reviewed_on';
+	const META_VER  = '_optima_reviewed_version'; // Fingerprint of the words the review covers.
+	const META_AT   = '_optima_reviewed_at';      // The page's modified time (GMT) when that version was recorded.
 	const NONCE     = 'optima_team_reviewed';
 
 	/** Post types that can carry a reviewer: every public type except People itself. */
@@ -49,6 +59,76 @@ final class Optima_Team_Reviewed {
 			'who'  => $who,
 			'when' => preg_match( '/^\d{4}-\d{2}-\d{2}$/', $when ) ? $when : '',
 		);
+	}
+
+	/** A fingerprint of the words on a page: title, content and excerpt. */
+	public static function fingerprint( int $post_id ): string {
+		$post = get_post( $post_id );
+		if ( ! $post ) {
+			return '';
+		}
+		return md5( $post->post_title . "\n" . $post->post_content . "\n" . $post->post_excerpt );
+	}
+
+	/**
+	 * Where a page's review record stands.
+	 *
+	 * complete: reviewer, date and version are all there and the page has not
+	 * changed since. incomplete: something is missing, so nothing prints.
+	 * stale: the page changed after the review, so nothing prints and People
+	 * flags it as "Review out of date". none: no review recorded.
+	 */
+	public static function status( int $post_id ): string {
+		$r = self::get( $post_id );
+		if ( ! $r['who'] && '' === $r['when'] && '' === (string) get_post_meta( $post_id, self::META_WHO, true ) ) {
+			return 'none';
+		}
+		if ( ! $r['who'] || '' === $r['when'] ) {
+			return 'incomplete';
+		}
+		$ver = (string) get_post_meta( $post_id, self::META_VER, true );
+		if ( '' !== $ver ) {
+			return hash_equals( $ver, self::fingerprint( $post_id ) ) ? 'complete' : 'stale';
+		}
+		// A record from before versions were kept: it covers the page only while the
+		// page has not been changed after the review date.
+		$modified = substr( (string) get_post_field( 'post_modified', $post_id ), 0, 10 );
+		return ( '' !== $modified && $modified > $r['when'] ) ? 'stale' : 'complete';
+	}
+
+	/** The review to print, or who 0 when the record is not complete and current. */
+	public static function printable( int $post_id ): array {
+		$r = self::get( $post_id );
+		return 'complete' === self::status( $post_id ) ? $r : array( 'who' => 0, 'when' => '' );
+	}
+
+	/**
+	 * Pages whose review needs someone: out of date or incomplete. Reviewer-less
+	 * pages after offboarding are on the Inbox already and are left out here.
+	 *
+	 * @return array<int, string> post ID => status.
+	 */
+	public static function needs_attention(): array {
+		$ids = get_posts(
+			array(
+				'post_type'      => self::types(),
+				'post_status'    => array( 'publish', 'pending', 'draft', 'future', 'private' ),
+				'posts_per_page' => 500,
+				'fields'         => 'ids',
+				'no_found_rows'  => true,
+				'meta_key'       => self::META_WHO, // phpcs:ignore WordPress.DB.SlowDBQuery
+				'meta_value'     => '0', // phpcs:ignore WordPress.DB.SlowDBQuery
+				'meta_compare'   => '!=', // phpcs:ignore WordPress.DB.SlowDBQuery
+			)
+		);
+		$out = array();
+		foreach ( $ids as $id ) {
+			$status = self::status( (int) $id );
+			if ( 'stale' === $status || 'incomplete' === $status ) {
+				$out[ (int) $id ] = $status;
+			}
+		}
+		return $out;
 	}
 
 	/** Pages a person reviewed, any status. */
@@ -114,7 +194,8 @@ final class Optima_Team_Reviewed {
 			)
 		);
 		wp_nonce_field( self::NONCE, '_optima_team_reviewed_nonce' );
-		$stale = 0 === $r['who'] && '' !== $r['when'];
+		$stale  = 0 === $r['who'] && '' !== $r['when'];
+		$status = self::status( $post->ID );
 		?>
 		<p>
 			<label for="st-reviewed-who" class="screen-reader-text"><?php esc_html_e( 'Reviewed by', 'optima-team' ); ?></label>
@@ -131,6 +212,13 @@ final class Optima_Team_Reviewed {
 		</p>
 		<?php if ( $stale ) : ?>
 			<p class="description"><strong><?php esc_html_e( 'The reviewer left the firm. Pick a new one.', 'optima-team' ); ?></strong></p>
+		<?php elseif ( 'stale' === $status ) : ?>
+			<p class="description"><strong><?php esc_html_e( 'Review out of date: the page changed after the review, so the line is not showing.', 'optima-team' ); ?></strong></p>
+			<p><label><input type="checkbox" name="optima_reviewed[confirm]" value="1"> <?php esc_html_e( 'The reviewer read the page as it is now, on the date above', 'optima-team' ); ?></label></p>
+		<?php elseif ( 'incomplete' === $status ) : ?>
+			<p class="description"><strong><?php esc_html_e( 'Not showing yet: add both the reviewer and the date of the review.', 'optima-team' ); ?></strong></p>
+		<?php elseif ( 'complete' === $status ) : ?>
+			<p class="description"><?php esc_html_e( 'Showing on the page. If the words change, the line comes off until the reviewer signs off again.', 'optima-team' ); ?></p>
 		<?php endif; ?>
 		<p class="description"><?php esc_html_e( 'Prints "Reviewed by" with the date at the end of the page and in its schema. On a law-firm site this is the attorney who signed off on the words.', 'optima-team' ); ?></p>
 		<?php
@@ -152,15 +240,35 @@ final class Optima_Team_Reviewed {
 		if ( $who && Optima_Team::POST_TYPE !== get_post_type( $who ) ) {
 			$who = 0;
 		}
+		// No date is made up: a review without its date stays incomplete and prints nothing.
 		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $when ) ) {
-			$when = $who ? current_time( 'Y-m-d' ) : '';
+			$when = '';
 		}
+		$was_who  = (string) get_post_meta( $post_id, self::META_WHO, true );
+		$was_when = (string) get_post_meta( $post_id, self::META_WHEN, true );
 		if ( $who || '' !== $when ) {
 			update_post_meta( $post_id, self::META_WHO, (string) $who );
 			update_post_meta( $post_id, self::META_WHEN, $when );
 		} else {
 			delete_post_meta( $post_id, self::META_WHO );
 			delete_post_meta( $post_id, self::META_WHEN );
+			delete_post_meta( $post_id, self::META_VER );
+			delete_post_meta( $post_id, self::META_AT );
+			return;
+		}
+		// The version the review covers is recorded when a review is entered or
+		// changed, or when the operator confirms the reviewer read the page as it is now.
+		// Saving the page for any other reason keeps the old version, so changed words show as out of date.
+		$changed = (string) $who !== $was_who || $when !== $was_when || ! empty( $in['confirm'] );
+		if ( ! $changed ) {
+			return;
+		}
+		if ( $who && '' !== $when ) {
+			update_post_meta( $post_id, self::META_VER, self::fingerprint( $post_id ) );
+			update_post_meta( $post_id, self::META_AT, (string) get_post_field( 'post_modified_gmt', $post_id ) );
+		} else {
+			delete_post_meta( $post_id, self::META_VER );
+			delete_post_meta( $post_id, self::META_AT );
 		}
 	}
 
@@ -171,7 +279,7 @@ final class Optima_Team_Reviewed {
 		if ( ! is_singular() || ! is_array( $graph ) ) {
 			return $graph;
 		}
-		$r = self::get( get_queried_object_id() );
+		$r = self::printable( get_queried_object_id() );
 		if ( ! $r['who'] ) {
 			return $graph;
 		}
@@ -184,7 +292,7 @@ final class Optima_Team_Reviewed {
 			}
 		}
 		if ( ! isset( $graph[ 'person_' . $r['who'] ] ) ) {
-			$graph[ 'person_' . $r['who'] ] = Optima_Team_Schema::person( $r['who'] );
+			$graph = Optima_Team_Schema::add_person( $graph, $r['who'] );
 		}
 		return $graph;
 	}
@@ -194,7 +302,7 @@ final class Optima_Team_Reviewed {
 		if ( ! is_singular() ) {
 			return;
 		}
-		$r = self::get( get_queried_object_id() );
+		$r = self::printable( get_queried_object_id() );
 		if ( ! $r['who'] ) {
 			return;
 		}
@@ -203,7 +311,7 @@ final class Optima_Team_Reviewed {
 		$date = '' !== $r['when'] ? date_i18n( get_option( 'date_format' ), strtotime( $r['when'] . ' 12:00:00' ) ) : '';
 		echo '<p class="optima-reviewed">';
 		/* translators: %s: reviewer's name */
-		echo esc_html__( 'Reviewed by', 'optima-team' ) . ' <a href="' . esc_url( get_permalink( $r['who'] ) ) . '">' . esc_html( $name ) . '</a>';
+		echo esc_html__( 'Reviewed by', 'optima-team' ) . ' <a href="' . esc_url( Optima_Team::public_url( $r['who'] ) ) . '">' . esc_html( $name ) . '</a>';
 		if ( '' !== $p['role'] ) {
 			echo ', ' . esc_html( $p['role'] );
 		}

@@ -66,7 +66,8 @@ final class Optima_Contact_Admin {
 			// The phone is typed on Details now; the old saved number is kept as it was.
 			'phone'     => sanitize_text_field( (string) ( ( get_option( Optima_Contact::OPTION, array() )['phone'] ?? '' ) ) ),
 			'text'      => sanitize_text_field( (string) ( $in['text'] ?? '' ) ),
-			'text_off'  => ! empty( $in['text_off'] ) ? 1 : 0,
+			// The screen asks whether the number takes texts and is monitored; Text is on only on a yes.
+			'text_off'  => ! empty( $in['text_ask'] ) ? ( empty( $in['text_ok'] ) ? 1 : 0 ) : ( ! empty( $in['text_off'] ) ? 1 : 0 ),
 			'book_url'  => esc_url_raw( trim( (string) ( $in['book_url'] ?? '' ) ) ),
 			'label'     => sanitize_text_field( (string) ( $in['label'] ?? '' ) ),
 			'title'     => sanitize_text_field( (string) ( $in['title'] ?? '' ) ),
@@ -75,7 +76,23 @@ final class Optima_Contact_Admin {
 			'book_note' => sanitize_text_field( (string) ( $in['book_note'] ?? '' ) ),
 			'photos'    => $photos,
 			'hide_on'   => sanitize_text_field( (string) ( $in['hide_on'] ?? '' ) ),
+			// What happens next. A step left blank keeps the starting wording.
+			'step_1'         => sanitize_text_field( (string) ( $in['step_1'] ?? '' ) ),
+			'step_2'         => sanitize_text_field( (string) ( $in['step_2'] ?? '' ) ),
+			'step_3'         => sanitize_text_field( (string) ( $in['step_3'] ?? '' ) ),
+			'steps_free'     => ! empty( $in['steps_free'] ) ? 1 : 0,
+			'steps_response' => Optima_Contact::clean_response( (string) ( $in['steps_response'] ?? '' ) ),
 		);
+		if ( '' !== trim( (string) ( $in['steps_response'] ?? '' ) ) && '' === $out['steps_response'] ) {
+			add_settings_error( Optima_Contact::OPTION, 'odc-response', __( 'The reply time was not saved: the site never guarantees a reply time. Write the window the firm keeps, such as "within 1 business hour".', 'optima-contact' ) );
+		}
+		// Typed wording that matches the starting wording keeps following it.
+		$start = Optima_Contact::step_defaults( (bool) $out['steps_free'] );
+		foreach ( array( 1, 2, 3 ) as $n ) {
+			if ( $out[ 'step_' . $n ] === $start[ $n ] ) {
+				$out[ 'step_' . $n ] = '';
+			}
+		}
 		$d = Optima_Contact::defaults();
 		foreach ( array( 'label', 'title' ) as $k ) {
 			if ( '' === $out[ $k ] ) {
@@ -140,8 +157,12 @@ final class Optima_Contact_Admin {
 				<tr>
 					<th scope="row"><label for="odc-text"><?php esc_html_e( 'Texting number', 'optima-contact' ); ?></label></th>
 					<td><input id="odc-text" type="text" class="regular-text" name="<?php echo esc_attr( $o ); ?>[text]" value="<?php echo esc_attr( $s['text'] ); ?>" placeholder="<?php esc_attr_e( 'Same as the phone number', 'optima-contact' ); ?>">
-						<p><label><input type="checkbox" name="<?php echo esc_attr( $o ); ?>[text_off]" value="1" <?php checked( $s['text_off'] ); ?>> <?php esc_html_e( 'This number cannot receive texts, so leave Text off', 'optima-contact' ); ?></label></p>
-						<p class="description"><?php esc_html_e( 'Landlines usually cannot receive texts. Turn Text off unless someone reads texts at this number.', 'optima-contact' ); ?></p></td>
+						<fieldset style="margin-top:10px">
+							<legend><strong><?php esc_html_e( 'Is this number able to receive texts and monitored?', 'optima-contact' ); ?></strong></legend>
+							<input type="hidden" name="<?php echo esc_attr( $o ); ?>[text_ask]" value="1">
+							<label><input type="checkbox" name="<?php echo esc_attr( $o ); ?>[text_ok]" value="1" <?php checked( empty( $s['text_off'] ) ); ?>> <?php esc_html_e( 'Yes, it takes texts and someone reads them. Show the Text button.', 'optima-contact' ); ?></label>
+						</fieldset>
+						<p class="description"><?php esc_html_e( 'The Text button stays off until this is ticked. Landlines usually cannot receive texts, and a text nobody reads is a lost call.', 'optima-contact' ); ?></p></td>
 				</tr>
 				<tr>
 					<th scope="row"><label for="odc-book"><?php esc_html_e( 'Booking link', 'optima-contact' ); ?></label></th>
@@ -191,6 +212,30 @@ final class Optima_Contact_Admin {
 					</td>
 				</tr>
 			</table>
+
+			<h2 class="sh-title"><?php esc_html_e( 'What happens next', 'optima-contact' ); ?></h2>
+			<p class="description"><?php esc_html_e( 'Three numbered steps on the home, practice, contact and thank-you pages, so a visitor knows what follows their call or message. Leave a step blank to keep the starting wording shown in grey. Promise only what the firm does every time.', 'optima-contact' ); ?></p>
+			<?php $start = Optima_Contact::step_defaults( ! empty( $s['steps_free'] ) ); ?>
+			<table class="form-table" role="presentation">
+				<?php foreach ( array( 1, 2, 3 ) as $n ) : ?>
+				<tr>
+					<th scope="row"><label for="odc-step-<?php echo esc_attr( (string) $n ); ?>"><?php /* translators: %d: step number */ echo esc_html( sprintf( __( 'Step %d', 'optima-contact' ), $n ) ); ?></label></th>
+					<td><input id="odc-step-<?php echo esc_attr( (string) $n ); ?>" type="text" class="large-text" name="<?php echo esc_attr( $o ); ?>[step_<?php echo esc_attr( (string) $n ); ?>]" value="<?php echo esc_attr( (string) $s[ 'step_' . $n ] ); ?>" placeholder="<?php echo esc_attr( $start[ $n ] ); ?>"></td>
+				</tr>
+				<?php endforeach; ?>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Free consultation', 'optima-contact' ); ?></th>
+					<td><label><input type="checkbox" name="<?php echo esc_attr( $o ); ?>[steps_free]" value="1" <?php checked( ! empty( $s['steps_free'] ) ); ?>> <?php esc_html_e( 'The firm offers free consultations. Step 2 then says the call is free and private.', 'optima-contact' ); ?></label></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="odc-response"><?php esc_html_e( 'Reply time', 'optima-contact' ); ?></label></th>
+					<td><input id="odc-response" type="text" class="regular-text" name="<?php echo esc_attr( $o ); ?>[steps_response]" value="<?php echo esc_attr( (string) $s['steps_response'] ); ?>" placeholder="<?php esc_attr_e( 'within 1 business hour', 'optima-contact' ); ?>">
+						<p class="description"><?php esc_html_e( 'Optional. Shows only when filled in. Write a window the firm keeps every time; a reply time that says guaranteed is never saved.', 'optima-contact' ); ?></p></td>
+				</tr>
+			</table>
+			<?php Optima_Admin_UI::dev_open(); ?>
+			<p class="sh-note"><?php esc_html_e( 'Themes place the block with optima_slot( "next-steps", array( "variant" => "row" ) ), row or timeline. Pages without slots use [optima_next_steps variant="timeline"]. [optima_office id="primary"] prints an office address with its Get directions link.', 'optima-contact' ); ?></p>
+			<?php Optima_Admin_UI::dev_close(); ?>
 			<?php submit_button( __( 'Save', 'optima-contact' ) ); ?>
 		</form>
 		<?php

@@ -100,19 +100,36 @@ final class Optima_Team_Editor {
 			$lines['bar'][] = trim( implode( ', ', array_filter( array( $r['state'] ?? '', $r['year'] ?? '', ! empty( $r['number'] ) ? '#' . $r['number'] : '' ) ) ) );
 		}
 		foreach ( $p['awards'] as $r ) {
-			$lines['awards'][] = trim( implode( ', ', array_filter( array( $r['name'] ?? '', $r['year'] ?? '', $r['issuer'] ?? '' ) ) ) );
+			$line = Optima_Team::award_line( $r );
+			if ( '' !== (string) ( $r['standards_url'] ?? '' ) ) {
+				$line .= ' (' . __( 'with a How this is awarded link', 'optima-team' ) . ')';
+			}
+			if ( ! Optima_Team::award_printable( $r ) ) {
+				$line .= ' (' . __( 'not printed: a fee was paid for this award, and a law site never shows a paid award', 'optima-team' ) . ')';
+			} elseif ( 'yes' === (string) ( $r['fee_paid'] ?? '' ) ) {
+				$line .= ' (' . __( 'a fee was paid for this award; it would not print on a law site', 'optima-team' ) . ')';
+			}
+			$lines['awards'][] = $line;
+		}
+		foreach ( (array) $p['certifications'] as $r ) {
+			$lines['certifications'][] = Optima_Team::certification_line( $r );
+		}
+		if ( '' !== (string) $p['bar_name'] ) {
+			$lines['bar_name'] = array( $p['bar_name'] );
 		}
 		$lines['memberships'] = $p['memberships'];
 		$lines['same_as']     = $p['same_as'];
 		$labels = array(
-			'education'   => __( 'Education', 'optima-team' ),
-			'bar'         => __( 'Bar admissions', 'optima-team' ),
-			'awards'      => __( 'Awards and honors', 'optima-team' ),
+			'education'      => __( 'Education', 'optima-team' ),
+			'bar_name'       => __( 'Name on the bar roll', 'optima-team' ),
+			'bar'            => __( 'Bar admissions', 'optima-team' ),
+			'certifications' => __( 'Board certification', 'optima-team' ),
+			'awards'         => __( 'Awards and honors', 'optima-team' ),
 			'memberships' => __( 'Professional memberships', 'optima-team' ),
 			'same_as'     => __( 'Profile links', 'optima-team' ),
 		);
 		if ( ! $law ) {
-			unset( $labels['bar'] );
+			unset( $labels['bar'], $labels['bar_name'] );
 		}
 		$refill = class_exists( 'Optima_Hub_Admin' ) ? Optima_Hub_Admin::url( 'updates' ) . '#sh-up-fill' : '';
 		echo '<fieldset class="st-group st-facts"><legend>' . esc_html__( 'Credentials', 'optima-team' ) . '</legend>';
@@ -133,6 +150,75 @@ final class Optima_Team_Editor {
 			echo '<input type="hidden" name="optima_team[attorney]" value="' . esc_attr( (string) $p['attorney'] ) . '">';
 		}
 		echo '</fieldset>';
+	}
+
+	/**
+	 * Practice areas: the shared list as checkboxes, plus free entries. Each
+	 * one links to its practice page when the site has one and goes into the
+	 * Person schema as knowsAbout.
+	 *
+	 * @param array $p The profile.
+	 */
+	private static function practice_areas( array $p ): void {
+		$known  = Optima_Team::practices();
+		$picked = (array) $p['practice_areas'];
+		$other  = array_values( array_diff( $picked, array_keys( $known ) ) );
+		?>
+		<fieldset class="st-group">
+			<legend><?php esc_html_e( 'Practice areas', 'optima-team' ); ?></legend>
+			<p class="sh-note"><?php esc_html_e( 'The case types this person handles. Each one links to its practice page when the site has a page at that address, and tells search engines what the person knows.', 'optima-team' ); ?></p>
+			<div class="st-practice-list">
+				<?php foreach ( $known as $slug => $name ) : ?>
+					<label><input type="checkbox" name="optima_team[practice_areas][]" value="<?php echo esc_attr( $slug ); ?>" <?php checked( in_array( $slug, $picked, true ) ); ?>> <?php echo esc_html( $name ); ?></label>
+				<?php endforeach; ?>
+			</div>
+			<p class="st-field">
+				<label for="st-practice-other"><?php esc_html_e( 'Other practice areas', 'optima-team' ); ?></label>
+				<textarea id="st-practice-other" name="optima_team[practice_other]" rows="2"><?php echo esc_textarea( implode( "\n", $other ) ); ?></textarea>
+				<span class="description"><?php esc_html_e( 'One per line. Use the practice page\'s address, for example truck-accidents/underride-crashes, so it links to that page.', 'optima-team' ); ?></span>
+			</p>
+		</fieldset>
+		<?php
+	}
+
+	/**
+	 * The team group (attorneys first on the team page, then the others by
+	 * group) and the offices the person works at, from the firm's office list.
+	 *
+	 * @param array $p The profile.
+	 */
+	private static function group_and_offices( array $p ): void {
+		$offices = Optima_Team::offices();
+		?>
+		<fieldset class="st-group">
+			<legend><?php esc_html_e( 'Team page group and offices', 'optima-team' ); ?></legend>
+			<div class="st-grid">
+				<p class="st-field">
+					<label for="st-group"><?php esc_html_e( 'Group on the team page', 'optima-team' ); ?></label>
+					<select id="st-group" name="optima_team[group]">
+						<option value=""><?php esc_html_e( 'None (attorney when marked as an attorney)', 'optima-team' ); ?></option>
+						<?php foreach ( Optima_Team::team_groups() as $key => $label ) : ?>
+							<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $p['group'], $key ); ?>><?php echo esc_html( $label ); ?></option>
+						<?php endforeach; ?>
+					</select>
+					<span class="description"><?php esc_html_e( 'The team page lists attorneys first, then everyone else under their group.', 'optima-team' ); ?></span>
+				</p>
+				<div class="st-field">
+					<span class="st-label"><?php esc_html_e( 'Offices', 'optima-team' ); ?></span>
+					<?php if ( $offices ) : ?>
+						<?php foreach ( $offices as $id => $row ) : ?>
+							<label style="display:block"><input type="checkbox" name="optima_team[offices][]" value="<?php echo esc_attr( $id ); ?>" <?php checked( in_array( $id, (array) $p['offices'], true ) ); ?>> <?php echo esc_html( Optima_Team::office_name( $id ) ); ?></label>
+						<?php endforeach; ?>
+					<?php else : ?>
+						<span class="description"><?php esc_html_e( 'The firm has one office, or its office list is not filled in yet (Your business, Offices).', 'optima-team' ); ?></span>
+						<?php foreach ( (array) $p['offices'] as $id ) : ?>
+							<input type="hidden" name="optima_team[offices][]" value="<?php echo esc_attr( $id ); ?>">
+						<?php endforeach; ?>
+					<?php endif; ?>
+				</div>
+			</div>
+		</fieldset>
+		<?php
 	}
 
 	public static function render_profile( $post ): void {
@@ -179,6 +265,27 @@ final class Optima_Team_Editor {
 			</fieldset>
 
 			<?php self::facts( $p, $law ); ?>
+
+			<?php self::practice_areas( $p ); ?>
+
+			<?php self::group_and_offices( $p ); ?>
+
+			<fieldset class="st-group">
+				<legend><?php esc_html_e( 'Bio page', 'optima-team' ); ?></legend>
+				<p class="sh-note"><?php esc_html_e( 'Only when the theme already has this person\'s bio on a page of its own. Each person then has one page: the profile page forwards there, leaves the sitemap, and every link, byline and schema line points there.', 'optima-team' ); ?></p>
+				<div class="st-grid">
+					<p class="st-field">
+						<label for="st-bio-url"><?php esc_html_e( 'Bio page address (optional)', 'optima-team' ); ?></label>
+						<input id="st-bio-url" type="text" class="code" name="optima_team[bio_url]" value="<?php echo esc_attr( $p['bio_url'] ); ?>" placeholder="/about/">
+						<span class="description"><?php esc_html_e( 'An address on this site. Leave blank to use the profile page.', 'optima-team' ); ?></span>
+					</p>
+					<p class="st-field">
+						<label for="st-schema-id"><?php esc_html_e( 'Person id in the schema (optional)', 'optima-team' ); ?></label>
+						<input id="st-schema-id" type="text" class="code" name="optima_team[schema_id]" value="<?php echo esc_attr( $p['schema_id'] ); ?>" placeholder="/#jane">
+						<span class="description"><?php esc_html_e( 'The id the theme\'s schema already gives this person, so search engines see one person. Leave blank for the page address with #person.', 'optima-team' ); ?></span>
+					</p>
+				</div>
+			</fieldset>
 
 			<fieldset class="st-group">
 				<legend><?php esc_html_e( 'Contact and byline', 'optima-team' ); ?></legend>
@@ -310,7 +417,7 @@ final class Optima_Team_Editor {
 		$p   = Optima_Team::sanitize_profile( $raw );
 		// Credentials are read-only on this screen (rule 47): the saved ones always stay.
 		$was = Optima_Team::profile( (int) $post_id );
-		foreach ( array( 'bar', 'education', 'awards', 'memberships', 'same_as' ) as $key ) {
+		foreach ( array( 'bar', 'education', 'awards', 'certifications', 'memberships', 'same_as', 'bar_name' ) as $key ) {
 			$p[ $key ] = $was[ $key ];
 		}
 		// Only someone who can edit other people's posts may tie a profile to another login.

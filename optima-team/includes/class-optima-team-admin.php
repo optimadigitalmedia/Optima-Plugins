@@ -97,7 +97,43 @@ final class Optima_Team_Admin {
 			'contact' => ! empty( $in['contact'] ) ? 1 : 0,
 			'columns' => min( 4, max( 2, absint( $in['columns'] ?? 3 ) ) ),
 			'bylines' => ! empty( $in['bylines'] ) ? 1 : 0,
+			'consult' => Optima_Team::site_path( (string) ( $in['consult'] ?? '' ) ),
 		);
+	}
+
+	/**
+	 * Problems first (rule 52): pages whose "Reviewed by" line is not showing
+	 * because the page changed after the review, or the record is missing the
+	 * reviewer or the date.
+	 */
+	private static function reviews_box(): void {
+		if ( ! class_exists( 'Optima_Team_Reviewed' ) ) {
+			return;
+		}
+		$pages = Optima_Team_Reviewed::needs_attention();
+		if ( ! $pages ) {
+			return;
+		}
+		?>
+		<section class="sh-box">
+			<h2 class="sh-title"><?php esc_html_e( 'Reviews to fix', 'optima-team' ); ?></h2>
+			<p><?php esc_html_e( 'These pages show no "Reviewed by" line until the review is complete and covers the words on the page now. Open a page, check it with the reviewer, then set the date and tick that they read the page as it is now.', 'optima-team' ); ?></p>
+			<div class="sh-scroll"><table class="widefat striped">
+				<thead><tr><th scope="col"><?php esc_html_e( 'Page', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Reviewer', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Reviewed on', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Status', 'optima-team' ); ?></th></tr></thead>
+				<tbody>
+				<?php foreach ( $pages as $id => $status ) : ?>
+					<?php $r = Optima_Team_Reviewed::get( (int) $id ); ?>
+					<tr>
+						<td><a href="<?php echo esc_url( (string) get_edit_post_link( (int) $id ) ); ?>"><strong><?php echo esc_html( '' !== get_the_title( (int) $id ) ? wp_strip_all_tags( get_the_title( (int) $id ) ) : __( '(no title)', 'optima-team' ) ); ?></strong></a></td>
+						<td><?php echo esc_html( $r['who'] ? wp_strip_all_tags( get_the_title( $r['who'] ) ) : __( 'Not set', 'optima-team' ) ); ?></td>
+						<td><?php echo esc_html( '' !== $r['when'] ? $r['when'] : __( 'Not set', 'optima-team' ) ); ?></td>
+						<td><span class="sh-pill is-received"><?php echo esc_html( 'stale' === $status ? __( 'Review out of date', 'optima-team' ) : __( 'Review incomplete', 'optima-team' ) ); ?></span></td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table></div>
+		</section>
+		<?php
 	}
 
 	public static function render(): void {
@@ -143,12 +179,13 @@ final class Optima_Team_Admin {
 			__( 'People', 'optima-team' )
 		);
 		settings_errors( $o );
+		self::reviews_box();
 		?>
 		<div class="sh-grid sh-grid-3">
 			<section class="sh-box sh-check is-<?php echo $people ? 'good' : 'warn'; ?>">
 				<p class="sh-label"><?php esc_html_e( 'People', 'optima-team' ); ?></p>
 				<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php echo esc_html( (string) count( $people ) ); ?></p>
-				<p class="sh-note"><?php echo $people ? esc_html__( 'Each one has a profile page under /team/.', 'optima-team' ) : esc_html__( 'Add the first person to start the team page.', 'optima-team' ); ?></p>
+				<p class="sh-note"><?php echo $people ? esc_html__( 'Each one has one page: their profile under /team/, or the bio page the profile names.', 'optima-team' ) : esc_html__( 'Add the first person to start the team page.', 'optima-team' ); ?></p>
 			</section>
 			<section class="sh-box sh-check is-<?php echo ( $people && count( $people ) === $complete ) ? 'good' : 'warn'; ?>">
 				<p class="sh-label"><?php esc_html_e( 'Complete profiles', 'optima-team' ); ?></p>
@@ -264,6 +301,11 @@ final class Optima_Team_Admin {
 					<td><label><input type="checkbox" name="<?php echo esc_attr( $o ); ?>[bylines]" value="1" <?php checked( $s['bylines'] ); ?>> <?php esc_html_e( 'Author names on blog posts link to the writer\'s team profile', 'optima-team' ); ?></label></td>
 				</tr>
 				<tr>
+					<th scope="row"><label for="st-consult"><?php esc_html_e( 'Free consultation page', 'optima-team' ); ?></label></th>
+					<td><input id="st-consult" type="text" class="regular-text code" name="<?php echo esc_attr( $o ); ?>[consult]" value="<?php echo esc_attr( $s['consult'] ); ?>" placeholder="/contact/">
+						<p class="description"><?php esc_html_e( 'Only when the firm offers a free consultation: the page on this site where a visitor asks for one. The at-a-glance card on each bio then shows a second button, Free consultation, beside Call. Leave blank and the card shows Call only.', 'optima-team' ); ?></p></td>
+				</tr>
+				<tr>
 					<th scope="row"><label for="st-columns"><?php esc_html_e( 'Grid columns on wide screens', 'optima-team' ); ?></label></th>
 					<td><select id="st-columns" name="<?php echo esc_attr( $o ); ?>[columns]">
 						<?php foreach ( array( 2, 3, 4 ) as $n ) : ?>
@@ -285,6 +327,9 @@ final class Optima_Team_Admin {
 				<tr><td>[optima_team columns="2"]</td><td><?php esc_html_e( 'A different number of columns for this grid.', 'optima-team' ); ?></td></tr>
 				<tr><td>[optima_team ids="12,15"]</td><td><?php esc_html_e( 'Only these people, in this order. The ID is in the address bar when you edit a person.', 'optima-team' ); ?></td></tr>
 				<tr><td>[optima_team bio="no"]</td><td><?php esc_html_e( 'Photo, name and role only.', 'optima-team' ); ?></td></tr>
+				<tr><td>[optima_team group="no"]</td><td><?php esc_html_e( 'One list in profile order. By default, once any profile has a group, attorneys come first and everyone else follows under their group.', 'optima-team' ); ?></td></tr>
+				<tr><td>optima_slot( 'bio-glance', array( 'variant' =&gt; 'card' ) )</td><td><?php esc_html_e( 'The at-a-glance card on a bio page (card or split).', 'optima-team' ); ?></td></tr>
+				<tr><td>optima_slot( 'practice-attorneys', array( 'practice' =&gt; 'truck-accidents' ) )</td><td><?php esc_html_e( 'The attorneys who handle a practice area, or who work at an office (office =&gt; id), each linking to their one bio (portrait or horizontal).', 'optima-team' ); ?></td></tr>
 			</table>
 			<p class="description"><?php esc_html_e( 'With Optima Analytics on, profile opens, calls and emails report as team_profile_click, team_profile_view, team_call and team_email.', 'optima-team' ); ?></p>
 		</section>

@@ -32,9 +32,45 @@ final class Optima_Reviews_Settings {
 			'profiles'           => array(), // slug => { rating, count, url, write_url }.
 			'disclaimer'         => '',
 			'load_styles'        => true,
-			'auto_add_five'      => false, // Publish new 5-star Google reviews without the inbox.
+			'auto_add_five'      => false, // Publish new 5-star Google reviews without the inbox. Ignored on law sites.
 			'purge_on_uninstall' => false,
+			// Law sites (release 1): the state rule set ('' = follow Case results, or none)
+			// and who approved the testimonial disclaimer, when, for which state and wording.
+			'state'                   => '',
+			'disclaimer_approver'     => '',
+			'disclaimer_approved_on'  => '',
+			'disclaimer_approved_for' => '',
+			// Release 2: review topic slug => practice slug, for the practice-reviews slot. A topic not listed maps to its own slug.
+			'practice_map'            => array(),
 		);
+	}
+
+	/**
+	 * The practice slug a topic's reviews belong to: the one saved under
+	 * Display, else the topic's own slug.
+	 */
+	public static function practice_for_topic( string $topic ): string {
+		$map = (array) self::get()['practice_map'];
+		$to  = (string) ( $map[ $topic ] ?? '' );
+		return '' !== $to ? $to : $topic;
+	}
+
+	/** The topics whose reviews belong on a practice page. */
+	public static function topics_for_practice( string $practice ): array {
+		$practice = trim( $practice, '/' );
+		$out      = array();
+		foreach ( Optima_Reviews_Topics::all() as $term ) {
+			if ( self::practice_for_topic( $term->slug ) === $practice ) {
+				$out[] = $term->slug;
+			}
+		}
+		return $out;
+	}
+
+	/** A practice slug as typed: lowercase words and dashes, with an optional sub-practice after a slash. */
+	public static function clean_practice( string $value ): string {
+		$value = strtolower( trim( sanitize_text_field( $value ), " /\t\n\r" ) );
+		return preg_match( '#^[a-z0-9]+(?:-[a-z0-9]+)*(?:/[a-z0-9]+(?:-[a-z0-9]+)*)*$#', $value ) ? $value : '';
 	}
 
 	public static function get(): array {
@@ -125,10 +161,40 @@ final class Optima_Reviews_Settings {
 			}
 		}
 
+		$prev                      = self::get();
 		$out['disclaimer']         = sanitize_textarea_field( (string) ( $input['disclaimer'] ?? '' ) );
 		$out['load_styles']        = ! empty( $input['load_styles'] );
-		$out['auto_add_five']      = ! empty( $input['auto_add_five'] );
 		$out['purge_on_uninstall'] = ! empty( $input['purge_on_uninstall'] );
+
+		$state        = sanitize_key( (string) ( $input['state'] ?? '' ) );
+		$out['state'] = isset( Optima_Reviews_Law::states()[ $state ] ) ? $state : '';
+
+		// Law sites hide the auto-publish box and ignore it; keep what was saved.
+		Optima_Reviews_Law::reset();
+		$law                  = '' !== $out['state'] || Optima_Reviews_Law::is_law();
+		$out['auto_add_five'] = $law ? ! empty( $prev['auto_add_five'] ) : ! empty( $input['auto_add_five'] );
+
+		// A named person saving this exact state and wording approves it.
+		$approver = sanitize_text_field( (string) ( $input['disclaimer_approver'] ?? '' ) );
+		$results  = get_option( 'optima_results', array() );
+		$theirs   = is_array( $results ) ? (string) ( $results['state'] ?? '' ) : '';
+		$state_on = '' !== $out['state'] ? $out['state'] : ( isset( Optima_Reviews_Law::states()[ $theirs ] ) ? $theirs : '' );
+		$wording  = '' !== trim( $out['disclaimer'] ) ? trim( $out['disclaimer'] ) : ( $law ? Optima_Reviews_Law::placeholder() : '' );
+		$hash     = ( '' !== $approver && '' !== $wording ) ? Optima_Reviews_Law::approval_hash( $state_on, $wording ) : '';
+		$out['disclaimer_approver']     = $approver;
+		$out['disclaimer_approved_for'] = $hash;
+		$out['disclaimer_approved_on']  = '' === $hash ? '' : ( ( $hash === $prev['disclaimer_approved_for'] && $approver === $prev['disclaimer_approver'] && '' !== $prev['disclaimer_approved_on'] ) ? $prev['disclaimer_approved_on'] : current_time( 'Y-m-d' ) );
+		Optima_Reviews_Law::reset();
+
+		// Topics and practice pages: only a slug that differs from the topic's own is kept.
+		$out['practice_map'] = array();
+		foreach ( (array) ( $input['practice_map'] ?? array() ) as $topic => $practice ) {
+			$topic    = sanitize_title( (string) $topic );
+			$practice = self::clean_practice( (string) $practice );
+			if ( '' !== $topic && '' !== $practice && $practice !== $topic ) {
+				$out['practice_map'][ $topic ] = $practice;
+			}
+		}
 
 		// Saving the form means someone looked at the totals, so note when.
 		update_option( self::STAMP, time(), false );
@@ -146,6 +212,11 @@ final class Optima_Reviews_Settings {
 		echo '<section class="sh-box" id="reviews-list"><h2>' . esc_html__( 'Reviews', 'optima-reviews' ) . '</h2>';
 		/* translators: 1: reviews on the site, 2: waiting in the Review inbox */
 		echo '<p>' . esc_html( sprintf( __( '%1$d on the site. %2$d waiting in the Review inbox.', 'optima-reviews' ), $live, $wait ) ) . '</p>';
+		$auto = Optima_Reviews_Law::auto_added_count();
+		if ( $auto ) {
+			/* translators: %d: number of reviews */
+			echo '<p class="sh-check is-warn" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="sh-dot" aria-hidden="true"></span>' . esc_html( sprintf( _n( '%d review was added automatically, without a person approving it. On a law site it stays hidden until someone opens it and presses Update.', '%d reviews were added automatically, without a person approving them. On a law site they stay hidden until someone opens each one and presses Update.', $auto, 'optima-reviews' ), $auto ) ) . '</p>';
+		}
 		if ( $latest ) {
 			echo '<ul class="sh-waiting">';
 			foreach ( $latest as $post ) {
@@ -165,6 +236,7 @@ final class Optima_Reviews_Settings {
 		}
 		$settings = self::get();
 		$name     = self::OPTION;
+		$law      = Optima_Reviews_Law::is_law();
 		?>
 		<?php Optima_Admin_UI::open( __( 'Reviews', 'optima-reviews' ), __( 'The reviews on the site, the business\'s profile on each platform, asking clients for reviews, and how reviews look.', 'optima-reviews' ) ); ?>
 			<p class="sh-note"><?php esc_html_e( 'On this screen:', 'optima-reviews' ); ?> <a href="#reviews-list"><?php esc_html_e( 'Reviews', 'optima-reviews' ); ?></a> · <a href="#reviews-platforms"><?php esc_html_e( 'Platforms', 'optima-reviews' ); ?></a> · <a href="#reviews-ask"><?php esc_html_e( 'Ask for reviews', 'optima-reviews' ); ?></a> · <a href="#reviews-display"><?php esc_html_e( 'Display', 'optima-reviews' ); ?></a></p>
@@ -240,19 +312,94 @@ final class Optima_Reviews_Settings {
 				<h2><?php esc_html_e( 'Display', 'optima-reviews' ); ?></h2>
 				<table class="form-table" role="presentation">
 					<tr>
-						<th scope="row"><label for="optima-reviews-disclaimer"><?php esc_html_e( 'Disclaimer (optional)', 'optima-reviews' ); ?></label></th>
+						<th scope="row"><label for="optima-reviews-state"><?php esc_html_e( 'Law firm rule set', 'optima-reviews' ); ?></label></th>
 						<td>
-							<textarea id="optima-reviews-disclaimer" class="large-text" rows="3" name="<?php echo esc_attr( $name . '[disclaimer]' ); ?>"><?php echo esc_textarea( $settings['disclaimer'] ); ?></textarea>
-							<p class="description"><?php esc_html_e( 'Shown under every reviews section. Law firms: your state bar may require one with testimonials, for example "Past results do not guarantee a similar outcome." Check your state\'s rules.', 'optima-reviews' ); ?></p>
+							<select id="optima-reviews-state" name="<?php echo esc_attr( $name . '[state]' ); ?>">
+								<option value="" <?php selected( $settings['state'], '' ); ?>><?php esc_html_e( 'Same as Case results, or not a law firm', 'optima-reviews' ); ?></option>
+								<?php foreach ( Optima_Reviews_Law::states() as $code => $label ) : ?>
+									<option value="<?php echo esc_attr( $code ); ?>" <?php selected( $settings['state'], $code ); ?>><?php echo esc_html( $label ); ?></option>
+								<?php endforeach; ?>
+							</select>
+							<p class="description">
+								<?php
+								if ( $law ) {
+									$state_label = Optima_Reviews_Law::states()[ Optima_Reviews_Law::state() ] ?? '';
+									echo esc_html(
+										'' !== $state_label
+											/* translators: %s: state */
+											? sprintf( __( 'This is a law site (%s). Every review needs a person\'s approval, no star filter hides lower ratings, and the testimonial disclaimer prints before the reviews.', 'optima-reviews' ), $state_label )
+											: __( 'This is a law site. Every review needs a person\'s approval, no star filter hides lower ratings, and the testimonial disclaimer prints before the reviews. Pick the state for its rules.', 'optima-reviews' )
+									);
+									if ( Optima_Reviews_Law::is_nc() ) {
+										echo ' ' . esc_html__( 'North Carolina: a review that mentions a dollar amount or a settlement, verdict or award figure cannot be approved, and the disclaimer also prints before and after any quote about an outcome.', 'optima-reviews' );
+									}
+								} else {
+									esc_html_e( 'Law firms only. Picking a state turns on the law-site rules for reviews.', 'optima-reviews' );
+								}
+								?>
+							</p>
 						</td>
 					</tr>
+					<tr>
+						<th scope="row"><label for="optima-reviews-disclaimer"><?php echo esc_html( $law ? __( 'Testimonial disclaimer (required)', 'optima-reviews' ) : __( 'Disclaimer (optional)', 'optima-reviews' ) ); ?></label></th>
+						<td>
+							<?php if ( $law && ! Optima_Reviews_Law::disclaimer_approved() ) : ?>
+								<p class="sh-check is-warn" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="sh-dot" aria-hidden="true"></span><strong><?php esc_html_e( 'Not approved', 'optima-reviews' ); ?></strong> <?php esc_html_e( 'Until counsel\'s wording is saved with an approver\'s name, the site prints the placeholder marked [VERIFY: counsel].', 'optima-reviews' ); ?></p>
+							<?php endif; ?>
+							<textarea id="optima-reviews-disclaimer" class="large-text" rows="3" name="<?php echo esc_attr( $name . '[disclaimer]' ); ?>"<?php echo $law ? ' placeholder="' . esc_attr( Optima_Reviews_Law::placeholder() ) . '"' : ''; ?>><?php echo esc_textarea( $settings['disclaimer'] ); ?></textarea>
+							<p class="description"><?php echo esc_html( $law ? __( 'Printed before every reviews section. Use the wording the firm\'s counsel gives you; left empty, the placeholder in gray prints instead.', 'optima-reviews' ) : __( 'Shown under every reviews section. Law firms: your state bar may require one with testimonials. Check your state\'s rules.', 'optima-reviews' ) ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="optima-reviews-disclaimer-approver"><?php esc_html_e( 'Wording approved by', 'optima-reviews' ); ?></label></th>
+						<td>
+							<input type="text" id="optima-reviews-disclaimer-approver" class="regular-text" autocomplete="name" name="<?php echo esc_attr( $name . '[disclaimer_approver]' ); ?>" value="<?php echo esc_attr( $settings['disclaimer_approver'] ); ?>" />
+							<p class="description">
+								<?php
+								if ( Optima_Reviews_Law::disclaimer_approved() ) {
+									/* translators: 1: approver name, 2: date */
+									echo esc_html( sprintf( __( 'Approved by %1$s on %2$s for this state and wording. Changing either one needs a new save with the approver\'s name.', 'optima-reviews' ), $settings['disclaimer_approver'], $settings['disclaimer_approved_on'] ) );
+								} else {
+									esc_html_e( 'The person at the firm who approved this exact wording. Wording still marked [VERIFY: counsel] never counts as approved.', 'optima-reviews' );
+								}
+								?>
+							</p>
+						</td>
+					</tr>
+					<?php if ( $law ) : ?>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'New 5-star reviews', 'optima-reviews' ); ?></th>
+						<td><p class="description"><?php esc_html_e( 'On a law site every new review waits in the Review inbox for a person to approve it, whatever its stars.', 'optima-reviews' ); ?></p></td>
+					</tr>
+					<?php else : ?>
 					<tr>
 						<th scope="row"><?php esc_html_e( 'New 5-star reviews', 'optima-reviews' ); ?></th>
 						<td>
 							<label><input type="checkbox" name="<?php echo esc_attr( $name . '[auto_add_five]' ); ?>" value="1" <?php checked( ! empty( $settings['auto_add_five'] ) ); ?> /> <?php esc_html_e( 'Add new 5-star Google reviews to the site automatically, on the pages they match. Everything else still waits in the Review inbox.', 'optima-reviews' ); ?></label>
-							<p class="description"><?php esc_html_e( 'Leave off for law firms: bar rules expect a person to approve each testimonial.', 'optima-reviews' ); ?></p>
+							<p class="description"><?php esc_html_e( 'Never used on a law site: there a person approves each review.', 'optima-reviews' ); ?></p>
 						</td>
 					</tr>
+					<?php endif; ?>
+					<?php $optima_topics = Optima_Reviews_Topics::all(); ?>
+					<?php if ( $optima_topics ) : ?>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Topics and practice pages', 'optima-reviews' ); ?></th>
+						<td>
+							<p class="description"><?php esc_html_e( 'Which practice page each topic\'s reviews show on, by the practice page\'s address (for example truck-accidents). Left blank, a topic shows on the practice page with its own address. Each review there links to that practice page.', 'optima-reviews' ); ?></p>
+							<div class="sh-scroll"><table class="widefat striped" style="margin-top:8px">
+								<thead><tr><th scope="col"><?php esc_html_e( 'Topic', 'optima-reviews' ); ?></th><th scope="col"><?php esc_html_e( 'Practice page address', 'optima-reviews' ); ?></th></tr></thead>
+								<tbody>
+								<?php foreach ( $optima_topics as $optima_term ) : ?>
+									<tr>
+										<td><label for="optima-reviews-map-<?php echo esc_attr( $optima_term->slug ); ?>"><?php echo esc_html( $optima_term->name ); ?></label></td>
+										<td><input type="text" class="regular-text code" id="optima-reviews-map-<?php echo esc_attr( $optima_term->slug ); ?>" name="<?php echo esc_attr( $name . '[practice_map][' . $optima_term->slug . ']' ); ?>" value="<?php echo esc_attr( (string) ( $settings['practice_map'][ $optima_term->slug ] ?? '' ) ); ?>" placeholder="<?php echo esc_attr( $optima_term->slug ); ?>" /></td>
+									</tr>
+								<?php endforeach; ?>
+								</tbody>
+							</table></div>
+						</td>
+					</tr>
+					<?php endif; ?>
 					<tr>
 						<th scope="row"><?php esc_html_e( 'Built-in design', 'optima-reviews' ); ?></th>
 						<td>
@@ -280,6 +427,8 @@ final class Optima_Reviews_Settings {
 				<li><code>[optima_reviews source="google" layout="row"]</code> <?php esc_html_e( 'shows only Google reviews in a sideways-scrolling row.', 'optima-reviews' ); ?></li>
 				<li><code>[optima_reviews summary="0"]</code> <?php esc_html_e( 'hides the rating summary.', 'optima-reviews' ); ?></li>
 				<li><code>[optima_reviews topic="law-firms" count="3"]</code> <?php esc_html_e( 'shows reviews tagged with one topic, or featured reviews until that topic has some.', 'optima-reviews' ); ?></li>
+				<li><code>[optima_reviews layout="quote" count="1"]</code> <?php esc_html_e( 'shows one large quote at a time.', 'optima-reviews' ); ?></li>
+				<li><code>optima_slot( 'practice-reviews', array( 'practice' =&gt; 'truck-accidents' ) )</code> <?php esc_html_e( 'in a theme template: the reviews whose topic maps to that practice page (Display, Topics and practice pages), each with a link to the practice page. Variants grid, list and quote.', 'optima-reviews' ); ?></li>
 				<li><code>[optima_review_summary]</code> <?php esc_html_e( 'shows only the rating summary.', 'optima-reviews' ); ?></li>
 			</ul>
 			<p><?php esc_html_e( 'Theme developers: call optima_reviews_slot() in a template to show the reviews for that page automatically. See the plugin README.', 'optima-reviews' ); ?></p>

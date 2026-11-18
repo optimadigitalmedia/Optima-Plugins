@@ -134,20 +134,23 @@ jobs:
         run: bash tools/uniform-check.sh plugins .
 
   release-tests:
-    name: Release channel tests
+    name: Tests (every file in tools/tests that runs without WordPress)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Version picking (stable and test channels)
-        run: php tools/tests/release-channel.php
-      - name: Site health with test releases installed
-        run: php tools/tests/fleet-checks.php
-      - name: Promote dry run with made-up releases
-        run: bash tools/tests/promote-dry-run.sh
-      - name: Forms Guard content check (layer 4)
-        run: php tools/tests/forms-guard-content.php
-      - name: Forms Guard List-field check (layer 5, CVE-2026-103039)
-        run: php tools/tests/forms-guard-serialized.php
+      # run-all.sh picks up every *.php and *.sh test, so a new test file runs
+      # here (and in the Release workflow's checks) without editing either.
+      # Only a test that loads a real WordPress (site-sync.php) is skipped.
+      - name: Every test
+        run: bash tools/tests/run-all.sh
+
+  release-workflow:
+    name: Release workflow lists every plugin
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: The "Run workflow" plugin list matches the plugin folders
+        run: python3 -I tools/release/dispatch-list.py --check
 
   slop-check:
     name: Code slop check

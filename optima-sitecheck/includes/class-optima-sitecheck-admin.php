@@ -229,6 +229,14 @@ final class Optima_Sitecheck_Admin {
 		if ( ! empty( $in['psi_key_clear'] ) ) {
 			$key = '';
 		}
+		// Retention: one of the offered lengths, or keep (0) with a reason.
+		$days   = isset( $in['retention'] ) ? (int) $in['retention'] : $old['retention'];
+		$days   = in_array( $days, self::RETENTION_CHOICES, true ) ? $days : Optima_Sitecheck::RETENTION_DAYS;
+		$reason = trim( sanitize_text_field( (string) ( $in['retention_reason'] ?? '' ) ) );
+		if ( 0 === $days && '' === $reason ) {
+			add_settings_error( Optima_Sitecheck::OPTION, 'retention', __( 'To keep site checks, write down why. Until then they are deleted after 90 days.', 'optima-sitecheck' ) );
+			$days = Optima_Sitecheck::RETENTION_DAYS;
+		}
 		return array(
 			'notify'     => sanitize_email( (string) ( $in['notify'] ?? '' ) ),
 			'lead_name'  => sanitize_text_field( (string) ( $in['lead_name'] ?? '' ) ),
@@ -237,8 +245,13 @@ final class Optima_Sitecheck_Admin {
 			'psi_key'    => sanitize_text_field( $key ),
 			'hold'       => ! empty( $in['hold'] ) ? 1 : 0,
 			'page'       => $old['page'],
+			'retention'        => $days,
+			'retention_reason' => 0 === $days ? $reason : '',
 		);
 	}
+
+	/** Days a check can be kept for; 0 keeps it (with a reason). */
+	const RETENTION_CHOICES = array( 30, 60, 90, 180, 365, 0 );
 
 	public static function create_page(): void {
 		check_admin_referer( 'optima_ssc_page' );
@@ -342,6 +355,26 @@ final class Optima_Sitecheck_Admin {
 					}
 					?>
 				</table>
+			</div>
+			<div class="sh-box">
+				<h2 class="sh-title"><?php esc_html_e( 'How long site checks are kept', 'optima-sitecheck' ); ?></h2>
+				<table class="form-table" role="presentation">
+					<?php
+					$choices = '';
+					foreach ( self::RETENTION_CHOICES as $d ) {
+						/* translators: %d: days */
+						$label    = 0 === $d ? __( 'Keep them (write down why)', 'optima-sitecheck' ) : sprintf( _n( '%d day', '%d days', $d, 'optima-sitecheck' ), $d );
+						$choices .= '<option value="' . esc_attr( (string) $d ) . '"' . selected( $s['retention'], $d, false ) . '>' . esc_html( $label ) . '</option>';
+					}
+					self::row(
+						__( 'Delete saved checks after', 'optima-sitecheck' ),
+						'<select aria-label="' . esc_attr__( 'Delete saved checks after', 'optima-sitecheck' ) . '" name="' . esc_attr( $o ) . '[retention]">' . $choices . '</select>',
+						__( 'Each check holds a visitor\'s name and email and the site they checked. A daily job deletes the older ones. 90 days matches how long form entries are kept.', 'optima-sitecheck' )
+					);
+					self::row( __( 'Why they are kept', 'optima-sitecheck' ), self::text( 'retention_reason', $s['retention_reason'], __( 'Only when keeping them', 'optima-sitecheck' ) ), __( 'Needed to keep them. Record the same reason in the site\'s decisions log.', 'optima-sitecheck' ) );
+					?>
+				</table>
+				<p class="sh-note"><?php esc_html_e( 'Tools, Export Personal Data and Erase Personal Data find a visitor\'s checks by the email they gave.', 'optima-sitecheck' ); ?></p>
 			</div>
 			<?php submit_button(); ?>
 		</form>

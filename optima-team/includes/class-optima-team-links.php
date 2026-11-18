@@ -32,6 +32,10 @@ final class Optima_Team_Links {
 		if ( $p['user'] ) {
 			$posts = (int) count_user_posts( (int) $p['user'], 'post', true );
 		}
+		// Posts whose Byline box names the person (release 2), without a login.
+		if ( class_exists( 'Optima_Team_Byline' ) ) {
+			$posts += count( Optima_Team_Byline::posts_for( $post_id ) );
+		}
 		$results = 0;
 		if ( post_type_exists( 'optima_result' ) ) {
 			$results = count(
@@ -61,7 +65,7 @@ final class Optima_Team_Links {
 	public static function urls( int $post_id ): array {
 		$p = Optima_Team::profile( $post_id );
 		return array(
-			'posts'    => $p['user'] ? admin_url( 'edit.php?author=' . (int) $p['user'] ) : '',
+			'posts'    => $p['user'] ? admin_url( 'edit.php?author=' . (int) $p['user'] ) : ( class_exists( 'Optima_Team_Byline' ) && Optima_Team_Byline::posts_for( $post_id ) ? admin_url( 'edit.php?optima_byline=' . $post_id ) : '' ),
 			'results'  => post_type_exists( 'optima_result' ) ? admin_url( 'edit.php?post_type=optima_result&optima_attorney=' . $post_id ) : '',
 			'reviewed' => admin_url( 'edit.php?post_type=page&optima_reviewed_by=' . $post_id ),
 		);
@@ -76,7 +80,7 @@ final class Optima_Team_Links {
 		$u = self::urls( $post->ID );
 		$rows = array(
 			array( __( 'Team page', 'optima-team' ), 'publish' === $post->post_status ? __( 'Listed', 'optima-team' ) : __( 'Not until published', 'optima-team' ), (string) get_post_type_archive_link( Optima_Team::POST_TYPE ) ),
-			array( __( 'Profile page', 'optima-team' ), 'publish' === $post->post_status ? (string) wp_parse_url( get_permalink( $post ), PHP_URL_PATH ) : __( 'Not until published', 'optima-team' ), 'publish' === $post->post_status ? get_permalink( $post ) : '' ),
+			array( __( 'Profile page', 'optima-team' ), 'publish' === $post->post_status ? (string) wp_parse_url( Optima_Team::public_url( $post->ID ), PHP_URL_PATH ) : __( 'Not until published', 'optima-team' ), 'publish' === $post->post_status ? Optima_Team::public_url( $post->ID ) : '' ),
 			/* translators: %d: posts */
 			array( __( 'Bylines', 'optima-team' ), sprintf( _n( '%d post', '%d posts', $c['posts'], 'optima-team' ), $c['posts'] ), $u['posts'] ),
 		);

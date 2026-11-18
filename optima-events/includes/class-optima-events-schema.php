@@ -274,6 +274,6 @@ final class Optima_Events_Schema {
 			'@context' => 'https://schema.org',
 			'@graph'   => array_values( $nodes ),
 		);
-		echo "\n<script type=\"application/ld+json\" id=\"optima-events-schema\">" . wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . "</script>\n";
+		echo "\n<script type=\"application/ld+json\" id=\"optima-events-schema\">" . wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG ) . "</script>\n";
 	}
 }
