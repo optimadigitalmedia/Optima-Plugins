@@ -9,10 +9,14 @@ jobs:
   php-syntax:
     name: PHP syntax check
     runs-on: ubuntu-latest
+    # PHP 8.6 shipped Nov 19, 2026; until the setup action offers a stable
+    # build it runs but cannot fail the check. Drop the exception once it is
+    # green, then keep every Optima site off 8.6 until it is.
+    continue-on-error: ${{ matrix.php-version == '8.6' }}
     strategy:
       fail-fast: false
       matrix:
-        php-version: ['8.0', '8.1', '8.2', '8.3']
+        php-version: ['8.0', '8.1', '8.2', '8.3', '8.4', '8.5', '8.6']
 
     steps:
       - uses: actions/checkout@v4
@@ -33,7 +37,11 @@ jobs:
             main="$dir/$dir.php"
             req=$(grep -m1 -oP 'Requires PHP:\s*\K[0-9.]+' "$main" 2>/dev/null || echo 0)
             if php -r "exit(version_compare(PHP_VERSION, '$req', '>=') ? 0 : 1);"; then
-              find "$dir" -name '*.php' -not -path '*/vendor/*' -print0 | xargs -0 -n1 -P4 php -l || status=1
+              # A deprecation (for example an implicitly nullable parameter on
+              # 8.4) prints a warning but php -l still exits 0, so fail on it.
+              out=$(find "$dir" -name '*.php' -not -path '*/vendor/*' -print0 | xargs -0 -n1 -P4 php -d error_reporting=E_ALL -d display_errors=1 -l 2>&1) || status=1
+              echo "$out" | grep -v '^No syntax errors' || true
+              if echo "$out" | grep -qi 'deprecated'; then echo "::error::$dir: deprecation on PHP ${{ matrix.php-version }}"; status=1; fi
             else
               echo "Skipping $dir: needs PHP $req"
             fi
