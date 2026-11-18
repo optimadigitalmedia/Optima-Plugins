@@ -204,3 +204,12 @@
 .optima-hours-summary-label {
 	font-weight: 600;
 }
+
+/* Phones answered: one line under the hours table, when the schedule is set. */
+.optima-hours-phones {
+	margin: .75em 0 0;
+}
+
+.optima-hours-phones-label {
+	font-weight: 600;
+}

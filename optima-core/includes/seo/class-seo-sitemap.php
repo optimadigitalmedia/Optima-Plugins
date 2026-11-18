@@ -28,6 +28,7 @@ final class Optima_SEO_Sitemap {
 
 	public static function init() {
 		add_filter( 'wp_sitemaps_posts_query_args', array( __CLASS__, 'exclude_noindex' ), 10, 2 );
+		add_filter( 'wp_sitemaps_posts_entry', array( __CLASS__, 'lastmod' ), 10, 2 );
 		// Testimonials and FAQs (Core's, or the same types from another plugin) are quotes and answers shown inside pages.
 		add_filter( 'wp_sitemaps_post_types', array( __CLASS__, 'drop_skipped_types' ) );
 		// The theme's noindexed archives (seo.pages ":category", ":tag", ":author", ":archive", term paths).
@@ -42,6 +43,20 @@ final class Optima_SEO_Sitemap {
 	}
 
 	/** Keep the daily check scheduled (activation hooks do not run on updates). */
+	/**
+	 * Each post's lastmod is the date its words last changed (the same date as
+	 * the schema's dateModified and the visible Last updated line).
+	 */
+	public static function lastmod( $entry, $post ) {
+		if ( is_array( $entry ) && $post instanceof WP_Post && class_exists( 'Optima_Core_Content_Changed' ) ) {
+			$date = Optima_Core_Content_Changed::formatted( $post->ID, 'c' );
+			if ( '' !== $date ) {
+				$entry['lastmod'] = $date;
+			}
+		}
+		return $entry;
+	}
+
 	public static function schedule() {
 		if ( ! wp_next_scheduled( self::CRON ) ) {
 			wp_schedule_event( time() + 60, 'daily', self::CRON );

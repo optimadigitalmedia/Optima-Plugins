@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.11.4 (2026-11-13)
+
+- Board certification on each profile: a Certifications list (what the person is certified in, the certifying body, the year and a link to check it), read from the setup file like the other credentials. It shows on the bio as "Board certified in X by Y" and goes into the Person schema as hasCredential with credentialCategory certification and recognizedBy the body.
+- Awards carry three more facts from the setup file: the wording (named to, included in, selected for), the issuer's "How this is awarded" page, printed as a link beside the award, and whether a fee was paid. On a law site an award with a fee paid is never printed, on the page or in the schema, and the profile's Credentials box says why. Awards saved before this release print as before.
+- The at-a-glance card for a bio, through the theme's bio-glance slot: the name as on the bar roll, role, office, where licensed, board certification by its body, the headline honor with its year, languages, a Call button (call_click) and a Free consultation button when the firm offers one (People, Settings, Free consultation page). Variants card and split (with the photo). The profile below the card leaves out what the card already shows.
+- The practice-attorneys slot: the attorneys whose practice areas include the practice page's slug, or who work at an office, each linking to the person's one bio. Variants portrait and horizontal.
+- A Byline box on posts picks the author from People without a WordPress login. The post's Article schema names that Person (its id and bio address), the author name and link the theme prints point at the bio, and People counts the post under the person's bylines and offboarding includes it.
+- A team group on each profile (attorney, intake, case management, paralegal, client care) and the offices the person works at. Once any profile has a group, the team grid lists attorneys first and then everyone else under their group heading; [optima_team group="no"] keeps one list. Sites with no groups set see no change.
+- Add a person brings the credentials, the offices and the group the setup file carries.
+
 ## 0.1.11.3 (2026-11-13)
 
 - Practice areas on each profile: tick case types from the shared practice-area list (car-accidents, truck-accidents, brain-injury and the rest) or add others, one per line. They show on the profile page and go into the Person schema as knowsAbout, each linked to the practice page when the site has a published page at that slug. Add a person brings them in from the setup file's practice_areas.

@@ -21,6 +21,46 @@ final class Optima_SEO_Head {
 		add_action( 'wp', array( __CLASS__, 'replace_core_canonical' ) );
 		add_action( 'wp_head', array( __CLASS__, 'output' ), 1 );
 		add_filter( 'wp_robots', array( __CLASS__, 'robots' ) );
+		// The REST API: a protected page's title stays generic for anyone who cannot edit it.
+		add_filter( 'the_title', array( __CLASS__, 'rest_private_title' ), PHP_INT_MAX, 2 );
+		add_action( 'rest_api_init', array( __CLASS__, 'rest_private_hooks' ) );
+	}
+
+	/** True when this REST reader may not see a protected post's own name. */
+	private static function hide_in_rest( $post ): bool {
+		$post = get_post( $post );
+		return $post instanceof WP_Post
+			&& '' !== (string) $post->post_password
+			&& ! current_user_can( 'edit_post', $post->ID );
+	}
+
+	/**
+	 * In a REST request (wp/v2/pages, posts, search), a password-protected
+	 * post's title reads "Private page" for anyone who cannot edit it.
+	 */
+	public static function rest_private_title( $title, $post_id = 0 ) {
+		if ( ! defined( 'REST_REQUEST' ) || ! REST_REQUEST || ! $post_id || ! self::hide_in_rest( $post_id ) ) {
+			return $title;
+		}
+		return self::private_title();
+	}
+
+	public static function rest_private_hooks() {
+		foreach ( get_post_types( array( 'show_in_rest' => true ), 'names' ) as $type ) {
+			add_filter( 'rest_prepare_' . $type, array( __CLASS__, 'rest_private_response' ), PHP_INT_MAX, 2 );
+		}
+	}
+
+	/** The same in the response itself, in case a theme or plugin built the title another way. */
+	public static function rest_private_response( $response, $post ) {
+		if ( $response instanceof WP_REST_Response && self::hide_in_rest( $post ) ) {
+			$data = $response->get_data();
+			if ( isset( $data['title'] ) && is_array( $data['title'] ) ) {
+				$data['title'] = array( 'rendered' => self::private_title() );
+				$response->set_data( $data );
+			}
+		}
+		return $response;
 	}
 
 	/**
@@ -172,7 +212,7 @@ final class Optima_SEO_Head {
 		if ( $is_article && Optima_SEO_Setup::prints( 'article_times' ) ) {
 			$id     = get_queried_object_id();
 			$tags[] = sprintf( '<meta property="article:published_time" content="%s" />', esc_attr( get_the_date( 'c', $id ) ) );
-			$tags[] = sprintf( '<meta property="article:modified_time" content="%s" />', esc_attr( get_the_modified_date( 'c', $id ) ) );
+			$tags[] = sprintf( '<meta property="article:modified_time" content="%s" />', esc_attr( Optima_Core_Content_Changed::formatted( $id, 'c' ) ) );
 		}
 
 		// Twitter.

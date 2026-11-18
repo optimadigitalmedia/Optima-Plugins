@@ -128,7 +128,25 @@ final class Optima_Team_Add {
 		if ( ! empty( $in['schema_id'] ) ) {
 			$state['schema_id'] = Optima_Team::site_path( (string) $in['schema_id'], true );
 		}
+		// Release 2: the credentials, offices and team group the file carries, cleaned the profile's way.
+		if ( ! empty( $in['creds'] ) && is_array( $in['creds'] ) ) {
+			$clean          = Optima_Team::sanitize_profile( self::creds_input( $in['creds'] ) );
+			$state['creds'] = array_intersect_key( $clean, array_flip( self::CREDS ) );
+		}
 		return $state;
+	}
+
+	/** What Add a person brings from the setup file besides the basics (release 2). */
+	const CREDS = array( 'bar', 'education', 'awards', 'certifications', 'memberships', 'same_as', 'bar_name', 'offices', 'group' );
+
+	/** The sanitizer takes memberships and profile links as one-per-line text. */
+	private static function creds_input( array $creds ): array {
+		foreach ( array( 'memberships', 'same_as' ) as $list ) {
+			if ( isset( $creds[ $list ] ) && is_array( $creds[ $list ] ) ) {
+				$creds[ $list ] = implode( "\n", array_map( 'strval', $creds[ $list ] ) );
+			}
+		}
+		return $creds;
 	}
 
 	/* ---------- who ---------- */
@@ -165,6 +183,10 @@ final class Optima_Team_Add {
 				'bio_url'   => Optima_Team::site_path( (string) ( $p['bio_url'] ?? '' ) ),
 				'schema_id' => Optima_Team::site_path( (string) ( $p['schema_id'] ?? '' ), true ),
 			);
+			$creds = array_intersect_key( $p, array_flip( self::CREDS ) );
+			if ( $creds ) {
+				$extra['creds'] = $creds;
+			}
 			foreach ( array( 'role', 'bio', 'email', 'photo', 'branch' ) as $key ) {
 				if ( '' !== $row[ $key ] ) {
 					$has[] = $key;
@@ -252,7 +274,7 @@ final class Optima_Team_Add {
 				$state['branch'] = '';
 				$state['photo']  = '';
 				$state['order']  = 0;
-				unset( $state['areas'], $state['bio_url'], $state['schema_id'] );
+				unset( $state['areas'], $state['bio_url'], $state['schema_id'], $state['creds'] );
 				if ( '' === $state['name'] ) {
 					self::notice( 'error', __( 'A name is needed to add someone who is not in the setup file.', 'optima-team' ) );
 					wp_safe_redirect( self::url() );
@@ -272,8 +294,8 @@ final class Optima_Team_Add {
 					exit;
 				}
 				$state['source'] = 'setup';
-				foreach ( array( 'name', 'role', 'bio', 'email', 'branch', 'photo', 'order', 'areas', 'bio_url', 'schema_id' ) as $key ) {
-					$state[ $key ] = $found[ $key ];
+				foreach ( array( 'name', 'role', 'bio', 'email', 'branch', 'photo', 'order', 'areas', 'bio_url', 'schema_id', 'creds' ) as $key ) {
+					$state[ $key ] = $found[ $key ] ?? '';
 				}
 				$state = self::clean( $state );
 				// The file's email names a WordPress user: that is the byline, unless step 2 changes it.
@@ -357,6 +379,12 @@ final class Optima_Team_Add {
 		// The sanitizer takes these two lists as one-per-line text.
 		$profile['memberships'] = '';
 		$profile['same_as']     = '';
+		// Credentials, offices and group from the setup file (already cleaned in clean()).
+		foreach ( (array) ( $state['creds'] ?? array() ) as $key => $value ) {
+			if ( in_array( $key, self::CREDS, true ) ) {
+				$profile[ $key ] = in_array( $key, array( 'memberships', 'same_as' ), true ) ? implode( "\n", (array) $value ) : $value;
+			}
+		}
 		update_post_meta( $id, Optima_Team::META, Optima_Team::sanitize_profile( $profile ) );
 
 		$photo = $state['photo_id'] ? $state['photo_id'] : self::sideload( $state['photo'], $id );

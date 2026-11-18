@@ -304,3 +304,10 @@
 	font-size: 13px;
 	color: var(--sr-muted);
 }
+
+/* Release 2: the quote layout (one large quote per row) and the practice page link on a card. */
+.optima-reviews--quote .optima-reviews__list { grid-template-columns: 1fr; max-width: 820px; }
+.optima-reviews--quote .optima-review { border: 0; background: transparent; padding-inline: 0; }
+.optima-reviews--quote .optima-review__text { font-family: var(--optima-font-display, inherit); font-size: 1.3em; line-height: 1.45; }
+.optima-review__practice { margin: 0; }
+.optima-review__practice a { color: var(--optima-accent, inherit); font-weight: 600; text-underline-offset: .15em; }

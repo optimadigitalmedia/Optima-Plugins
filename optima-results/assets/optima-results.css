@@ -81,3 +81,19 @@
 .optima-result__attorney a { color: inherit; text-decoration: underline; text-underline-offset: .15em; }
 .optima-result__attorney[hidden] { display: none; }
 .optima-result__venue[hidden] { display: none; }
+
+/* Release 2: layouts a theme picks per site (layout.blocks.results), and the See all link. */
+.optima-results--ledger .optima-results__grid { grid-template-columns: 1fr; gap: 0; }
+.optima-results--ledger .optima-result { border-radius: 0; border-width: 0 0 1px; padding-inline: 0; background: transparent; }
+@media (min-width: 760px) {
+	.optima-results--ledger .optima-result { display: grid; grid-template-columns: minmax(9rem, 12rem) 1fr; column-gap: 1.5rem; }
+	.optima-results--ledger .optima-result > * { grid-column: 2; }
+	.optima-results--ledger .optima-result__amount { grid-column: 1; grid-row: 1 / span 3; }
+}
+@media (min-width: 760px) {
+	.optima-results--feature .optima-results__grid > .optima-result:first-child { grid-column: 1 / -1; }
+	.optima-results--feature .optima-results__grid > .optima-result:first-child .optima-result__amount { font-size: 1.6em; }
+}
+.optima-results .optima-result__meta a { color: var(--sr-accent); text-underline-offset: .15em; }
+.optima-results__more { margin: var(--sr-gap) 0 0; }
+.optima-results__more a { color: var(--sr-accent); font-weight: 600; text-underline-offset: .15em; }

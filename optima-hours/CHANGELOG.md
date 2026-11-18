@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.8.13 (2026-11-13)
+
+- **Phones answered.** A second schedule on Hours, beside the office hours: not set, around the clock (24/7), or its own days and times. It shows as one line under the hours table and goes into the schema only as the intake ContactPoint's `hoursAvailable` (on the business entry, and on each office in Optima Core when the office has no phone hours of its own). The office hours stay the walk-in hours. Nothing changes until it is set, and nothing goes out until the hours are confirmed.
+- **Time zone on every hours line.** A Time zone setting on Hours (default: the one in WordPress, Settings, General). Every hours line ends with it ("8:30 am to 5:30 pm ET"): the table, the footer line, the "Open now" line, holiday hours and Phones answered. The "Open now" line and closures follow the zone set here. Filter `optima_hours_zone_label` changes or removes the short name.
+
 ## 0.1.8.12 (2026-11-12)
 
 - **Safer schema output.** The opening hours JSON-LD is encoded with `JSON_HEX_TAG`, so a `<` or `>` in any field can never close the script tag early. The schema itself is unchanged.

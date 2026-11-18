@@ -377,7 +377,7 @@ final class Optima_SEO_Setup {
 	 *   %title%      the document title as printed     %site%     the site name
 	 *   %tagline%    the site tagline                  %query%    the search terms
 	 *   %url%        this request's address            %link% the canonical address
-	 *   %published%  the post's published date (ISO 8601)   %modified% its last modified date
+	 *   %published%  the post's published date (ISO 8601)   %modified% when its words last changed
 	 */
 	public static function tokens( string $value ): string {
 		if ( false === strpos( $value, '%' ) ) {
@@ -427,7 +427,7 @@ final class Optima_SEO_Setup {
 			case '%published%':
 				return $id ? (string) get_the_date( 'c', $id ) : '';
 			case '%modified%':
-				return $id ? (string) get_the_modified_date( 'c', $id ) : '';
+				return $id ? Optima_Core_Content_Changed::formatted( $id, 'c' ) : '';
 			case '%title%':
 				$title = (string) self::page( 'title' );
 				return ( '' !== $title && false === strpos( $title, '%' ) ) ? $title : wp_get_document_title();

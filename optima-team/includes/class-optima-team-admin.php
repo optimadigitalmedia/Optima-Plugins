@@ -97,6 +97,7 @@ final class Optima_Team_Admin {
 			'contact' => ! empty( $in['contact'] ) ? 1 : 0,
 			'columns' => min( 4, max( 2, absint( $in['columns'] ?? 3 ) ) ),
 			'bylines' => ! empty( $in['bylines'] ) ? 1 : 0,
+			'consult' => Optima_Team::site_path( (string) ( $in['consult'] ?? '' ) ),
 		);
 	}
 
@@ -300,6 +301,11 @@ final class Optima_Team_Admin {
 					<td><label><input type="checkbox" name="<?php echo esc_attr( $o ); ?>[bylines]" value="1" <?php checked( $s['bylines'] ); ?>> <?php esc_html_e( 'Author names on blog posts link to the writer\'s team profile', 'optima-team' ); ?></label></td>
 				</tr>
 				<tr>
+					<th scope="row"><label for="st-consult"><?php esc_html_e( 'Free consultation page', 'optima-team' ); ?></label></th>
+					<td><input id="st-consult" type="text" class="regular-text code" name="<?php echo esc_attr( $o ); ?>[consult]" value="<?php echo esc_attr( $s['consult'] ); ?>" placeholder="/contact/">
+						<p class="description"><?php esc_html_e( 'Only when the firm offers a free consultation: the page on this site where a visitor asks for one. The at-a-glance card on each bio then shows a second button, Free consultation, beside Call. Leave blank and the card shows Call only.', 'optima-team' ); ?></p></td>
+				</tr>
+				<tr>
 					<th scope="row"><label for="st-columns"><?php esc_html_e( 'Grid columns on wide screens', 'optima-team' ); ?></label></th>
 					<td><select id="st-columns" name="<?php echo esc_attr( $o ); ?>[columns]">
 						<?php foreach ( array( 2, 3, 4 ) as $n ) : ?>
@@ -321,6 +327,9 @@ final class Optima_Team_Admin {
 				<tr><td>[optima_team columns="2"]</td><td><?php esc_html_e( 'A different number of columns for this grid.', 'optima-team' ); ?></td></tr>
 				<tr><td>[optima_team ids="12,15"]</td><td><?php esc_html_e( 'Only these people, in this order. The ID is in the address bar when you edit a person.', 'optima-team' ); ?></td></tr>
 				<tr><td>[optima_team bio="no"]</td><td><?php esc_html_e( 'Photo, name and role only.', 'optima-team' ); ?></td></tr>
+				<tr><td>[optima_team group="no"]</td><td><?php esc_html_e( 'One list in profile order. By default, once any profile has a group, attorneys come first and everyone else follows under their group.', 'optima-team' ); ?></td></tr>
+				<tr><td>optima_slot( 'bio-glance', array( 'variant' =&gt; 'card' ) )</td><td><?php esc_html_e( 'The at-a-glance card on a bio page (card or split).', 'optima-team' ); ?></td></tr>
+				<tr><td>optima_slot( 'practice-attorneys', array( 'practice' =&gt; 'truck-accidents' ) )</td><td><?php esc_html_e( 'The attorneys who handle a practice area, or who work at an office (office =&gt; id), each linking to their one bio (portrait or horizontal).', 'optima-team' ); ?></td></tr>
 			</table>
 			<p class="description"><?php esc_html_e( 'With Optima Analytics on, profile opens, calls and emails report as team_profile_click, team_profile_view, team_call and team_email.', 'optima-team' ); ?></p>
 		</section>

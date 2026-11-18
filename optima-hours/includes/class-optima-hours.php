@@ -4,7 +4,10 @@
  * true right now in the site's own timezone.
  *
  * Storage:
- *   optima_hours           confirmed flag, notice bar mode, the seven days.
+ *   optima_hours           confirmed flag, notice bar mode, the seven days (the
+ *                          office hours, when the door is open), the time zone
+ *                          ('' = WordPress's), and the "Phones answered" schedule
+ *                          (phones: mode off, always or hours, plus its own days).
  *   optima_hours_closures  dated closures and special hours (holidays).
  *   optima_hours_dismissed closure ids whose Google reminder was dismissed.
  *
@@ -85,7 +88,104 @@ final class Optima_Hours {
 			'confirmed' => ! empty( $s['confirmed'] ),
 			'bar'       => in_array( $s['bar'] ?? '', array( 'off', 'day', 'week' ), true ) ? $s['bar'] : 'off',
 			'days'      => $days,
+			'timezone'  => self::clean_zone( (string) ( $s['timezone'] ?? '' ) ),
+			'phones'    => self::clean_phones( (array) ( $s['phones'] ?? array() ) ),
 		);
+	}
+
+	/** An IANA time zone name, or '' (use WordPress's). */
+	public static function clean_zone( string $zone ): string {
+		return in_array( $zone, timezone_identifiers_list(), true ) ? $zone : '';
+	}
+
+	/**
+	 * The "Phones answered" schedule: mode 'off' (not set), 'always' (24/7) or
+	 * 'hours' (its own seven days, the same shape as the office hours).
+	 *
+	 * @return array{mode:string, days:array}
+	 */
+	public static function clean_phones( array $p ): array {
+		$days = array();
+		foreach ( array_keys( self::days() ) as $key ) {
+			$d            = (array) ( $p['days'][ $key ] ?? array() );
+			$ranges       = self::clean_ranges( (array) ( $d['ranges'] ?? array() ) );
+			$days[ $key ] = array(
+				'open'   => ! empty( $d['open'] ) && $ranges,
+				'ranges' => $ranges,
+			);
+		}
+		$mode = in_array( $p['mode'] ?? '', array( 'off', 'always', 'hours' ), true ) ? $p['mode'] : 'off';
+		if ( 'hours' === $mode && ! array_filter( wp_list_pluck( $days, 'open' ) ) ) {
+			$mode = 'off';
+		}
+		return array(
+			'mode' => $mode,
+			'days' => $days,
+		);
+	}
+
+	/** The time zone the hours are kept in: the one set on Hours, else WordPress's (Settings, General). */
+	public static function timezone(): DateTimeZone {
+		$zone = self::settings()['timezone'];
+		return '' !== $zone ? new DateTimeZone( $zone ) : wp_timezone();
+	}
+
+	/** Short names for US zones; anything else uses PHP's abbreviation. */
+	const ZONES = array(
+		'America/New_York'             => 'ET',
+		'America/Detroit'              => 'ET',
+		'America/Indiana/Indianapolis' => 'ET',
+		'America/Kentucky/Louisville'  => 'ET',
+		'America/Chicago'              => 'CT',
+		'America/Denver'               => 'MT',
+		'America/Boise'                => 'MT',
+		'America/Phoenix'              => 'MST',
+		'America/Los_Angeles'          => 'PT',
+		'America/Anchorage'            => 'AKT',
+		'Pacific/Honolulu'             => 'HT',
+	);
+
+	/**
+	 * The time zone as visitors read it at the end of every hours line ("ET").
+	 * Filter `optima_hours_zone_label`; return '' to leave it off.
+	 */
+	public static function zone_label(): string {
+		$zone  = self::timezone();
+		$name  = $zone->getName();
+		$label = self::ZONES[ $name ] ?? ( new DateTimeImmutable( 'now', $zone ) )->format( 'T' );
+		if ( preg_match( '/^[+-]\d/', $label ) ) {
+			$label = 'UTC' . $label;
+		}
+		return (string) apply_filters( 'optima_hours_zone_label', $label, $name );
+	}
+
+	/** A label with the time zone after it: "5:00 PM ET". */
+	public static function with_zone( string $text ): string {
+		$zone = self::zone_label();
+		return '' !== $zone && '' !== $text ? $text . ' ' . $zone : $text;
+	}
+
+	/** True when the Phones answered schedule is set and the hours are confirmed. */
+	public static function phones_public(): bool {
+		$s = self::settings();
+		return $s['confirmed'] && 'off' !== $s['phones']['mode'];
+	}
+
+	/**
+	 * The phone schedule in one line: "Every day, around the clock" or
+	 * "Monday to Friday, 8 a.m. to 8 p.m. ET". '' when not set or not confirmed.
+	 */
+	public static function phone_summary(): string {
+		if ( ! self::phones_public() ) {
+			return '';
+		}
+		$p = self::settings()['phones'];
+		if ( 'always' === $p['mode'] ) {
+			$text = __( 'Every day, around the clock.', 'optima-hours' );
+		} else {
+			$text = self::summarize( $p['days'] );
+		}
+		return (string) apply_filters( 'optima_hours_phone_summary', $text );
 	}
 
 	/** Visitors and schema only see hours the owner has confirmed. */
@@ -203,7 +303,7 @@ final class Optima_Hours {
 	/** Now, in the site's timezone (Settings, General). */
 	public static function now(): DateTimeImmutable {
 		$now = (int) apply_filters( 'optima_hours_now', time() );
-		return ( new DateTimeImmutable( '@' . $now ) )->setTimezone( wp_timezone() );
+		return ( new DateTimeImmutable( '@' . $now ) )->setTimezone( self::timezone() );
 	}
 
 	/** The closure covering a date, if any. */
@@ -254,7 +354,7 @@ final class Optima_Hours {
 
 	/** Site time format, e.g. "9:00 AM". */
 	public static function time_label( DateTimeInterface $t ): string {
-		return wp_date( (string) get_option( 'time_format', 'g:i a' ), $t->getTimestamp() );
+		return wp_date( (string) get_option( 'time_format', 'g:i a' ), $t->getTimestamp(), self::timezone() );
 	}
 
 	/** "9:00 AM to 5:00 PM" for a stored "HH:MM" pair. */
@@ -278,7 +378,15 @@ final class Optima_Hours {
 		if ( ! self::is_public() || ! self::has_hours() ) {
 			return '';
 		}
-		$s      = self::settings();
+		return self::summarize( self::settings()['days'], true );
+	}
+
+	/**
+	 * Seven days in one line, open days with the same hours grouped, each group
+	 * ending in the time zone. $filter applies `optima_hours_summary`.
+	 */
+	public static function summarize( array $week, bool $filter = false ): string {
+		$s      = array( 'days' => $week );
 		$groups = array();
 		$last   = null;
 		foreach ( self::ordered_days() as $key ) {
@@ -302,7 +410,7 @@ final class Optima_Hours {
 				/* translators: 1: first day, 2: last day. */
 				$days = sprintf( __( '%1$s to %2$s', 'optima-hours' ), $days, self::day_label( $g['to'] ) );
 			}
-			$times = implode( __( ' and ', 'optima-hours' ), array_map( array( __CLASS__, 'short_range' ), $g['ranges'] ) );
+			$times = self::with_zone( implode( __( ' and ', 'optima-hours' ), array_map( array( __CLASS__, 'short_range' ), $g['ranges'] ) ) );
 			/* translators: 1: day or days, 2: hours. */
 			$parts[] = sprintf( __( '%1$s, %2$s', 'optima-hours' ), $days, $times );
 		}
@@ -310,7 +418,7 @@ final class Optima_Hours {
 		if ( '' !== $text ) {
 			$text .= '.';
 		}
-		return (string) apply_filters( 'optima_hours_summary', $text, $groups );
+		return $filter ? (string) apply_filters( 'optima_hours_summary', $text, $groups ) : $text;
 	}
 
 	/** "9 a.m. to 5:30 p.m." for a stored "HH:MM" pair: short footer style. */
@@ -339,13 +447,13 @@ final class Optima_Hours {
 		if ( ! $ranges ) {
 			return __( 'Closed', 'optima-hours' );
 		}
-		return implode( __( ' and ', 'optima-hours' ), array_map( array( __CLASS__, 'range_label' ), $ranges ) );
+		return self::with_zone( implode( __( ' and ', 'optima-hours' ), array_map( array( __CLASS__, 'range_label' ), $ranges ) ) );
 	}
 
 	/** A date as "Thursday, November 26". */
 	public static function date_label( string $ymd ): string {
-		$d = DateTimeImmutable::createFromFormat( '!Y-m-d', $ymd, wp_timezone() );
-		return $d ? wp_date( _x( 'l, F j', 'closure date', 'optima-hours' ), $d->setTime( 12, 0 )->getTimestamp() ) : $ymd;
+		$d = DateTimeImmutable::createFromFormat( '!Y-m-d', $ymd, self::timezone() );
+		return $d ? wp_date( _x( 'l, F j', 'closure date', 'optima-hours' ), $d->setTime( 12, 0 )->getTimestamp(), self::timezone() ) : $ymd;
 	}
 
 	/** A closure's dates as "Thursday, November 26" or "November 26 to November 27". */
@@ -353,11 +461,11 @@ final class Optima_Hours {
 		if ( $c['start'] === $c['end'] ) {
 			return self::date_label( $c['start'] );
 		}
-		$a = DateTimeImmutable::createFromFormat( '!Y-m-d', $c['start'], wp_timezone() );
-		$b = DateTimeImmutable::createFromFormat( '!Y-m-d', $c['end'], wp_timezone() );
+		$a = DateTimeImmutable::createFromFormat( '!Y-m-d', $c['start'], self::timezone() );
+		$b = DateTimeImmutable::createFromFormat( '!Y-m-d', $c['end'], self::timezone() );
 		$f = _x( 'F j', 'closure date range', 'optima-hours' );
 		/* translators: 1: first day, 2: last day. */
-		return sprintf( __( '%1$s to %2$s', 'optima-hours' ), wp_date( $f, $a->setTime( 12, 0 )->getTimestamp() ), wp_date( $f, $b->setTime( 12, 0 )->getTimestamp() ) );
+		return sprintf( __( '%1$s to %2$s', 'optima-hours' ), wp_date( $f, $a->setTime( 12, 0 )->getTimestamp(), self::timezone() ), wp_date( $f, $b->setTime( 12, 0 )->getTimestamp(), self::timezone() ) );
 	}
 
 	/**
@@ -373,7 +481,7 @@ final class Optima_Hours {
 			$plan = self::day_plan( $today->modify( ( $i >= 0 ? '+' : '' ) . $i . ' day' ) );
 			$iv   = array();
 			foreach ( $plan['intervals'] as $pair ) {
-				$iv[] = array( $pair[0]->getTimestamp(), $pair[1]->getTimestamp(), self::time_label( $pair[0] ), self::time_label( $pair[1] ) );
+				$iv[] = array( $pair[0]->getTimestamp(), $pair[1]->getTimestamp(), self::with_zone( self::time_label( $pair[0] ) ), self::with_zone( self::time_label( $pair[1] ) ) );
 			}
 			$days[] = array(
 				's'  => $plan['date']->getTimestamp(),

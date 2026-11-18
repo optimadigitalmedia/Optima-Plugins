@@ -9,6 +9,11 @@
  * hours, unless the active theme is one of the Optima themes that print their
  * own business schema (filter `optima_hours_standalone_schema`).
  *
+ * The office hours are openingHoursSpecification (when the door is open). The
+ * "Phones answered" schedule, when it is set, goes out only as the intake
+ * ContactPoint's hoursAvailable, on the business node, never as opening hours.
+ * Optima Core's office nodes read it too (phone_specs()).
+ *
  * Nothing is added until the hours are confirmed.
  *
  * @package Optima_Hours
@@ -102,7 +107,74 @@ final class Optima_Hours_Schema {
 		return (array) apply_filters( 'optima_hours_schema_properties', $props );
 	}
 
-	/** Optima Core: add the hours to its business node. */
+	/**
+	 * The Phones answered schedule as OpeningHoursSpecification entries, for a
+	 * ContactPoint's hoursAvailable. Empty until it is set and the hours are confirmed.
+	 * Around the clock is Google's documented 00:00 to 23:59 on every day.
+	 */
+	public static function phone_specs(): array {
+		if ( ! Optima_Hours::phones_public() ) {
+			return array();
+		}
+		$p = Optima_Hours::settings()['phones'];
+		if ( 'always' === $p['mode'] ) {
+			return array(
+				array(
+					'@type'     => 'OpeningHoursSpecification',
+					'dayOfWeek' => array_values( Optima_Hours::days() ),
+					'opens'     => '00:00',
+					'closes'    => '23:59',
+				),
+			);
+		}
+		$groups = array();
+		foreach ( Optima_Hours::days() as $key => $name ) {
+			if ( ! $p['days'][ $key ]['open'] ) {
+				continue;
+			}
+			foreach ( $p['days'][ $key ]['ranges'] as $r ) {
+				$groups[ $r[0] . '-' . $r[1] ]['range']  = $r;
+				$groups[ $r[0] . '-' . $r[1] ]['days'][] = $name;
+			}
+		}
+		$out = array();
+		foreach ( $groups as $g ) {
+			$out[] = array(
+				'@type'     => 'OpeningHoursSpecification',
+				'dayOfWeek' => 1 === count( $g['days'] ) ? $g['days'][0] : $g['days'],
+				'opens'     => $g['range'][0],
+				'closes'    => $g['range'][1],
+			);
+		}
+		return $out;
+	}
+
+	/**
+	 * The intake ContactPoint for a phone number: hoursAvailable from the
+	 * Phones answered schedule, availableLanguage only from the site's
+	 * languages (Optima Core). Empty without a number or a phone schedule.
+	 */
+	public static function contact_point( string $telephone ): array {
+		$hours = self::phone_specs();
+		if ( '' === $telephone || ! $hours ) {
+			return array();
+		}
+		$point = array(
+			'@type'          => 'ContactPoint',
+			'contactType'    => 'intake',
+			'telephone'      => $telephone,
+			'hoursAvailable' => $hours,
+		);
+		if ( class_exists( 'Optima_Core_Offices' ) && method_exists( 'Optima_Core_Offices', 'language_nodes' ) ) {
+			$langs = Optima_Core_Offices::language_nodes();
+			if ( $langs ) {
+				$point['availableLanguage'] = $langs;
+			}
+		}
+		return (array) apply_filters( 'optima_hours_contact_point', $point );
+	}
+
+	/** Optima Core: add the hours (and the intake ContactPoint, when phone hours are set) to its business node. */
 	public static function add_to_graph( $graph ) {
 		if ( ! is_array( $graph ) || empty( $graph['business'] ) || ! is_array( $graph['business'] ) ) {
 			return $graph;
@@ -110,6 +182,12 @@ final class Optima_Hours_Schema {
 		$props = self::properties();
 		if ( $props ) {
 			$graph['business'] = array_merge( $graph['business'], $props );
+		}
+		if ( empty( $graph['business']['contactPoint'] ) ) {
+			$point = self::contact_point( (string) ( $graph['business']['telephone'] ?? '' ) );
+			if ( $point ) {
+				$graph['business']['contactPoint'] = $point;
+			}
 		}
 		return $graph;
 	}
@@ -133,6 +211,11 @@ final class Optima_Hours_Schema {
 			),
 			$props
 		);
+		$point = self::contact_point( (string) ( Optima_Admin_UI::business()['phone'] ?? '' ) );
+		if ( $point ) {
+			$node['telephone']    = $point['telephone'];
+			$node['contactPoint'] = $point;
+		}
 		echo "\n<script type=\"application/ld+json\" id=\"optima-hours-schema\">" . wp_json_encode( $node, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG ) . "</script>\n";
 	}
 }

@@ -42,6 +42,29 @@ final class Optima_Results_Editor {
 			$q->set( 'meta_key', Optima_Results::META['attorney'] );
 			$q->set( 'meta_value', (string) $who );
 		}
+		// The list reads in the site's order unless a column was clicked: result date, newest first, then date added.
+		if ( ! $q->get( 'orderby' ) ) {
+			$meta   = (array) $q->get( 'meta_query' );
+			$meta[] = array(
+				'relation'    => 'OR',
+				'result_date' => array(
+					'key'     => Optima_Results::META['date'],
+					'compare' => 'EXISTS',
+				),
+				array(
+					'key'     => Optima_Results::META['date'],
+					'compare' => 'NOT EXISTS',
+				),
+			);
+			$q->set( 'meta_query', $meta );
+			$q->set(
+				'orderby',
+				array(
+					'result_date' => 'DESC',
+					'date'        => 'DESC',
+				)
+			);
+		}
 	}
 
 	/** Set when this request held a result back, so the redirect can say why. */

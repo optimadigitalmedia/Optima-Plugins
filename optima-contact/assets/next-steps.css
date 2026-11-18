@@ -1,0 +1,18 @@
+/* Optima Call Buttons: the "What happens next" block and the office line.
+   Tokens only (--optima-*, printed by Optima Build from the theme's DESIGN.md). */
+.optima-next-steps { margin: 0 0 2rem; color: var(--optima-ink); }
+.optima-next-steps__title { margin: 0 0 1rem; font-family: var(--optima-font-display, inherit); }
+.optima-next-steps__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; counter-reset: none; }
+.optima-next-steps.is-row .optima-next-steps__list { grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
+.optima-next-steps__step { display: flex; gap: .875rem; align-items: flex-start; margin: 0; padding: 1rem 1.125rem; background: var(--optima-surface); border: 1px solid var(--optima-line); border-radius: var(--optima-radius-md); }
+.optima-next-steps__step p { margin: 0; line-height: 1.5; }
+.optima-next-steps__n { flex: 0 0 auto; display: inline-grid; place-items: center; width: 2rem; height: 2rem; border-radius: 999px; background: var(--optima-accent); color: var(--optima-accent-ink); font-family: var(--optima-font-mono, inherit); font-weight: 600; }
+.optima-next-steps.is-timeline .optima-next-steps__list { gap: 0; }
+.optima-next-steps.is-timeline .optima-next-steps__step { position: relative; background: none; border: 0; border-radius: 0; padding: 0 0 1.5rem; }
+.optima-next-steps.is-timeline .optima-next-steps__step:not(:last-child)::before { content: ""; position: absolute; left: 1rem; top: 2rem; bottom: 0; width: 1px; background: var(--optima-line); }
+.optima-next-steps__note { margin: .75rem 0 0; color: var(--optima-ink-2); font-size: .9375rem; }
+.optima-office { margin: 0 0 1.5rem; }
+.optima-office__name { margin: 0; font-weight: 600; }
+.optima-office__address { margin: .25rem 0; font-style: normal; }
+.optima-office__go { margin: 0; }
+.optima-directions { color: var(--optima-accent); font-weight: 600; }

@@ -38,6 +38,15 @@ $optima_outcome = (string) ( $review['outcome_disclaimer'] ?? '' );
 		<p class="optima-review__disclaimer"><?php echo esc_html( $optima_outcome ); ?></p>
 	<?php endif; ?>
 
+	<?php if ( ! empty( $review['practice_link']['url'] ) ) : ?>
+		<p class="optima-review__practice"><a href="<?php echo esc_url( $review['practice_link']['url'] ); ?>">
+			<?php
+			/* translators: %s: practice area, for example truck accidents */
+			echo esc_html( sprintf( __( 'Read about our %s work', 'optima-reviews' ), (string) $review['practice_link']['name'] ) );
+			?>
+		</a></p>
+	<?php endif; ?>
+
 	<footer class="optima-review__footer">
 		<?php if ( $review['photo'] ) : ?>
 			<img class="optima-review__avatar" src="<?php echo esc_url( $review['photo'] ); ?>" alt="" width="40" height="40" loading="lazy" decoding="async" referrerpolicy="no-referrer" />

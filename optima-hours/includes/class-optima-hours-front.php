@@ -183,6 +183,13 @@ final class Optima_Hours_Front {
 		}
 		$out = '<table class="optima-hours-table"><caption class="optima-hours-caption">' . esc_html__( 'Opening hours', 'optima-hours' ) . '</caption><tbody>' . $rows . '</tbody></table>';
 
+		// The Phones answered schedule, when it is set: one line under the table.
+		$phones = Optima_Hours::phone_summary();
+		if ( '' !== $phones ) {
+			$out .= '<p class="optima-hours-phones"><span class="optima-hours-phones-label">' . esc_html__( 'Phones answered', 'optima-hours' ) . '</span> '
+				. '<span class="optima-hours-phones-text">' . esc_html( $phones ) . '</span></p>';
+		}
+
 		$limit    = Optima_Hours::now()->modify( '+' . self::LIST_AHEAD . ' days' )->format( 'Y-m-d' );
 		$upcoming = array_filter(
 			Optima_Hours::upcoming_closures(),
@@ -216,7 +223,7 @@ final class Optima_Hours_Front {
 		if ( 'off' === $s['bar'] || ! $s['confirmed'] ) {
 			return array();
 		}
-		$tz    = wp_timezone();
+		$tz    = Optima_Hours::timezone();
 		$limit = Optima_Hours::now()->modify( '+' . Optima_Hours::WINDOW . ' days' )->format( 'Y-m-d' );
 		$out   = array();
 		foreach ( Optima_Hours::upcoming_closures() as $c ) {

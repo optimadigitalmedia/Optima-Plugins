@@ -40,7 +40,37 @@ final class Optima_Reviews_Settings {
 			'disclaimer_approver'     => '',
 			'disclaimer_approved_on'  => '',
 			'disclaimer_approved_for' => '',
+			// Release 2: review topic slug => practice slug, for the practice-reviews slot. A topic not listed maps to its own slug.
+			'practice_map'            => array(),
 		);
+	}
+
+	/**
+	 * The practice slug a topic's reviews belong to: the one saved under
+	 * Display, else the topic's own slug.
+	 */
+	public static function practice_for_topic( string $topic ): string {
+		$map = (array) self::get()['practice_map'];
+		$to  = (string) ( $map[ $topic ] ?? '' );
+		return '' !== $to ? $to : $topic;
+	}
+
+	/** The topics whose reviews belong on a practice page. */
+	public static function topics_for_practice( string $practice ): array {
+		$practice = trim( $practice, '/' );
+		$out      = array();
+		foreach ( Optima_Reviews_Topics::all() as $term ) {
+			if ( self::practice_for_topic( $term->slug ) === $practice ) {
+				$out[] = $term->slug;
+			}
+		}
+		return $out;
+	}
+
+	/** A practice slug as typed: lowercase words and dashes, with an optional sub-practice after a slash. */
+	public static function clean_practice( string $value ): string {
+		$value = strtolower( trim( sanitize_text_field( $value ), " /\t\n\r" ) );
+		return preg_match( '#^[a-z0-9]+(?:-[a-z0-9]+)*(?:/[a-z0-9]+(?:-[a-z0-9]+)*)*$#', $value ) ? $value : '';
 	}
 
 	public static function get(): array {
@@ -155,6 +185,16 @@ final class Optima_Reviews_Settings {
 		$out['disclaimer_approved_for'] = $hash;
 		$out['disclaimer_approved_on']  = '' === $hash ? '' : ( ( $hash === $prev['disclaimer_approved_for'] && $approver === $prev['disclaimer_approver'] && '' !== $prev['disclaimer_approved_on'] ) ? $prev['disclaimer_approved_on'] : current_time( 'Y-m-d' ) );
 		Optima_Reviews_Law::reset();
+
+		// Topics and practice pages: only a slug that differs from the topic's own is kept.
+		$out['practice_map'] = array();
+		foreach ( (array) ( $input['practice_map'] ?? array() ) as $topic => $practice ) {
+			$topic    = sanitize_title( (string) $topic );
+			$practice = self::clean_practice( (string) $practice );
+			if ( '' !== $topic && '' !== $practice && $practice !== $topic ) {
+				$out['practice_map'][ $topic ] = $practice;
+			}
+		}
 
 		// Saving the form means someone looked at the totals, so note when.
 		update_option( self::STAMP, time(), false );
@@ -340,6 +380,26 @@ final class Optima_Reviews_Settings {
 						</td>
 					</tr>
 					<?php endif; ?>
+					<?php $optima_topics = Optima_Reviews_Topics::all(); ?>
+					<?php if ( $optima_topics ) : ?>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Topics and practice pages', 'optima-reviews' ); ?></th>
+						<td>
+							<p class="description"><?php esc_html_e( 'Which practice page each topic\'s reviews show on, by the practice page\'s address (for example truck-accidents). Left blank, a topic shows on the practice page with its own address. Each review there links to that practice page.', 'optima-reviews' ); ?></p>
+							<div class="sh-scroll"><table class="widefat striped" style="margin-top:8px">
+								<thead><tr><th scope="col"><?php esc_html_e( 'Topic', 'optima-reviews' ); ?></th><th scope="col"><?php esc_html_e( 'Practice page address', 'optima-reviews' ); ?></th></tr></thead>
+								<tbody>
+								<?php foreach ( $optima_topics as $optima_term ) : ?>
+									<tr>
+										<td><label for="optima-reviews-map-<?php echo esc_attr( $optima_term->slug ); ?>"><?php echo esc_html( $optima_term->name ); ?></label></td>
+										<td><input type="text" class="regular-text code" id="optima-reviews-map-<?php echo esc_attr( $optima_term->slug ); ?>" name="<?php echo esc_attr( $name . '[practice_map][' . $optima_term->slug . ']' ); ?>" value="<?php echo esc_attr( (string) ( $settings['practice_map'][ $optima_term->slug ] ?? '' ) ); ?>" placeholder="<?php echo esc_attr( $optima_term->slug ); ?>" /></td>
+									</tr>
+								<?php endforeach; ?>
+								</tbody>
+							</table></div>
+						</td>
+					</tr>
+					<?php endif; ?>
 					<tr>
 						<th scope="row"><?php esc_html_e( 'Built-in design', 'optima-reviews' ); ?></th>
 						<td>
@@ -367,6 +427,8 @@ final class Optima_Reviews_Settings {
 				<li><code>[optima_reviews source="google" layout="row"]</code> <?php esc_html_e( 'shows only Google reviews in a sideways-scrolling row.', 'optima-reviews' ); ?></li>
 				<li><code>[optima_reviews summary="0"]</code> <?php esc_html_e( 'hides the rating summary.', 'optima-reviews' ); ?></li>
 				<li><code>[optima_reviews topic="law-firms" count="3"]</code> <?php esc_html_e( 'shows reviews tagged with one topic, or featured reviews until that topic has some.', 'optima-reviews' ); ?></li>
+				<li><code>[optima_reviews layout="quote" count="1"]</code> <?php esc_html_e( 'shows one large quote at a time.', 'optima-reviews' ); ?></li>
+				<li><code>optima_slot( 'practice-reviews', array( 'practice' =&gt; 'truck-accidents' ) )</code> <?php esc_html_e( 'in a theme template: the reviews whose topic maps to that practice page (Display, Topics and practice pages), each with a link to the practice page. Variants grid, list and quote.', 'optima-reviews' ); ?></li>
 				<li><code>[optima_review_summary]</code> <?php esc_html_e( 'shows only the rating summary.', 'optima-reviews' ); ?></li>
 			</ul>
 			<p><?php esc_html_e( 'Theme developers: call optima_reviews_slot() in a template to show the reviews for that page automatically. See the plugin README.', 'optima-reviews' ); ?></p>

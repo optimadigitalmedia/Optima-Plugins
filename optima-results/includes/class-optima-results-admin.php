@@ -109,7 +109,27 @@ final class Optima_Results_Admin {
 			'approver'     => $approver,
 			'approved_on'  => $on,
 			'approved_for' => $hash,
+			'page'         => self::page_path( (string) ( $in['page'] ?? '' ) ),
 		);
+	}
+
+	/** The results page as a path on this site ("/case-results/"), or '' for anything else. */
+	private static function page_path( string $value ): string {
+		$value = trim( sanitize_text_field( $value ) );
+		if ( '' === $value ) {
+			return '';
+		}
+		$parts = wp_parse_url( $value );
+		if ( ! is_array( $parts ) ) {
+			return '';
+		}
+		if ( isset( $parts['host'] ) && strtolower( (string) $parts['host'] ) !== strtolower( (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) ) ) {
+			return '';
+		}
+		if ( ! isset( $parts['host'] ) && '/' !== substr( $value, 0, 1 ) ) {
+			return '';
+		}
+		return '/' . ltrim( preg_replace( '#[^A-Za-z0-9/_.~%-]#', '', (string) ( $parts['path'] ?? '/' ) ), '/' );
 	}
 
 	/** Counts of approved, waiting and draft results. */
@@ -214,6 +234,13 @@ final class Optima_Results_Admin {
 						</td>
 					</tr>
 					<tr>
+						<th scope="row"><label for="sr-page"><?php esc_html_e( 'Results page', 'optima-results' ); ?></label></th>
+						<td>
+							<input id="sr-page" type="text" class="regular-text code" name="<?php echo esc_attr( $o ); ?>[page]" value="<?php echo esc_attr( $s['page'] ); ?>" placeholder="/case-results/">
+							<p class="description"><?php esc_html_e( 'The page with every result. Practice pages link to it as "See all ... results", filtered to their practice area. Leave blank to use the page at /case-results/ or /results/.', 'optima-results' ); ?></p>
+						</td>
+					</tr>
+					<tr>
 						<th scope="row"><label for="sr-disclaimer"><?php esc_html_e( 'Disclaimer wording', 'optima-results' ); ?></label></th>
 						<td>
 							<textarea id="sr-disclaimer" class="large-text" rows="5" name="<?php echo esc_attr( $o ); ?>[disclaimer]" placeholder="<?php echo esc_attr( Optima_Results::default_disclaimer( $s['state'] ) ); ?>"><?php echo esc_textarea( $s['disclaimer'] ); ?></textarea>
@@ -271,6 +298,9 @@ final class Optima_Results_Admin {
 				<tr><td>[optima_results area="car-accidents"]</td><td><?php esc_html_e( 'Only one practice area, for that practice area\'s page. Use the slug from Case results, Practice areas.', 'optima-results' ); ?></td></tr>
 				<tr><td>[optima_results heading="Case results" limit="6"]</td><td><?php esc_html_e( 'A heading above the grid and a cap on how many show.', 'optima-results' ); ?></td></tr>
 				<tr><td>[optima_results filters="no"]</td><td><?php esc_html_e( 'The grid without the filter buttons.', 'optima-results' ); ?></td></tr>
+				<tr><td>[optima_results attorney="12"]</td><td><?php esc_html_e( 'Only the results that name this attorney (a People profile ID or the profile\'s address name).', 'optima-results' ); ?></td></tr>
+				<tr><td>[optima_results variant="ledger"]</td><td><?php esc_html_e( 'A different layout: grid (the default), ledger (one result per row) or feature (the newest result large).', 'optima-results' ); ?></td></tr>
+				<tr><td>optima_slot( 'practice-results', array( 'practice' =&gt; 'truck-accidents' ) )</td><td><?php esc_html_e( 'On a practice page: its results with a See all link to the results page. optima_slot( \'bio-results\' ) does the same on a bio.', 'optima-results' ); ?></td></tr>
 				<tr><td>[optima_result id="12"]</td><td><?php esc_html_e( 'One result by its ID, with the disclaimer.', 'optima-results' ); ?></td></tr>
 			</table>
 		</section>
@@ -289,11 +319,22 @@ final class Optima_Results_Admin {
 			array(
 				'post_type'      => Optima_Results::POST_TYPE,
 				'post_status'    => array( 'publish', 'pending', 'draft', 'future' ),
-				'posts_per_page' => 25,
+				'posts_per_page' => 500,
 				'orderby'        => 'date',
 				'order'          => 'DESC',
 			)
 		);
+		// The same order as the site: the result's year, then its date, then the date it was added.
+		usort(
+			$rows,
+			static function ( $x, $y ): int {
+				return Optima_Results_Render::newest_first(
+					array( 'date' => (string) get_post_meta( $x->ID, Optima_Results::META['date'], true ), 'post_date' => $x->post_date ),
+					array( 'date' => (string) get_post_meta( $y->ID, Optima_Results::META['date'], true ), 'post_date' => $y->post_date )
+				);
+			}
+		);
+		$rows = array_slice( $rows, 0, 25 );
 		$all  = (int) array_sum( (array) wp_count_posts( Optima_Results::POST_TYPE ) );
 		$line = Optima_Results::settings()['threshold'];
 		echo '<section class="sh-box"><h2 class="sh-title">' . esc_html__( 'Results', 'optima-results' ) . '</h2>';
