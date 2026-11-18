@@ -2,9 +2,11 @@
 /**
  * Site Sync screen, notices and health check.
  *
- * The screen is the Optima menu's "Site Sync" tab: counts at the top, then every
- * row that is not already current, with what WordPress holds next to what the
- * theme ships. Looking never changes anything; every change is a button.
+ * The screen is Optima, Content, Approved copy (address tab=sync): counts at the
+ * top, then every row that is not already current, with what WordPress holds
+ * next to what the theme ships, then the pages and forms the theme can add.
+ * Looking never changes anything; every change is a button, and nothing new
+ * is added to the site until a person ticks it.
  *
  * @package Optima_Core
  */
@@ -96,12 +98,23 @@ final class Optima_Sync_Admin {
 			Optima_Sync::UPDATE   => array( 'Ready to update', 'good' ),
 			Optima_Sync::EDITED   => array( 'Edited in WordPress', 'warn' ),
 			Optima_Sync::CONFLICT => array( 'Needs a decision', 'warn' ),
-			Optima_Sync::MISSING  => array( 'Page not found', 'bad' ),
+			Optima_Sync::MISSING  => array( 'Not on the site yet', 'warn' ),
+			Optima_Sync::OFF      => array( 'Waiting on Gravity Forms', 'warn' ),
 		);
+		foreach ( $state as $key => $rows ) {
+			$state[ $key ] = array_values(
+				array_filter(
+					$rows,
+					static function ( $r ) {
+						return empty( $r['covered'] );
+					}
+				)
+			);
+		}
 		echo '<div class="sh-grid sh-grid-3">';
 		foreach ( $counts as $key => $meta ) {
 			$n = count( $state[ $key ] ?? array() );
-			if ( ! $n && in_array( $key, array( Optima_Sync::MISSING, Optima_Sync::CONFLICT ), true ) ) {
+			if ( ! $n && in_array( $key, array( Optima_Sync::MISSING, Optima_Sync::CONFLICT, Optima_Sync::OFF ), true ) ) {
 				continue;
 			}
 			printf(
@@ -126,7 +139,18 @@ final class Optima_Sync_Admin {
 			echo '</section>';
 		}
 
-		$review = array_merge( $state[ Optima_Sync::EDITED ] ?? array(), $state[ Optima_Sync::CONFLICT ] ?? array() );
+		$review  = array();
+		$blocked = array();
+		foreach ( array_merge( $state[ Optima_Sync::EDITED ] ?? array(), $state[ Optima_Sync::CONFLICT ] ?? array() ) as $row ) {
+			if ( empty( $row['blocked'] ) ) {
+				$review[] = $row;
+			} else {
+				$blocked[] = $row;
+			}
+		}
+		foreach ( $blocked as $row ) {
+			echo '<div class="notice notice-warning inline"><p><strong>' . esc_html( Optima_Sync::label( $row ) ) . ':</strong> ' . esc_html( $row['blocked'] ) . '</p></div>';
+		}
 		if ( $review ) {
 			echo '<section class="sh-box"><h2>Changes made in WordPress</h2>';
 			echo '<p>These differ from the theme copy. Site Sync never overwrites them on its own. Tick the ones to decide on, then choose. "Keep the WordPress copy" also means the edit should go back into the client repo so the next theme carries it.</p>';
@@ -137,31 +161,105 @@ final class Optima_Sync_Admin {
 			echo '</form></section>';
 		}
 
-		$missing = $state[ Optima_Sync::MISSING ] ?? array();
+		$addable = array();
+		$missing = array();
+		foreach ( $state[ Optima_Sync::MISSING ] ?? array() as $row ) {
+			if ( in_array( $row['kind'], array( 'create', 'form' ), true ) ) {
+				$addable[] = $row;
+			} else {
+				$missing[] = $row;
+			}
+		}
+		if ( $addable ) {
+			self::addable( $addable, $plan['hash'] );
+		}
 		if ( $missing ) {
-			echo '<section class="sh-box"><h2>Pages the theme names but the site does not have</h2><p>Create them, or run the theme\'s setup, then come back.</p><ul class="sh-list">';
+			echo '<section class="sh-box"><h2>Pages the theme names but cannot create</h2><p>The theme has copy for these but no "create" block saying how to make the page. Add one in the site repo\'s optima-sync.json, or create the page by hand, then come back.</p><ul class="sh-list">';
 			foreach ( $missing as $row ) {
 				echo '<li>' . esc_html( Optima_Sync::label( $row ) ) . '</li>';
 			}
 			echo '</ul></section>';
 		}
 
-		if ( ! $updates && ! $review && ! $missing && ! $plan['errors'] ) {
+		$off = $state[ Optima_Sync::OFF ] ?? array();
+		if ( $off ) {
+			echo '<section class="sh-box"><h2>Gravity Forms is not active</h2><p>The theme ships these forms. Nothing happens to them until Gravity Forms is on; then come back here to add or update them.</p><ul class="sh-list">';
+			foreach ( $off as $row ) {
+				echo '<li>' . esc_html( Optima_Sync::label( $row ) ) . '</li>';
+			}
+			echo '</ul></section>';
+		}
+
+		if ( ! $updates && ! $review && ! $blocked && ! $addable && ! $missing && ! $off && ! $plan['errors'] ) {
 			echo '<section class="sh-box"><h2>Everything is in sync</h2><p>Every page matches the copy in this theme. When a theme update changes the copy, the untouched pages update on their own.</p></section>';
 		}
 
 		$journal = get_option( Optima_Sync::JOURNAL, array() );
 		if ( in_array( $journal['state'] ?? '', array( 'applied', 'failed', 'applying' ), true ) ) {
 			echo '<section class="sh-box"><h2>Last sync</h2>';
+			$who = array(
+				'auto' => 'Automatic, after a theme update',
+				'cli'  => 'From the command line',
+			);
 			printf(
 				'<p>%s, %s. %s</p>',
-				esc_html( 'auto' === ( $journal['who'] ?? '' ) ? 'Automatic, after a theme update' : 'Run by hand' ),
+				esc_html( $who[ $journal['who'] ?? '' ] ?? 'Run by hand' ),
 				esc_html( wp_date( 'M j, g:i a', strtotime( $journal['time'] ) ) ),
 				esc_html( sprintf( _n( '%d item changed.', '%d items changed.', count( $journal['rows'] ), 'optima-core' ), count( $journal['rows'] ) ) )
 			);
 			self::form( 'undo', '', 'Undo the last sync', 'button' );
 			echo '</section>';
 		}
+	}
+
+	/** Pages and forms the theme can add. Nothing is ticked to start with. */
+	private static function addable( array $rows, $hash ) {
+		$trashed = false;
+		echo '<section class="sh-box"><h2>' . esc_html( sprintf( _n( '%d page or form the theme can add', '%d pages and forms the theme can add', count( $rows ), 'optima-core' ), count( $rows ) ) ) . '</h2>';
+		echo '<p>The theme ships these, but the site does not have them yet. Nothing is added until you tick it. A new page gets the status the theme gives it (a draft stays a draft), its copy from the theme, and its SEO and page fields in the same step. Undo the last sync moves a new page to the trash and switches a new form off.</p>';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		echo '<table class="widefat striped"><thead><tr><td class="check-column"></td><th>Item</th><th>What it adds</th><th>Note</th></tr></thead><tbody>';
+		foreach ( $rows as $row ) {
+			$note = '';
+			if ( ! empty( $row['blocked'] ) ) {
+				$note = $row['blocked'];
+			} elseif ( ! empty( $row['trashed'] ) ) {
+				$note    = 'A page with this address is in the trash. Restore it instead of creating a second one, or empty it from the trash first.';
+				$trashed = true;
+			} elseif ( ! empty( $row['author_note'] ) ) {
+				$note = $row['author_note'];
+			}
+			printf(
+				'<tr><th class="check-column"><input type="checkbox" name="ids[]" value="%s"%s aria-label="%s"></th><td><strong>%s</strong>%s</td><td>%s</td><td>%s</td></tr>',
+				esc_attr( $row['id'] ),
+				empty( $row['blocked'] ) ? '' : ' disabled',
+				esc_attr( Optima_Sync::label( $row ) ),
+				esc_html( 'form' === $row['kind'] ? $row['title'] : '/' . trim( ( '' !== $row['parent'] && false === strpos( $row['slug'], '/' ) ? $row['parent'] . '/' : '' ) . $row['slug'], '/' ) . '/' ),
+				! empty( $row['trashed'] ) ? '<br><span class="sh-tag">In the trash</span>' : '',
+				esc_html( self::adds( $row ) ),
+				esc_html( $note )
+			);
+		}
+		echo '</tbody></table>';
+		self::hidden( 'add', $hash );
+		echo '<p class="sh-actions"><button class="button button-primary" name="choice" value="create">Create the ticked items</button>';
+		if ( $trashed ) {
+			echo ' <button class="button" name="choice" value="restore">Restore the ticked pages from the trash</button>';
+		}
+		echo '</p></form></section>';
+	}
+
+	/** One plain line on what adding a row does. */
+	private static function adds( array $row ) {
+		if ( 'form' === $row['kind'] ) {
+			$n = count( (array) ( $row['form']['fields'] ?? array() ) );
+			return sprintf( _n( 'A Gravity Forms form with %d field, titled exactly as the theme names it.', 'A Gravity Forms form with %d fields, titled exactly as the theme names it.', $n, 'optima-core' ), $n );
+		}
+		$bits   = array( ( 'publish' === $row['status'] ? 'A published ' : 'A draft ' ) . ( 'page' === $row['post_type'] ? 'page' : $row['post_type'] ) . ' titled "' . $row['title'] . '"' );
+		$bits[] = '' !== $row['parent'] ? 'under /' . $row['parent'] . '/' : '';
+		$bits[] = '' !== $row['template'] && 'default' !== $row['template'] ? 'on the template ' . $row['template'] : '';
+		$bits[] = '' !== trim( (string) $row['theme'] ) ? 'with its copy from the theme' : 'with no copy yet';
+		return implode( ', ', array_filter( $bits ) ) . '.';
 	}
 
 	private static function rows( array $rows, $pick ) {
@@ -188,6 +286,19 @@ final class Optima_Sync_Admin {
 	}
 
 	private static function preview( array $row, $text ) {
+		if ( 'form' === $row['kind'] ) {
+			$form = is_array( $text ) ? $text : json_decode( (string) $text, true );
+			if ( ! is_array( $form ) ) {
+				return '(none)';
+			}
+			$labels = array();
+			foreach ( (array) ( $form['fields'] ?? array() ) as $field ) {
+				$labels[] = (string) ( $field['label'] ?? '' );
+			}
+			$n     = count( $labels );
+			$plain = sprintf( _n( 'Form "%1$s", %2$d field: %3$s', 'Form "%1$s", %2$d fields: %3$s', $n, 'optima-core' ), (string) ( $form['title'] ?? '' ), $n, implode( ', ', array_filter( $labels ) ) );
+			return mb_strlen( $plain ) > 220 ? mb_substr( $plain, 0, 220 ) . '...' : $plain;
+		}
 		if ( ! empty( $row['image'] ) ) {
 			return $text === $row['theme'] ? 'Image: ' . wp_basename( (string) $row['image'] ) : ( $text ? 'Image #' . (int) $text : 'No image' );
 		}
@@ -235,6 +346,22 @@ final class Optima_Sync_Admin {
 		if ( 'undo' === $step ) {
 			$result = Optima_Sync::undo();
 			$text   = is_wp_error( $result ) ? $result->get_error_message() : sprintf( 'Undone: %d put back.', $result['restored'] ) . ( $result['skipped'] ? ' Left alone because they changed since: ' . implode( ', ', $result['skipped'] ) . '.' : '' );
+		} elseif ( 'add' === $step ) {
+			if ( ! $ids ) {
+				$result = new WP_Error( 'none', 'Tick at least one item first.' );
+			} else {
+				$result = Optima_Sync::apply( $review, 'restore' === $choice ? 'restore' : 'create', $ids );
+			}
+			if ( is_wp_error( $result ) ) {
+				$text = $result->get_error_message();
+			} elseif ( 'restore' === $choice ) {
+				$text = sprintf( 'Restored %d page(s) from the trash, each with the status it had.', $result['written'] );
+			} else {
+				$text = sprintf( 'Added %d item(s). New drafts stay drafts until you publish them. Purge the hosting cache to see published pages live.', $result['written'] );
+			}
+			if ( ! is_wp_error( $result ) && ! empty( $result['notes'] ) ) {
+				$text .= ' ' . implode( ' ', $result['notes'] );
+			}
 		} elseif ( 'pick' === $step ) {
 			if ( ! $ids ) {
 				$result = new WP_Error( 'none', 'Tick at least one item first.' );

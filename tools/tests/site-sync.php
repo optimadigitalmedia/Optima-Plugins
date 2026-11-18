@@ -2,7 +2,8 @@
 // Site Sync integration checks. Run against a disposable WordPress whose active theme
 // is a throwaway test theme with a writable optima-sync.json, optima-core active:
 //   php tools/tests/site-sync.php /path/to/wordpress
-// It deletes every page and attachment on that site. Never point it at a real site.
+// It deletes every page and attachment on that site (and, when Gravity Forms is not
+// installed, uses a stand-in for it). Never point it at a real site.
 require rtrim($argv[1] ?? '', '/').'/wp-load.php';
 if ('synctest' !== get_stylesheet()) { fwrite(STDERR, "Refusing: the active theme must be the throwaway 'synctest' theme.\n"); exit(1); }
 wp_set_current_user(1);
@@ -186,6 +187,144 @@ $biz = get_option('optima_business'); $cards = get_option('synctest_cards'); $tm
 ok(!is_wp_error($r) && 4===$r['restored'] && ''===($biz['email']??''), 'undo puts back the business field');
 ok($cards['people'][1]['title']==='Old Jordan title' && $tm['role']==='Co-Founder' && get_user_meta($uid,'description',true)==='Old author bio', 'undo puts back card, team role and author bio');
 require_once ABSPATH.'wp-admin/includes/user.php'; wp_delete_user($uid); wp_delete_post($team, true); delete_option('optima_business'); delete_option('synctest_cards');
+
+// 1.6.1: a page the site lacks is created from its "create" block, only when a person ticks it.
+foreach (get_posts(array('post_type'=>'page','numberposts'=>-1,'post_status'=>'any','fields'=>'ids')) as $id) wp_delete_post($id, true);
+foreach (array(Optima_Sync::BASES, Optima_Sync::JOURNAL) as $o) delete_option($o);
+function rows(){ $o=array(); foreach(Optima_Sync::plan()['rows'] as $r){ $o[$r['id']]=$r; } return $o; }
+function hashnow(){ return Optima_Sync::plan()['hash']; }
+file_put_contents($theme.'/tpl-landing.php', "<?php\n/* Template Name: Landing */\n");
+file_put_contents($theme.'/sync/pages/services.html', "<p>Services copy</p>\n");
+$old = wp_insert_post(array('post_type'=>'page','post_name'=>'old-offer','post_title'=>'Old offer','post_status'=>'publish','post_content'=>'Old'));
+wp_trash_post($old);
+$admin = get_userdata(1);
+$m = array('sync_version'=>1,
+  'pages'=>array(
+    array('slug'=>'services','title'=>'Services','source'=>'sync/pages/services.html','create'=>array('status'=>'publish','template'=>'tpl-landing.php','menu_order'=>3,'author'=>$admin->user_login)),
+    array('slug'=>'services/injury','title'=>'Injury','content'=>'Injury copy','create'=>array('author'=>'nobody@example.com')),
+    array('slug'=>'old-offer','content'=>'Offer copy','create'=>array('status'=>'publish')),
+    array('slug'=>'bad-template','content'=>'x','create'=>array('template'=>'nope.php')),
+    array('slug'=>'orphan','content'=>'x','create'=>array('parent'=>'no-such-parent')),
+    array('slug'=>'bad-status','content'=>'x','create'=>array('status'=>'private')),
+  ),
+  'fields'=>array(array('slug'=>'services','seo'=>'desc','value'=>'Services description')),
+);
+manifest($m); bump('1.6.1');
+$s = states(); $r = rows();
+ok($s['page/services#create']==='missing' && empty($r['page/services#create']['blocked']), 'a page with a create block reads missing and can be created');
+ok(!empty($r['page/services#content']['covered']) && !empty($r['page/services#seo:desc']['covered']), 'its copy and field rows wait for the page instead of counting twice');
+ok(empty($r['page/services/injury#create']['blocked']), 'a child whose parent the theme also creates is not blocked');
+ok(false !== strpos((string) $r['page/services/injury#create']['author_note'], 'nobody@example.com'), 'an unknown author falls back, with a note');
+ok((int) $r['page/old-offer#create']['trashed'] === $old, 'a trashed page with the same slug is found');
+ok(false !== strpos((string) ($r['page/bad-template#create']['blocked'] ?? ''), 'no page template'), 'a template the theme lacks blocks creation');
+ok(false !== strpos((string) ($r['page/orphan#create']['blocked'] ?? ''), 'parent page'), 'a parent nobody can create blocks creation');
+ok((bool) preg_grep('/status "private"/', Optima_Sync::plan()['errors']), 'a status other than publish or draft is refused');
+ok(7 === Optima_Sync::summary(true)['review'], 'review count: five new-page rows, the page with no create block, one manifest error (covered field rows not counted): '.Optima_Sync::summary(true)['review']);
+Optima_Sync::maybe_auto_run();
+ok(!get_page_by_path('services'), 'the automatic run never creates a page');
+$res = Optima_Sync::apply(hashnow(), 'create', array('page/services/injury#create'));
+ok(is_wp_error($res) && 'parent'===$res->get_error_code() && !get_page_by_path('services/injury'), 'a child without its parent ticked is refused, nothing created');
+$res = Optima_Sync::apply(hashnow(), 'create', array('page/old-offer#create'));
+ok(!is_wp_error($res) && 0===$res['written'] && 'trash'===get_post_status($old) && !get_page_by_path('old-offer'), 'a slug in the trash is never created a second time');
+$res = Optima_Sync::apply(hashnow(), 'create', array('page/services/injury#create','page/services#create'));
+$svc = get_page_by_path('services'); $inj = get_page_by_path('services/injury');
+ok(!is_wp_error($res) && 2===$res['written'] && $svc && $inj, 'create makes the ticked pages, parent first');
+ok('publish'===$svc->post_status && 'Services'===$svc->post_title && '<p>Services copy</p>'===rtrim($svc->post_content), 'the new page has its status, title and copy');
+ok('tpl-landing.php'===get_page_template_slug($svc) && 3===(int)$svc->menu_order && 1===(int)$svc->post_author, 'and its template, menu order and author');
+ok('draft'===$inj->post_status && (int)$inj->post_parent===$svc->ID && 1===(int)$inj->post_author, 'a draft stays a draft, under its parent, credited to the person running it');
+ok('Services description'===get_post_meta($svc->ID, OPTIMA_SEO_META_DESC, true), 'its SEO description filled in the same step');
+$s = states();
+ok('current'===$s['page/services#create'] && 'current'===$s['page/services#content'] && 'current'===$s['page/services#title'] && 'current'===$s['page/services#seo:desc'], 'every row of the new page reads current');
+$res = Optima_Sync::undo();
+ok(!is_wp_error($res) && 2===$res['restored'] && 'trash'===get_post_status($svc->ID) && 'trash'===get_post_status($inj->ID), 'undo moves the created pages to the trash');
+$r = rows();
+ok('missing'===$r['page/services#create']['state'] && (int)$r['page/services#create']['trashed']===$svc->ID, 'after undo the page is offered for restore, not re-creation');
+$res = Optima_Sync::apply(hashnow(), 'restore', array('page/services#create'));
+ok(!is_wp_error($res) && 1===$res['written'] && 'publish'===get_post_status($svc->ID) && 'services'===get_post($svc->ID)->post_name, 'restore brings it back with the status and address it had');
+$res = Optima_Sync::undo();
+ok(!is_wp_error($res) && 'trash'===get_post_status($svc->ID), 'undoing a restore puts it back in the trash');
+wp_delete_post($svc->ID, true); wp_delete_post($inj->ID, true);
+$res = Optima_Sync::apply(hashnow(), 'create', array('page/services#create'));
+$svc = get_page_by_path('services');
+wp_update_post(array('ID'=>$svc->ID, 'post_content'=>'Edited after creation'));
+$res = Optima_Sync::undo();
+ok(!is_wp_error($res) && in_array('services: new page', $res['skipped'], true) && 'publish'===get_post_status($svc->ID), 'a created page edited since is never trashed by undo');
+ok('Services description'===get_post_meta($svc->ID, OPTIMA_SEO_META_DESC, true), 'and its fields are left whole');
+wp_delete_post($svc->ID, true);
+
+// 1.6.1: Gravity Forms from the theme bundle. A stand-in for GFAPI when Gravity Forms is not installed;
+// like the real one, it adds keys of its own when it saves, so a form never equals its export byte for byte.
+if (!class_exists('GFAPI')) {
+  class GFAPI {
+    static function all(){ $f=get_option('synctest_gf',array()); return is_array($f)?$f:array(); }
+    static function put($f){ update_option('synctest_gf',$f,false); }
+    static function get_form($id){ $a=self::all(); return $a[$id] ?? false; }
+    static function get_forms($active=true,$trash=false){ return array_values(array_filter(self::all(), function($f) use($trash){ return $trash || empty($f['is_trash']); })); }
+    static function add_form($form){ $a=self::all(); $id=$a?max(array_keys($a))+1:1; $form['id']=$id; $form['is_active']='1'; $form['is_trash']='0'; $form['date_created']=gmdate('Y-m-d H:i:s'); foreach($form['fields'] as &$fl){ $fl['formId']=$id; $fl['visibility']=$fl['visibility']??'visible'; } unset($fl); $a[$id]=$form; self::put($a); return $id; }
+    static function update_form($form,$id){ $a=self::all(); if(!isset($a[$id])) return new WP_Error('not_found','Form not found'); $form['id']=$id; $form['is_active']=$a[$id]['is_active']; $form['is_trash']=$a[$id]['is_trash']; $form['date_created']=$a[$id]['date_created']; foreach($form['fields'] as &$fl){ $fl['formId']=$id; $fl['visibility']=$fl['visibility']??'visible'; } unset($fl); $a[$id]=$form; self::put($a); return true; }
+    static function update_form_property($id,$k,$v){ $a=self::all(); $a[$id][$k]=$v; self::put($a); return true; }
+  }
+  delete_option('synctest_gf');
+}
+@mkdir($theme.'/sync/forms', 0777, true);
+function export_form($fields, $button='Send'){ file_put_contents(get_stylesheet_directory().'/sync/forms/contact.json', json_encode(array('0'=>array('id'=>7,'title'=>'Contact form export','fields'=>$fields,'button'=>array('type'=>'text','text'=>$button)),'version'=>'2.8.0'))); }
+function gf_by_title($t){ foreach (GFAPI::get_forms(null,false) as $f) if ($f['title']===$t) return $f; return null; }
+$f1 = array(array('id'=>1,'type'=>'text','label'=>'Name','isRequired'=>true), array('id'=>2,'type'=>'email','label'=>'Email'));
+export_form($f1);
+manifest(array('sync_version'=>1, 'forms'=>array(
+  array('file'=>'sync/forms/contact.json','title'=>'Contact'),
+  array('file'=>'sync/forms/none.json','title'=>'Nowhere'),
+  array('title'=>'No file'),
+))); bump('1.6.2');
+add_filter('optima_sync_forms_ready', '__return_false');
+ok('unavailable'===states()['form/contact'], 'without Gravity Forms a form row says so');
+$res = Optima_Sync::apply(hashnow(), 'create', array('form/contact'));
+ok(!is_wp_error($res) && 0===$res['written'] && null===gf_by_title('Contact'), 'and nothing is done to it');
+remove_filter('optima_sync_forms_ready', '__return_false');
+$errs = Optima_Sync::plan()['errors'];
+ok(in_array('File missing from the theme: sync/forms/none.json', $errs, true) && (bool) preg_grep('/A forms entry needs a "file"/', $errs), 'a missing export file and an entry without a file are reported');
+ok('missing'===states()['form/contact'], 'a form the site lacks reads missing');
+Optima_Sync::maybe_auto_run();
+ok(null===gf_by_title('Contact'), 'the automatic run never adds a form');
+$res = Optima_Sync::apply(hashnow(), 'create', array('form/contact'));
+$form = gf_by_title('Contact');
+ok(!is_wp_error($res) && 1===$res['written'] && $form && 'Contact'===$form['title'] && 2===count($form['fields']), 'create adds the form with the manifest title, exactly');
+$fid = (int) $form['id'];
+ok('current'===states()['form/contact'], 'and it reads current');
+$f2 = $f1; $f2[] = array('id'=>3,'type'=>'phone','label'=>'Phone'); export_form($f2); bump('1.6.3');
+ok('update'===states()['form/contact'], 'a theme change to an untouched form is a safe update');
+Optima_Sync::maybe_auto_run();
+$form = GFAPI::get_form($fid);
+ok(3===count($form['fields']) && $fid===(int)$form['id'] && 1===count(GFAPI::get_forms(null,false)), 'the automatic run updates it in place, same id, no second form');
+$a = GFAPI::all(); $a[$fid]['fields'][0]['label'] = 'Full name (edited in WordPress)'; GFAPI::put($a); Optima_Sync::forget_summary();
+ok('edited'===states()['form/contact'], 'a form edited in WordPress is flagged as edited');
+$f3 = $f2; $f3[2]['label'] = 'Phone number'; export_form($f3); bump('1.6.4');
+ok('conflict'===states()['form/contact'], 'both changed is a conflict');
+Optima_Sync::maybe_auto_run();
+ok('Full name (edited in WordPress)'===GFAPI::get_form($fid)['fields'][0]['label'], 'a conflict is never overwritten on its own');
+$res = Optima_Sync::apply(hashnow(), 'take', array('form/contact'));
+$form = GFAPI::get_form($fid);
+ok(!is_wp_error($res) && 'Name'===$form['fields'][0]['label'] && 'Phone number'===$form['fields'][2]['label'] && $fid===(int)$form['id'], '"Use the theme copy" updates the form and keeps its id');
+$res = Optima_Sync::undo();
+ok(!is_wp_error($res) && 1===$res['restored'] && 'Full name (edited in WordPress)'===GFAPI::get_form($fid)['fields'][0]['label'], 'undo puts back the form as it was');
+$res = Optima_Sync::apply(hashnow(), 'keep', array('form/contact'));
+ok('current'===states()['form/contact'], 'keeping the WordPress form clears the flag');
+delete_option('synctest_gf'); delete_option(Optima_Sync::BASES); Optima_Sync::forget_summary();
+GFAPI::add_form(array('title'=>'Contact','fields'=>$f3,'button'=>array('type'=>'text','text'=>'Send')));
+ok('current'===states()['form/contact'], 'a form once imported by hand from the same file is adopted, not flagged');
+GFAPI::add_form(array('title'=>'Contact','fields'=>$f1));
+$r = rows();
+ok('conflict'===$r['form/contact']['state'] && false !== strpos((string) ($r['form/contact']['blocked'] ?? ''), 'Two forms'), 'two forms with the same title wait for a person');
+$res = Optima_Sync::apply(hashnow(), 'take', array('form/contact'));
+ok(!is_wp_error($res) && 0===$res['written'], 'and are never written');
+delete_option('synctest_gf'); delete_option(Optima_Sync::BASES);
+$res = Optima_Sync::apply(hashnow(), 'create', array('form/contact'));
+$fid = (int) gf_by_title('Contact')['id'];
+$res = Optima_Sync::undo();
+$form = GFAPI::get_form($fid);
+ok(!is_wp_error($res) && 1===$res['restored'] && !empty($form['is_trash']) && empty($form['is_active']), 'undoing an added form switches it off and trashes it');
+ok('missing'===states()['form/contact'], 'and it can be added again');
+delete_option('synctest_gf');
 
 // No manifest: status only.
 unlink($theme.'/optima-sync.json');

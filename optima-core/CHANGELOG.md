@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.6.1.0 (2026-11-18)
+
+- Site Sync (Optima, Content, Approved copy) creates the pages a site lacks and adds the theme's Gravity Forms, so nobody hand-imports a WordPress import file or a form file again. Spec and theme contract: `docs/site-sync-spec.md`.
+- **New pages.** A page entry in `optima-sync.json` can carry a `create` block (title, parent, page template, menu order, status `publish` or `draft`, author by email or login). Approved copy lists those pages under "Pages and forms the theme can add", unticked; "Create the ticked items" makes them, parent first, with the theme's title and copy, then fills their SEO and page fields in the same step. Drafts stay drafts. The automatic run after a theme update and "Sync these now" never create anything. A page whose address is in the trash is never created a second time: it is offered for restore, with the status it had. A missing parent, a template the theme lacks, or an unknown post type blocks the row and says why; an unknown author falls back to the person running it, with a note.
+- **Gravity Forms from the bundle.** A manifest `forms` list (`file`, the export in the theme, and `title`). A missing form is added when ticked, titled exactly as the manifest says; a form nobody edited since the last sync updates in place when the theme changes it (same form id, so its entries stay with it); a form edited in WordPress is never overwritten on its own and waits on the same Keep / Use the theme copy choice as page copy. A form once imported by hand from the same file is adopted, not flagged. Two forms with the same title wait for a person. Without Gravity Forms the rows say "Gravity Forms is not active" and nothing happens.
+- Every create, restore and form write is locked, journaled before it starts, checked again right before it writes, and undone by Undo the last sync: a created page goes to the trash, a restored page back to the trash, an added form is switched off and trashed, an updated form gets its earlier version back, each only if nobody changed it since.
+- WP-CLI: `wp optima sync create [<item>...] [--all] [--restore] [--dry-run]` and `wp optima sync undo`; `status` gains a note column.
+
 ## 1.6.0.12 (2026-11-05)
 
 - No em dash in visible text: the empty choice in a select reads Select one.
