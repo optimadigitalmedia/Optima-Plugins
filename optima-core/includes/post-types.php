@@ -21,6 +21,17 @@ final class Optima_Core_Post_Types {
 			$singular = $type['singular'];
 			$plural   = $type['plural'];
 
+			// A type with fields needs custom-fields support: without it WordPress
+			// leaves `meta` out of /wp/v2/<type> and drops meta sent on writes,
+			// so the show_in_rest meta from Optima_Core_Meta never reaches REST
+			// or the block editor (core/post-meta bindings read the same field).
+			// The generic Custom Fields box this would add is removed in
+			// Optima_Core_Meta_Box::add(); the Details box is the UI.
+			$supports = (array) $type['supports'];
+			if ( ! empty( $type['fields'] ) && ! in_array( 'custom-fields', $supports, true ) ) {
+				$supports[] = 'custom-fields';
+			}
+
 			$labels = array(
 				'name'               => $plural,
 				'singular_name'      => $singular,
@@ -48,7 +59,7 @@ final class Optima_Core_Post_Types {
 					'show_in_menu' => in_array( $slug, array( 'testimonial', 'faq' ), true ) ? false : true,
 					'has_archive'  => $type['has_archive'],
 					'rewrite'      => $type['rewrite'],
-					'supports'     => $type['supports'],
+					'supports'     => $supports,
 				)
 			);
 		}

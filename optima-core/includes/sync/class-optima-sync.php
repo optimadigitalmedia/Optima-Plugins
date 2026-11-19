@@ -36,6 +36,7 @@ final class Optima_Sync {
 	const EDITED   = 'edited';    // Edited in WordPress, theme unchanged.
 	const CONFLICT = 'conflict';  // Both changed, or an unknown saved value.
 	const MISSING  = 'missing';   // The page or post the item names is not there.
+	const CREATE   = 'create';    // Not there, and the manifest says to create it (1.6.5).
 
 	/** Options a manifest may set. Anything else is ignored. */
 	const ALLOWED_OPTIONS = array( 'blogname', 'blogdescription' );
@@ -110,14 +111,63 @@ final class Optima_Sync {
 			return array( 'items' => array(), 'errors' => array( 'optima-sync.json needs "sync_version": 1.' ) );
 		}
 
+		// Pages and posts (1.6.5: `posts` is `pages` with post_type "post" and created as drafts;
+		// `file` is `source`; `seo_title` and `description` are the page's SEO fields; `create`
+		// makes a page the site lacks, as a published page or a draft; `create_missing` at the
+		// top sets the default for every entry).
+		$default_create = $manifest['create_missing'] ?? false;
+		$entries        = array();
 		foreach ( (array) ( $manifest['pages'] ?? array() ) as $page ) {
-			$type = sanitize_key( $page['post_type'] ?? 'page' );
-			$slug = (string) ( $page['slug'] ?? '' );
-			if ( isset( $page['title'] ) ) {
-				$items[] = array( 'kind' => 'post', 'post_type' => $type, 'slug' => $slug, 'field' => 'title', 'value' => (string) $page['title'] );
+			$entries[] = array( 'page', (array) $page );
+		}
+		foreach ( (array) ( $manifest['posts'] ?? array() ) as $post ) {
+			$entries[] = array( 'post', (array) $post );
+		}
+		foreach ( $entries as list( $default_type, $page ) ) {
+			$type   = sanitize_key( $page['post_type'] ?? $default_type );
+			$slug   = (string) ( $page['slug'] ?? '' );
+			$source = $page['source'] ?? ( $page['file'] ?? null );
+			$create = self::create_status( $page['create'] ?? ( 'post' === $default_type ? ( false === $default_create ? true : $default_create ) : $default_create ), 'post' === $type );
+			$new    = '' === $create ? null : array(
+				'status'     => $create,
+				'template'   => (string) ( $page['template'] ?? '' ),
+				'parent'     => (string) ( $page['parent'] ?? '' ),
+				'front_page' => ! empty( $page['front_page'] ),
+				'posts_page' => ! empty( $page['posts_page'] ),
+				'menu_order' => (int) ( $page['menu_order'] ?? 0 ),
+				'excerpt'    => (string) ( $page['excerpt'] ?? '' ),
+				'date'       => (string) ( $page['date'] ?? '' ),
+			);
+			$title = $page['title'] ?? ( null !== $new ? ucwords( str_replace( array( '-', '_', '/' ), ' ', $slug ) ) : null );
+			if ( null !== $title ) {
+				$items[] = array( 'kind' => 'post', 'post_type' => $type, 'slug' => $slug, 'field' => 'title', 'value' => (string) $title, 'new' => $new );
 			}
-			if ( isset( $page['source'] ) || isset( $page['content'] ) ) {
-				$items[] = array( 'kind' => 'post', 'post_type' => $type, 'slug' => $slug, 'field' => 'content', 'source' => $page['source'] ?? null, 'value' => $page['content'] ?? null, 'previous' => $page['previous'] ?? array() );
+			if ( null !== $source || isset( $page['content'] ) ) {
+				$items[] = array( 'kind' => 'post', 'post_type' => $type, 'slug' => $slug, 'field' => 'content', 'source' => $source, 'value' => $page['content'] ?? null, 'previous' => $page['previous'] ?? array(), 'new' => $new );
+			}
+			if ( isset( $page['seo_title'] ) ) {
+				$items[] = array( 'kind' => 'post', 'post_type' => $type, 'slug' => $slug, 'field' => 'seo:title', 'value' => (string) $page['seo_title'], 'new' => $new );
+			}
+			if ( isset( $page['description'] ) ) {
+				$items[] = array( 'kind' => 'post', 'post_type' => $type, 'slug' => $slug, 'field' => 'seo:desc', 'value' => (string) $page['description'], 'new' => $new );
+			}
+			// 1.11.0: "noindex": true ticks Hide from search in the Optima SEO box (a style guide,
+			// a thank-you page); false clears it. Left out, the box is not touched.
+			if ( isset( $page['noindex'] ) ) {
+				$items[] = array( 'kind' => 'post', 'post_type' => $type, 'slug' => $slug, 'field' => 'seo:noindex', 'value' => self::flag( $page['noindex'] ), 'new' => $new );
+			}
+		}
+		// Identity (1.6.5): the site title, tagline and Business info, written once from the repo.
+		$identity = (array) ( $manifest['identity'] ?? array() );
+		if ( isset( $identity['title'] ) ) {
+			$manifest['options'][] = array( 'option' => 'blogname', 'value' => (string) $identity['title'] );
+		}
+		if ( isset( $identity['tagline'] ) ) {
+			$manifest['options'][] = array( 'option' => 'blogdescription', 'value' => (string) $identity['tagline'] );
+		}
+		foreach ( (array) ( $identity['business'] ?? array() ) as $key => $value ) {
+			if ( is_scalar( $value ) && '' !== (string) $value ) {
+				$manifest['options'][] = array( 'option' => 'optima_business', 'key' => (string) $key, 'value' => (string) $value );
 			}
 		}
 		foreach ( (array) ( $manifest['fields'] ?? array() ) as $f ) {
@@ -125,7 +175,10 @@ final class Optima_Sync {
 			if ( isset( $f['field'] ) ) {
 				$field = 'field:' . sanitize_key( $f['field'] );
 			} elseif ( isset( $f['seo'] ) ) {
-				$field = 'seo:' . ( 'title' === $f['seo'] ? 'title' : 'desc' );
+				$field = 'seo:' . ( in_array( $f['seo'], array( 'title', 'noindex' ), true ) ? $f['seo'] : 'desc' );
+				if ( 'seo:noindex' === $field && isset( $f['value'] ) ) {
+					$f['value'] = self::flag( $f['value'] );
+				}
 			} elseif ( isset( $f['meta'] ) ) {
 				// With "key", one key inside an array meta value, so the rest is left alone.
 				$field = 'meta:' . (string) $f['meta'] . ( isset( $f['key'] ) ? '.' . sanitize_key( $f['key'] ) : '' );
@@ -134,6 +187,13 @@ final class Optima_Sync {
 			}
 			if ( '' === $field ) {
 				$errors[] = 'A field entry names no field, seo, meta or post_field.';
+				continue;
+			}
+			// 1.12.0: a post meta field may carry a list or object ("_optima_aeo_faqs": rows of
+			// {q, a}). It is compared as canonical JSON and written as a real array.
+			$is_array = is_array( $f['value'] ?? null );
+			if ( $is_array && ! self::is_meta( $field ) ) {
+				$errors[] = 'Field "' . $field . '" on ' . ( $f['slug'] ?? '' ) . ' takes text only. A list or object value needs a "meta" or "field" entry.';
 				continue;
 			}
 			$items[] = array(
@@ -145,7 +205,7 @@ final class Optima_Sync {
 				'source'    => $f['source'] ?? null,
 				'image'     => $f['image'] ?? null,
 				'previous'  => $f['previous'] ?? array(),
-			);
+			) + ( $is_array ? array( 'array' => true ) : array() );
 		}
 		foreach ( (array) ( $manifest['settings'] ?? array() ) as $s ) {
 			$items[] = array( 'kind' => 'setting', 'group' => sanitize_key( $s['group'] ?? '' ), 'key' => sanitize_key( $s['key'] ?? '' ), 'value' => $s['value'] ?? null, 'source' => $s['source'] ?? null, 'previous' => $s['previous'] ?? array() );
@@ -155,7 +215,7 @@ final class Optima_Sync {
 			$path = isset( $o['key'] ) ? self::path( (string) $o['key'] ) : '';
 			$ok   = '' === $path ? in_array( $name, self::ALLOWED_OPTIONS, true ) : in_array( $name, self::option_keys(), true );
 			if ( ! $ok || ( isset( $o['key'] ) && '' === $path ) ) {
-				$errors[] = 'Option "' . $name . ( isset( $o['key'] ) ? '.' . $o['key'] : '' ) . '" is not one Site Sync may set.';
+				$errors[] = 'Option "' . $name . ( isset( $o['key'] ) ? '.' . $o['key'] : '' ) . '" is not one Approved copy may set.';
 				continue;
 			}
 			$items[] = array( 'kind' => 'option', 'option' => $name, 'key' => $path, 'value' => $o['value'] ?? null, 'source' => $o['source'] ?? null, 'previous' => $o['previous'] ?? array() );
@@ -164,7 +224,7 @@ final class Optima_Sync {
 			$email = sanitize_email( (string) ( $u['email'] ?? '' ) );
 			$field = (string) ( $u['field'] ?? 'description' );
 			if ( ! is_email( $email ) || ! in_array( $field, self::ALLOWED_USER_FIELDS, true ) ) {
-				$errors[] = 'User entry "' . ( $u['email'] ?? '' ) . '" needs an email and a field Site Sync may set (description).';
+				$errors[] = 'User entry "' . ( $u['email'] ?? '' ) . '" needs an email and a field Approved copy may set (description).';
 				continue;
 			}
 			$items[] = array( 'kind' => 'user', 'email' => strtolower( $email ), 'field' => $field, 'value' => $u['value'] ?? null, 'source' => $u['source'] ?? null, 'previous' => $u['previous'] ?? array() );
@@ -172,7 +232,9 @@ final class Optima_Sync {
 
 		foreach ( $items as &$item ) {
 			$item['id']       = self::item_id( $item );
-			$item['previous'] = array_map( 'strval', (array) ( $item['previous'] ?? array() ) );
+			$item['previous'] = empty( $item['array'] )
+				? array_map( 'strval', (array) ( $item['previous'] ?? array() ) )
+				: array_map( array( __CLASS__, 'canon' ), array_values( (array) ( $item['previous'] ?? array() ) ) );
 			if ( ! empty( $item['image'] ) ) {
 				$file = self::source( $item['image'] );
 				if ( ! $file ) {
@@ -188,6 +250,8 @@ final class Optima_Sync {
 					$item['broken'] = true;
 				}
 				$item['theme'] = $file ? (string) file_get_contents( $file ) : '';
+			} elseif ( ! empty( $item['array'] ) ) {
+				$item['theme'] = self::json( $item['value'] );
 			} else {
 				$item['theme'] = (string) ( $item['value'] ?? '' );
 			}
@@ -204,6 +268,17 @@ final class Optima_Sync {
 			)
 		);
 		return array( 'items' => $items, 'errors' => $errors );
+	}
+
+	/** "publish", "draft" or "" from a manifest's create value (true, false, or a status). */
+	private static function create_status( $create, $is_post ) {
+		if ( true === $create ) {
+			return $is_post ? 'draft' : 'publish';
+		}
+		if ( is_string( $create ) && in_array( $create, array( 'publish', 'draft', 'private', 'pending' ), true ) ) {
+			return $create;
+		}
+		return '';
 	}
 
 	/** A stable id for an item, e.g. "page/about#content". */
@@ -290,11 +365,85 @@ final class Optima_Sync {
 			return $post ? (string) $post->{'post_' . $field} : '';
 		}
 		$sub = self::meta_sub( $field );
+		if ( ! empty( $item['array'] ) ) {
+			$value = get_post_meta( $id, self::meta_key( $field ), true );
+			$value = '' !== $sub ? self::dig( $value, $sub ) : $value;
+			if ( is_array( $value ) ) {
+				return self::json( $value );
+			}
+			return is_scalar( $value ) ? (string) $value : '';
+		}
 		if ( '' !== $sub ) {
 			$value = self::dig( get_post_meta( $id, self::meta_key( $field ), true ), $sub );
 			return is_scalar( $value ) ? (string) $value : '';
 		}
 		return (string) get_post_meta( $id, self::meta_key( $field ), true );
+	}
+
+	/** Whether a field names post meta (a "field:" or "meta:" entry), the only kind that can hold an array. */
+	private static function is_meta( $field ) {
+		return 0 === strpos( (string) $field, 'meta:' ) || 0 === strpos( (string) $field, 'field:' );
+	}
+
+	/**
+	 * An array value as JSON, in the order it was given: what the Approved copy screen
+	 * shows and what is written. An empty list is '', the same as no field, so
+	 * "[]" in the theme and a field never saved agree.
+	 *
+	 * @param mixed $value
+	 */
+	public static function json( $value ) {
+		if ( ! is_array( $value ) ) {
+			return is_scalar( $value ) ? (string) $value : '';
+		}
+		return $value ? (string) wp_json_encode( $value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT ) : '';
+	}
+
+	/**
+	 * An array value as canonical JSON, for comparing: object keys sorted at
+	 * every level, list order kept (the order of a list of questions is part of
+	 * the copy). The same rows give the same text however they were saved.
+	 *
+	 * @param mixed $value An array, or the JSON text of one.
+	 */
+	public static function canon( $value ) {
+		$value = is_array( $value ) ? $value : self::unpack( $value );
+		return is_array( $value ) ? self::json( self::sorted( $value ) ) : self::normalize( $value );
+	}
+
+	/** @param mixed $value */
+	private static function sorted( $value ) {
+		if ( ! is_array( $value ) ) {
+			return $value;
+		}
+		if ( ! array_is_list( $value ) ) {
+			ksort( $value, SORT_STRING );
+		}
+		return array_map( array( __CLASS__, 'sorted' ), $value );
+	}
+
+	/**
+	 * What an array row writes: the decoded array for JSON text, '' to remove
+	 * the field (undo of a field that was empty), or the text itself (undo of a
+	 * plain value someone had saved there).
+	 *
+	 * @return array|string
+	 */
+	private static function unpack( $text ) {
+		$text = (string) $text;
+		if ( '' === $text ) {
+			return '';
+		}
+		$data = json_decode( $text, true );
+		return is_array( $data ) ? $data : $text;
+	}
+
+	/** Whether two copies of a row are the same: canonical JSON for arrays, normalized text otherwise. */
+	private static function same( array $row, $a, $b ) {
+		if ( ! empty( $row['array'] ) ) {
+			return self::canon( $a ) === self::canon( $b );
+		}
+		return self::normalize( $a ) === self::normalize( $b );
 	}
 
 	/** Themes may let Site Sync set keys inside their own array options. */
@@ -376,6 +525,12 @@ final class Optima_Sync {
 		return false === $dot ? '' : substr( $field, $dot + 1 );
 	}
 
+	/** A manifest yes/no as the SEO box stores it: '1' or ''. */
+	private static function flag( $value ): string {
+		$on = is_string( $value ) ? in_array( strtolower( trim( $value ) ), array( '1', 'true', 'yes', 'on' ), true ) : (bool) $value;
+		return $on ? '1' : '';
+	}
+
 	private static function meta_key( $field ) {
 		if ( 0 === strpos( $field, 'field:' ) ) {
 			return optima_core_meta_key( substr( $field, 6 ) );
@@ -386,6 +541,9 @@ final class Optima_Sync {
 		if ( 'seo:desc' === $field ) {
 			return OPTIMA_SEO_META_DESC;
 		}
+		if ( 'seo:noindex' === $field ) {
+			return OPTIMA_SEO_META_NOINDEX;
+		}
 		$key = substr( $field, 5 );
 		$dot = strpos( $key, '.' );
 		return false === $dot ? $key : substr( $key, 0, $dot );
@@ -393,6 +551,9 @@ final class Optima_Sync {
 
 	/** What the saved value means for comparison: text as is, images by file. */
 	private static function comparable( array $item, $raw ) {
+		if ( ! empty( $item['array'] ) ) {
+			return self::canon( $raw );
+		}
 		if ( empty( $item['image'] ) ) {
 			return self::normalize( $raw );
 		}
@@ -406,6 +567,14 @@ final class Optima_Sync {
 			$hash = $path && is_file( $path ) ? hash_file( 'sha256', $path ) : 'missing';
 		}
 		return 'img:' . $hash;
+	}
+
+	/** The theme copy as compared: image hash, canonical JSON for a list, or normalized text. */
+	private static function theme_text( array $item ) {
+		if ( ! empty( $item['image'] ) ) {
+			return $item['theme'];
+		}
+		return empty( $item['array'] ) ? self::normalize( $item['theme'] ) : self::canon( $item['theme'] );
 	}
 
 	/** Line endings and trailing space never count as an edit. */
@@ -435,7 +604,10 @@ final class Optima_Sync {
 			if ( 'post' === $item['kind'] ) {
 				$item['post_id'] = self::post_id( $item, $cache );
 				if ( ! $item['post_id'] ) {
-					$item['state'] = self::MISSING;
+					// A page the manifest says to create is a safe write: nothing is overwritten.
+					$item['state'] = empty( $item['new'] ) ? self::MISSING : self::CREATE;
+					$item['t']     = self::hash( self::theme_text( $item ) );
+					$item['d']     = self::hash( '' );
 					$rows[]        = $item;
 					continue;
 				}
@@ -455,7 +627,7 @@ final class Optima_Sync {
 				continue;
 			}
 			$item['raw']   = self::read( $item );
-			$theme         = empty( $item['image'] ) ? self::normalize( $item['theme'] ) : $item['theme'];
+			$theme         = self::theme_text( $item );
 			$db            = self::comparable( $item, $item['raw'] );
 			$item['t']     = self::hash( $theme );
 			$item['d']     = self::hash( $db );
@@ -518,7 +690,7 @@ final class Optima_Sync {
 			return $cached;
 		}
 		$plan   = self::plan();
-		$counts = array_fill_keys( array( self::CURRENT, self::UPDATE, self::EDITED, self::CONFLICT, self::MISSING ), 0 );
+		$counts = array_fill_keys( array( self::CURRENT, self::UPDATE, self::EDITED, self::CONFLICT, self::MISSING, self::CREATE ), 0 );
 		foreach ( $plan['rows'] as $row ) {
 			++$counts[ $row['state'] ];
 		}
@@ -563,9 +735,11 @@ final class Optima_Sync {
 
 			$pick = array();
 			foreach ( $plan['rows'] as $row ) {
-				if ( 'safe' === $mode && self::UPDATE === $row['state'] ) {
+				if ( 'safe' === $mode && in_array( $row['state'], array( self::UPDATE, self::CREATE ), true ) ) {
 					$pick[] = $row;
-				} elseif ( 'safe' !== $mode && in_array( $row['id'], $ids, true ) && self::MISSING !== $row['state'] && self::CURRENT !== $row['state'] ) {
+				} elseif ( 'take' === $mode && self::CREATE === $row['state'] && in_array( $row['id'], $ids, true ) ) {
+					$pick[] = $row;
+				} elseif ( 'safe' !== $mode && in_array( $row['id'], $ids, true ) && ! in_array( $row['state'], array( self::MISSING, self::CURRENT, self::CREATE ), true ) ) {
 					$pick[] = $row;
 				}
 			}
@@ -603,14 +777,16 @@ final class Optima_Sync {
 			unset( $row );
 
 			$journal = array(
-				'state' => 'applying',
-				'time'  => gmdate( 'c' ),
-				'user'  => get_current_user_id(),
-				'who'   => $who,
-				'theme' => self::theme_key(),
-				'rows'  => array_map(
+				'state'   => 'applying',
+				'time'    => gmdate( 'c' ),
+				'user'    => get_current_user_id(),
+				'who'     => $who,
+				'theme'   => self::theme_key(),
+				'created' => array(),
+				'front'   => array(),
+				'rows'    => array_map(
 					static function ( $r ) {
-						return array_intersect_key( $r, array_flip( array( 'id', 'kind', 'post_type', 'slug', 'field', 'group', 'key', 'option', 'post_id', 'email', 'user_id', 'image', 'raw', 'write' ) ) );
+						return array_intersect_key( $r, array_flip( array( 'id', 'kind', 'post_type', 'slug', 'field', 'group', 'key', 'option', 'post_id', 'email', 'user_id', 'image', 'array', 'raw', 'write' ) ) );
 					},
 					$pick
 				),
@@ -619,13 +795,34 @@ final class Optima_Sync {
 				return new WP_Error( 'journal', 'Could not save the undo record. Nothing was changed.' );
 			}
 
-			$written = 0;
+			// Pages and posts the manifest says to create (1.6.5): one post each, with its title
+			// and content, before the field writes below fill the rest. Recorded for undo.
+			$created = self::create_posts( $pick, $journal );
+			if ( is_wp_error( $created ) ) {
+				$journal['state'] = 'failed';
+				self::save_journal( $journal );
+				self::summary( true );
+				return $created;
+			}
+			$written = (int) $created;
+			foreach ( $pick as $i => $row ) {
+				if ( self::CREATE === $row['state'] ) {
+					$pick[ $i ]['post_id'] = $journal['created'][ $row['post_type'] . '/' . $row['slug'] ] ?? 0;
+					$pick[ $i ]['raw']     = in_array( $row['field'], array( 'title', 'content' ), true ) ? $row['write'] : '';
+					$journal['rows'][ $i ]['post_id'] = $pick[ $i ]['post_id'];
+				}
+			}
+			self::save_journal( $journal );
 			foreach ( $pick as $row ) {
+				if ( self::CREATE === $row['state'] && in_array( $row['field'], array( 'title', 'content' ), true ) ) {
+					$bases[ $row['id'] ] = array( 't' => $row['t'], 'd' => $row['t'] );
+					continue; // Written by wp_insert_post already.
+				}
 				if ( ! self::write( $row, $row['raw'], $row['write'] ) ) {
 					$journal['state'] = 'failed';
 					self::save_journal( $journal );
 					self::summary( true );
-					return new WP_Error( 'write', 'Sync stopped at ' . self::label( $row ) . ', because it changed while syncing. Undo the last sync from the Site Sync screen, then review again.' );
+					return new WP_Error( 'write', 'Sync stopped at ' . self::label( $row ) . ', because it changed while syncing. Undo the last sync from the Approved copy screen, then review again.' );
 				}
 				$bases[ $row['id'] ] = array( 't' => $row['t'], 'd' => $row['t'] );
 				++$written;
@@ -669,6 +866,82 @@ final class Optima_Sync {
 	}
 
 	/**
+	 * Create every page or post the picked rows name (state CREATE), one each, and
+	 * record the ids and the front-page options in the journal.
+	 *
+	 * @return int|WP_Error Posts created.
+	 */
+	private static function create_posts( array $pick, array &$journal ) {
+		$groups = array();
+		foreach ( $pick as $row ) {
+			if ( self::CREATE === $row['state'] ) {
+				$groups[ $row['post_type'] . '/' . $row['slug'] ][] = $row;
+			}
+		}
+		foreach ( $groups as $key => $rows ) {
+			$first = $rows[0];
+			$new   = (array) $first['new'];
+			$data  = array(
+				'post_type'   => $first['post_type'],
+				'post_status' => $new['status'] ?: 'draft',
+				'post_name'   => sanitize_title( wp_basename( $first['slug'] ) ),
+				'post_title'  => '',
+				'post_content' => '',
+				'menu_order'  => (int) ( $new['menu_order'] ?? 0 ),
+			);
+			foreach ( $rows as $row ) {
+				if ( 'title' === $row['field'] ) {
+					$data['post_title'] = wp_slash( (string) $row['write'] );
+				} elseif ( 'content' === $row['field'] ) {
+					$data['post_content'] = wp_slash( (string) $row['write'] );
+				}
+			}
+			if ( '' === $data['post_title'] ) {
+				$data['post_title'] = ucwords( str_replace( array( '-', '_', '/' ), ' ', $first['slug'] ) );
+			}
+			if ( ! empty( $new['excerpt'] ) ) {
+				$data['post_excerpt'] = wp_slash( (string) $new['excerpt'] );
+			}
+			if ( ! empty( $new['date'] ) && strtotime( (string) $new['date'] ) ) {
+				$data['post_date'] = gmdate( 'Y-m-d H:i:s', strtotime( (string) $new['date'] ) );
+			}
+			$parent = '';
+			if ( 'page' === $first['post_type'] && false !== strpos( $first['slug'], '/' ) ) {
+				$parent = dirname( $first['slug'] );
+			} elseif ( ! empty( $new['parent'] ) ) {
+				$parent = (string) $new['parent'];
+			}
+			if ( '' !== $parent ) {
+				$parent_post = get_page_by_path( $parent, OBJECT, $first['post_type'] );
+				if ( ! $parent_post ) {
+					return new WP_Error( 'parent', 'Could not create ' . $first['slug'] . ': its parent "' . $parent . '" is not on the site yet.' );
+				}
+				$data['post_parent'] = (int) $parent_post->ID;
+			}
+			$id = wp_insert_post( $data, true );
+			if ( is_wp_error( $id ) || ! $id ) {
+				return new WP_Error( 'create', 'Could not create ' . $first['slug'] . ( is_wp_error( $id ) ? ': ' . $id->get_error_message() : '.' ) );
+			}
+			if ( ! empty( $new['template'] ) ) {
+				update_post_meta( (int) $id, '_wp_page_template', sanitize_text_field( (string) $new['template'] ) );
+			}
+			if ( ! empty( $new['front_page'] ) ) {
+				$journal['front'] = $journal['front'] ?: array( 'show_on_front' => get_option( 'show_on_front' ), 'page_on_front' => (int) get_option( 'page_on_front' ), 'page_for_posts' => (int) get_option( 'page_for_posts' ) );
+				update_option( 'show_on_front', 'page' );
+				update_option( 'page_on_front', (int) $id );
+			}
+			if ( ! empty( $new['posts_page'] ) ) {
+				$journal['front'] = $journal['front'] ?: array( 'show_on_front' => get_option( 'show_on_front' ), 'page_on_front' => (int) get_option( 'page_on_front' ), 'page_for_posts' => (int) get_option( 'page_for_posts' ) );
+				update_option( 'show_on_front', 'page' );
+				update_option( 'page_for_posts', (int) $id );
+			}
+			$journal['created'][ $key ] = (int) $id;
+			self::save_journal( $journal );
+		}
+		return count( $groups );
+	}
+
+	/**
 	 * Put back what the last sync replaced. A field edited since is left alone.
 	 *
 	 * @return array{restored:int,skipped:string[]}|WP_Error
@@ -690,12 +963,30 @@ final class Optima_Sync {
 			$bases    = get_option( self::BASES, array() );
 			$restored = 0;
 			$skipped  = array();
+			// Pages and posts the sync created go to the trash (nothing is lost), and the
+			// front-page settings go back to what they were. Their fields need no restoring.
+			$created = (array) ( $journal['created'] ?? array() );
+			foreach ( $created as $key => $id ) {
+				if ( get_post( (int) $id ) && 'trash' !== get_post_status( (int) $id ) ) {
+					wp_trash_post( (int) $id );
+					++$restored;
+				}
+			}
+			if ( ! empty( $journal['front'] ) && $created ) {
+				update_option( 'show_on_front', (string) $journal['front']['show_on_front'] );
+				update_option( 'page_on_front', (int) $journal['front']['page_on_front'] );
+				update_option( 'page_for_posts', (int) $journal['front']['page_for_posts'] );
+			}
 			foreach ( $journal['rows'] as $row ) {
+				if ( 'post' === $row['kind'] && isset( $created[ $row['post_type'] . '/' . $row['slug'] ] ) ) {
+					unset( $bases[ $row['id'] ] );
+					continue;
+				}
 				$now = self::read( $row );
-				if ( self::normalize( $now ) === self::normalize( $row['raw'] ) ) {
+				if ( self::same( $row, $now, $row['raw'] ) ) {
 					continue; // Never written, or already back.
 				}
-				if ( self::normalize( $now ) !== self::normalize( $row['write'] ) || ! self::write( $row, $now, $row['raw'] ) ) {
+				if ( ! self::same( $row, $now, $row['write'] ) || ! self::write( $row, $now, $row['raw'] ) ) {
 					$skipped[] = self::label( $row );
 					continue;
 				}
@@ -714,7 +1005,7 @@ final class Optima_Sync {
 
 	/** Compare and write one field. False when it changed underneath us. */
 	private static function write( array $row, $expected, $value ) {
-		if ( self::normalize( self::read( $row ) ) !== self::normalize( $expected ) ) {
+		if ( ! self::same( $row, self::read( $row ), $expected ) ) {
 			return false;
 		}
 		if ( 'setting' === $row['kind'] ) {
@@ -740,13 +1031,24 @@ final class Optima_Sync {
 			if ( is_wp_error( $result ) ) {
 				return false;
 			}
+		} elseif ( ! empty( $row['array'] ) ) {
+			$key  = self::meta_key( $row['field'] );
+			$sub  = self::meta_sub( $row['field'] );
+			$data = self::unpack( $value );
+			if ( '' !== $sub ) {
+				update_post_meta( (int) $row['post_id'], $key, wp_slash( self::plant( get_post_meta( (int) $row['post_id'], $key, true ), $sub, $data ) ) );
+			} elseif ( '' === $data ) {
+				delete_post_meta( (int) $row['post_id'], $key );
+			} else {
+				update_post_meta( (int) $row['post_id'], $key, wp_slash( $data ) );
+			}
 		} elseif ( '' !== self::meta_sub( $row['field'] ) ) {
 			$key = self::meta_key( $row['field'] );
 			update_post_meta( (int) $row['post_id'], $key, wp_slash( self::plant( get_post_meta( (int) $row['post_id'], $key, true ), self::meta_sub( $row['field'] ), $value ) ) );
 		} else {
 			update_post_meta( (int) $row['post_id'], self::meta_key( $row['field'] ), wp_slash( $value ) );
 		}
-		return self::normalize( self::read( $row ) ) === self::normalize( $value );
+		return self::same( $row, self::read( $row ), $value );
 	}
 
 	/** Add a theme image to the media library once, tagged with its file hash. */

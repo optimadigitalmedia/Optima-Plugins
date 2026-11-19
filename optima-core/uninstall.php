@@ -28,6 +28,10 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 // the next update check.
 delete_transient( 'optima_updater_optima-core' );
 delete_transient( 'optima_updater_optima-core__test' );
+// Derived or temporary: the thank-you page list, the staging guard's count, the last cache purge.
+delete_transient( 'optima_core_thanks_pages' );
+delete_option( 'optima_core_staging_held' );
+delete_option( 'optima_core_cache_purged' );
 
 $optima_core_settings = get_option( 'optima_seo_defaults', array() );
 $optima_core_purge    = is_array( $optima_core_settings ) && ! empty( $optima_core_settings['purge_on_uninstall'] );
@@ -42,9 +46,18 @@ delete_option( 'optima_core_protection' );
 delete_option( 'optima_seo_sitemap_found' );
 delete_option( 'optima_core_offices' );
 delete_option( 'optima_core_offices_settings' );
+delete_option( 'optima_core_policies' );
 wp_clear_scheduled_hook( 'optima_seo_sitemap_check' );
 
-foreach ( array( '_optima_seo_title', '_optima_seo_desc', '_optima_seo_canonical', '_optima_seo_noindex', '_optima_primary_practice', '_optima_content_changed' ) as $optima_core_meta_key ) {
+// The Change log: its table, the menu snapshots and the weekly email.
+global $wpdb;
+$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}optima_change_log" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+foreach ( array( 'optima_change_log_db', 'optima_change_log_menus', 'optima_change_log_last_digest', 'optima_change_log_switch', 'optima_change_log_mail' ) as $optima_core_opt ) {
+	delete_option( $optima_core_opt );
+}
+wp_clear_scheduled_hook( 'optima_change_log_digest' );
+
+foreach ( array( '_optima_seo_title', '_optima_seo_desc', '_optima_seo_canonical', '_optima_seo_noindex', '_optima_primary_practice', '_optima_content_changed', '_optima_hreflang', '_optima_lang', '_optima_needs_firm_approval' ) as $optima_core_meta_key ) {
 	delete_post_meta_by_key( $optima_core_meta_key );
 }
 

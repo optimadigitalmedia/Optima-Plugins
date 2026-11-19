@@ -21,6 +21,10 @@ final class Optima_SEO_Head {
 		add_action( 'wp', array( __CLASS__, 'replace_core_canonical' ) );
 		add_action( 'wp_head', array( __CLASS__, 'output' ), 1 );
 		add_filter( 'wp_robots', array( __CLASS__, 'robots' ) );
+		add_action( 'wp_head', array( __CLASS__, 'verification' ), 2 );
+		foreach ( array( 'gform_after_save_form', 'gform_post_form_trashed', 'gform_post_form_restored', 'gform_after_delete_form', 'gform_pre_confirmation_save', 'save_post_page' ) as $hook ) {
+			add_action( $hook, array( __CLASS__, 'forget_thanks' ) );
+		}
 		// The REST API: a protected page's title stays generic for anyone who cannot edit it.
 		add_filter( 'the_title', array( __CLASS__, 'rest_private_title' ), PHP_INT_MAX, 2 );
 		add_action( 'rest_api_init', array( __CLASS__, 'rest_private_hooks' ) );
@@ -64,6 +68,104 @@ final class Optima_SEO_Head {
 	}
 
 	/**
+	 * Google Search Console and Bing Webmaster Tools verification tags (upstream
+	 * 1.8.0), on the front page only: that is the page both check. Typed on
+	 * Optima, Search and AI, SEO. Printed even when the theme prints its own head,
+	 * since no theme prints these.
+	 */
+	public static function verification() {
+		if ( ! is_front_page() || ! class_exists( 'Optima_Core_SEO_Settings' ) ) {
+			return;
+		}
+		$tags = array(
+			'google-site-verification' => Optima_Core_SEO_Settings::value( 'google_verify' ),
+			'msvalidate.01'            => Optima_Core_SEO_Settings::value( 'bing_verify' ),
+		);
+		foreach ( $tags as $name => $code ) {
+			if ( '' !== (string) $code ) {
+				printf( '<meta name="%s" content="%s" />' . "\n", esc_attr( $name ), esc_attr( (string) $code ) );
+			}
+		}
+	}
+
+	/**
+	 * Thank-you pages (upstream 1.8.0): pages a visitor only reaches after sending
+	 * a form. Gravity Forms confirmation pages (a confirmation set to "Page", or to
+	 * a redirect on this site), plus pages whose address is thank-you or thanks.
+	 * They get noindex and leave the sitemap. The front page and the posts page
+	 * are never hidden, even when a form sends people there. Filter
+	 * `optima_core_thanks_pages` (int[] page IDs).
+	 *
+	 * @return int[]
+	 */
+	public static function thanks_pages() {
+		$ids = get_transient( 'optima_core_thanks_pages' );
+		if ( ! is_array( $ids ) ) {
+			$ids = array();
+			if ( class_exists( 'GFAPI' ) && method_exists( 'GFAPI', 'get_forms' ) ) {
+				foreach ( (array) GFAPI::get_forms() as $form ) {
+					foreach ( (array) ( $form['confirmations'] ?? array() ) as $c ) {
+						$ids[] = self::confirmation_page( (array) $c );
+					}
+				}
+			}
+			$slugs = get_posts(
+				array(
+					'post_type'        => 'page',
+					'post_status'      => 'publish',
+					'fields'           => 'ids',
+					'numberposts'      => 50,
+					'suppress_filters' => true,
+					'post_name__in'    => array( 'thank-you', 'thankyou', 'thanks', 'thank-you-for-contacting-us', 'contact-thank-you', 'form-thank-you' ),
+				)
+			);
+			$ids = array_merge( $ids, array_map( 'intval', (array) $slugs ) );
+			$ids = array_values( array_unique( array_filter( array_map( 'intval', $ids ) ) ) );
+			set_transient( 'optima_core_thanks_pages', $ids, 12 * HOUR_IN_SECONDS );
+		}
+		$ids  = array_map( 'intval', (array) apply_filters( 'optima_core_thanks_pages', $ids ) );
+		$keep = array( (int) get_option( 'page_on_front' ), (int) get_option( 'page_for_posts' ) );
+		return array_values( array_diff( array_unique( $ids ), $keep, array( 0 ) ) );
+	}
+
+	/** The page a Gravity Forms confirmation sends people to, or 0. */
+	public static function confirmation_page( array $c ) {
+		if ( ! empty( $c['isActive'] ) || ! array_key_exists( 'isActive', $c ) ) {
+			$type = (string) ( $c['type'] ?? '' );
+			if ( 'page' === $type ) {
+				return (int) ( $c['pageId'] ?? 0 );
+			}
+			if ( 'redirect' === $type && ! empty( $c['url'] ) && function_exists( 'url_to_postid' ) ) {
+				$url  = (string) $c['url'];
+				$host = (string) wp_parse_url( $url, PHP_URL_HOST );
+				if ( '' === $host || (string) wp_parse_url( home_url(), PHP_URL_HOST ) === $host ) {
+					return (int) url_to_postid( $url );
+				}
+			}
+		}
+		return 0;
+	}
+
+	public static function forget_thanks() {
+		delete_transient( 'optima_core_thanks_pages' );
+	}
+
+	/**
+	 * The post whose SEO box describes this view: the post or page shown, or the
+	 * page set as the posts page (Settings, Reading) when the blog list is shown
+	 * (upstream 1.12.1). 0 elsewhere.
+	 */
+	public static function seo_post_id(): int {
+		if ( is_singular() ) {
+			return (int) get_queried_object_id();
+		}
+		if ( is_home() && ! is_front_page() ) {
+			return (int) get_option( 'page_for_posts' );
+		}
+		return 0;
+	}
+
+	/**
 	 * We emit canonical for every context ourselves, so drop core's
 	 * singular-only version to avoid a duplicate tag.
 	 */
@@ -75,10 +177,13 @@ final class Optima_SEO_Head {
 	 * Use the per-page SEO title when set; otherwise leave WordPress's default.
 	 */
 	public static function document_title( $title ) {
-		if ( is_singular() ) {
-			$custom = get_post_meta( get_queried_object_id(), OPTIMA_SEO_META_TITLE, true );
+		$id = self::seo_post_id();
+		if ( $id ) {
+			$custom = get_post_meta( $id, OPTIMA_SEO_META_TITLE, true );
 			if ( '' !== $custom ) {
-				return $custom;
+				// Page 2 and on of the blog list says so, so the pages do not share one title.
+				$n = (int) get_query_var( 'paged' );
+				return ( $n > 1 && ! is_singular() ) ? sprintf( '%s, page %d', $custom, $n ) : $custom;
 			}
 		}
 		// The theme's per-URL title from optima-setup.json (seo.pages), used as written.
@@ -157,7 +262,7 @@ final class Optima_SEO_Head {
 		$og_type     = '' !== $og_type ? $og_type : (string) Optima_SEO_Setup::site( $is_article ? 'og_type_post' : 'og_type' );
 		$og_type     = '' !== $og_type ? $og_type : ( $is_article ? 'article' : 'website' );
 		// The theme's share title and text, unless an editor set this page's own in the SEO box.
-		$box_id      = is_singular() ? get_queried_object_id() : 0;
+		$box_id      = self::seo_post_id();
 		$og_title    = $box_id && '' !== (string) get_post_meta( $box_id, OPTIMA_SEO_META_TITLE, true ) ? '' : (string) Optima_SEO_Setup::page( 'og_title' );
 		$og_title    = '' !== $og_title ? Optima_SEO_Setup::tokens( $og_title ) : $title;
 		$og_desc     = $box_id && '' !== (string) get_post_meta( $box_id, OPTIMA_SEO_META_DESC, true ) ? '' : (string) Optima_SEO_Setup::page( 'og_description' );
@@ -267,12 +372,17 @@ final class Optima_SEO_Head {
 			$robots['noindex'] = true;
 			unset( $robots['index'] );
 		}
+		// A thank-you page (a form's confirmation page) stays out of search.
+		if ( is_page() && in_array( (int) get_queried_object_id(), self::thanks_pages(), true ) ) {
+			$robots['noindex'] = true;
+			unset( $robots['index'] );
+		}
 		return Optima_SEO_Setup::finish_robots( (array) $robots );
 	}
 
 	private static function description() {
-		if ( is_singular() ) {
-			$id   = get_queried_object_id();
+		if ( self::seo_post_id() ) {
+			$id   = self::seo_post_id();
 			$desc = get_post_meta( $id, OPTIMA_SEO_META_DESC, true );
 			if ( '' !== $desc ) {
 				return $desc;
@@ -289,8 +399,9 @@ final class Optima_SEO_Head {
 		if ( Optima_SEO_Setup::page_has( 'description' ) ) {
 			return '';
 		}
-		if ( is_singular() ) {
-			$id = get_queried_object_id();
+		// The page's excerpt or text; on the blog list, the posts page's (upstream 1.12.1).
+		if ( self::seo_post_id() ) {
+			$id = self::seo_post_id();
 			if ( has_excerpt( $id ) ) {
 				return wp_strip_all_tags( get_the_excerpt( $id ) );
 			}
@@ -322,24 +433,51 @@ final class Optima_SEO_Head {
 		return get_bloginfo( 'description' );
 	}
 
-	/** The canonical address for this request ('' when the theme's data says there is none). */
+	/**
+	 * The canonical address for this request ('' when the theme's data says there
+	 * is none). The SEO box and the theme's per-URL value win; after them, a
+	 * not-found or search page has none (upstream 1.12.1: it pointed at the home
+	 * page), and page 2 and on of a list names itself, not page 1.
+	 */
 	public static function canonical_url() {
+		$url = self::canonical_base();
+		if ( self::$given ) {
+			return $url;
+		}
+		if ( is_404() || is_search() ) {
+			return '';
+		}
+		$n = (int) get_query_var( 'paged' );
+		if ( $url && $n > 1 && ! is_singular() ) {
+			$url = get_option( 'permalink_structure' ) ? user_trailingslashit( trailingslashit( $url ) . 'page/' . $n, 'paged' ) : add_query_arg( 'paged', $n, $url );
+		}
+		return $url;
+	}
+
+	/** @var bool Whether canonical_base() returned an address the SEO box or the theme set. */
+	private static $given = false;
+
+	private static function canonical_base() {
+		self::$given = false;
 		if ( is_singular() ) {
 			$id       = get_queried_object_id();
 			$override = get_post_meta( $id, OPTIMA_SEO_META_CANONICAL, true );
 			if ( '' !== $override ) {
+				self::$given = true;
 				return $override;
 			}
 		}
 		if ( Optima_SEO_Setup::page_has( 'canonical' ) ) {
 			$setup = Optima_SEO_Setup::page( 'canonical' );
 			if ( false === $setup ) {
+				self::$given = true;
 				return '';
 			}
 			// %link% is this very address, so a canonical naming it means the default below.
 			// Resolving it here would call canonical_url() again, without end.
 			$setup = (string) $setup;
 			if ( '' !== $setup && false === strpos( $setup, '%link%' ) ) {
+				self::$given = true;
 				return Optima_SEO_Setup::resolve( Optima_SEO_Setup::tokens( $setup ) );
 			}
 		}

@@ -3,7 +3,7 @@
  * Plugin Name:       Optima Core
  * Plugin URI:        https://optimadigitalmedia.com
  * Description:       The Optima engine for a client site: business identity, content model (post types, fields, Block Bindings), the JSON-LD schema graph, and the in-house SEO head tags and sitemap tuning. One plugin, one Optima dashboard. The Yoast replacement, built to survive any future redesign.
- * Version:           1.6.0.16
+ * Version:           1.15.0.0
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Author:            Optima Digital
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OPTIMA_CORE_VERSION', '1.6.0.16' );
+define( 'OPTIMA_CORE_VERSION', '1.15.0.0' );
 define( 'OPTIMA_CORE_DIR', plugin_dir_path( __FILE__ ) );
 define( 'OPTIMA_CORE_FILE', __FILE__ );
 
@@ -58,9 +58,22 @@ Optima_Core_Content_Changed::init();
 /* ---- Editable pages: words and photos on the page, layout locked (theme opt-in) ---- */
 require_once OPTIMA_CORE_DIR . 'includes/editable-pages.php';
 
-/* ---- Spam protection: email guard, comments and pingbacks closed (both on by default) ---- */
+/* ---- Spam protection and the security baseline (plugin-first rule 19), every switch on by default ---- */
+require_once OPTIMA_CORE_DIR . 'includes/operators.php';
 require_once OPTIMA_CORE_DIR . 'includes/protection.php';
 Optima_Core_Protection::init();
+/* Staging copies email only operators and the admin email, and call no outside services. */
+require_once OPTIMA_CORE_DIR . 'includes/staging-guard.php';
+Optima_Core_Staging::init();
+/* Caches purge themselves after a theme or Optima plugin update. */
+require_once OPTIMA_CORE_DIR . 'includes/cache-purge.php';
+Optima_Core_Cache::init();
+/* Privacy and terms drafts, for the firm to approve (never published from here). */
+require_once OPTIMA_CORE_DIR . 'includes/policies.php';
+Optima_Core_Policies::init();
+/* [optima_map]: Google's map loads only on a tap. */
+require_once OPTIMA_CORE_DIR . 'includes/map.php';
+Optima_Core_Map::init();
 
 /* ---- Schema module (was optima-schema) ---- */
 require_once OPTIMA_CORE_DIR . 'includes/schema/class-optima-schema.php';
@@ -72,6 +85,7 @@ require_once OPTIMA_CORE_DIR . 'includes/seo/class-seo-setup.php';
 require_once OPTIMA_CORE_DIR . 'includes/seo/class-seo-box.php';
 require_once OPTIMA_CORE_DIR . 'includes/seo/class-seo-sitemap.php';
 require_once OPTIMA_CORE_DIR . 'includes/seo/class-seo-oembed.php';
+require_once OPTIMA_CORE_DIR . 'includes/seo/class-seo-hreflang.php';
 
 /* ---- SEO global defaults, the unified Optima admin, and the update tracker ---- */
 require_once OPTIMA_CORE_DIR . 'includes/seo/seo-settings.php';
@@ -81,6 +95,11 @@ require_once OPTIMA_CORE_DIR . 'includes/admin.php';
 /* ---- Site Sync: theme copy in, hand edits kept (docs/site-sync-spec.md) ---- */
 require_once OPTIMA_CORE_DIR . 'includes/sync/class-optima-sync.php';
 require_once OPTIMA_CORE_DIR . 'includes/sync/class-optima-sync-admin.php';
+/* Change log: who changed what, when it wasn't an operator (operators only). */
+require_once OPTIMA_CORE_DIR . 'includes/changelog/class-optima-changelog.php';
+require_once OPTIMA_CORE_DIR . 'includes/changelog/class-optima-changelog-admin.php';
+Optima_Changelog::init();
+Optima_Changelog_Admin::init();
 Optima_Sync::init();
 Optima_Sync_Admin::init();
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
@@ -144,6 +163,7 @@ Optima_SEO_Setup::init();
 Optima_SEO_Box::init();
 Optima_SEO_Sitemap::init();
 Optima_SEO_OEmbed::init();
+Optima_SEO_Hreflang::init();
 Optima_Schema_Conflicts::init();
 
 /* The one Optima menu (Dashboard / Business / SEO). */
