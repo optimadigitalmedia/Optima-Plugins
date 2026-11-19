@@ -200,7 +200,7 @@ final class Optima_Hub_Health {
 	}
 
 	public static function run_scan(): void {
-		$home  = wp_remote_get( home_url( '/' ), array( 'timeout' => 8, 'redirection' => 2, 'sslverify' => false, 'headers' => array( 'Cache-Control' => 'no-cache' ) ) );
+		$home  = wp_remote_get( home_url( '/' ), array( 'timeout' => 8, 'redirection' => 2, 'sslverify' => self::self_sslverify(), 'headers' => array( 'Cache-Control' => 'no-cache' ) ) );
 		if ( ! is_wp_error( $home ) && 200 === (int) wp_remote_retrieve_response_code( $home ) ) {
 			self::note_nav( (string) wp_remote_retrieve_body( $home ) );
 		}
@@ -209,7 +209,7 @@ final class Optima_Hub_Health {
 		$found   = 0;
 		$checked = 0;
 		foreach ( $pages as $p ) {
-			$r = wp_remote_get( get_permalink( $p ), array( 'timeout' => 8, 'redirection' => 2, 'sslverify' => false, 'headers' => array( 'Cache-Control' => 'no-cache' ) ) );
+			$r = wp_remote_get( get_permalink( $p ), array( 'timeout' => 8, 'redirection' => 2, 'sslverify' => self::self_sslverify(), 'headers' => array( 'Cache-Control' => 'no-cache' ) ) );
 			if ( is_wp_error( $r ) || 200 !== (int) wp_remote_retrieve_response_code( $r ) ) {
 				continue;
 			}
@@ -255,7 +255,7 @@ final class Optima_Hub_Health {
 		if ( false !== $cached ) {
 			return 'yes' === $cached;
 		}
-		$r      = wp_remote_head( home_url( '/' ), array( 'timeout' => 5, 'redirection' => 0, 'sslverify' => false ) );
+		$r      = wp_remote_head( home_url( '/' ), array( 'timeout' => 5, 'redirection' => 0, 'sslverify' => self::self_sslverify() ) );
 		$locked = ! is_wp_error( $r ) && 401 === (int) wp_remote_retrieve_response_code( $r );
 		set_transient( 'optima_hub_staging_auth', $locked ? 'yes' : 'no', HOUR_IN_SECONDS );
 		return $locked;
@@ -304,22 +304,41 @@ final class Optima_Hub_Health {
 	 * someone's own computer (localhost, *.local, *.test, a private IP).
 	 */
 	public static function is_live(): bool {
-		if ( self::is_staging() ) {
-			return false;
-		}
+		return ! self::is_staging() && ! self::is_local_host();
+	}
+
+	/**
+	 * A copy on someone's own computer: no host, localhost, a LOCAL_HOSTS
+	 * name, or a private or reserved IP address.
+	 */
+	public static function is_local_host(): bool {
 		$host = strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) );
 		if ( '' === $host || 'localhost' === $host ) {
-			return false;
+			return true;
 		}
 		foreach ( self::LOCAL_HOSTS as $suffix ) {
 			if ( str_ends_with( $host, $suffix ) ) {
-				return false;
+				return true;
 			}
 		}
 		if ( filter_var( $host, FILTER_VALIDATE_IP ) ) {
-			return false !== filter_var( $host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE );
+			return false === filter_var( $host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE );
 		}
-		return true;
+		return false;
+	}
+
+	/**
+	 * Whether the site's checks of its own pages verify its HTTPS certificate.
+	 * Yes on live and on host staging addresses (STAGING_HOSTS serve real
+	 * certificates). No only on a copy on someone's own computer (a local
+	 * host name, a private IP, or WordPress's environment set to local or
+	 * development), where the certificate is usually self-signed and the check
+	 * would read every page as unreachable. Core's https_local_ssl_verify
+	 * filter can still change the answer for one site.
+	 */
+	public static function self_sslverify(): bool {
+		$local = self::is_local_host() || in_array( wp_get_environment_type(), array( 'local', 'development' ), true );
+		return (bool) apply_filters( 'https_local_ssl_verify', ! $local ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- core filter.
 	}
 
 	/**
@@ -587,6 +606,78 @@ final class Optima_Hub_Health {
 	}
 
 	/**
+	 * Leftovers in the page tree that put stray or broken addresses on the
+	 * site (law-site blueprint, release 2): a page whose parent is in the
+	 * trash (its address hangs off a page visitors cannot open), a second
+	 * page titled Home that is not the front page, and published content
+	 * whose address ends in -copy or -2 (a duplicate made by copying a page
+	 * or reusing a slug). Reads the database only.
+	 */
+	public static function page_tree(): array {
+		global $wpdb;
+		$lines = array();
+		$link  = '';
+
+		// 1. Pages under a trashed parent.
+		$orphans = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			"SELECT c.ID, c.post_title, p.post_title AS parent_title FROM {$wpdb->posts} c INNER JOIN {$wpdb->posts} p ON c.post_parent = p.ID
+			WHERE c.post_type = 'page' AND c.post_status IN ( 'publish', 'private', 'future', 'pending', 'draft' ) AND p.post_status = 'trash' LIMIT 20"
+		);
+		foreach ( (array) $orphans as $row ) {
+			/* translators: 1: page title, 2: parent page title */
+			$lines[] = sprintf( __( '"%1$s" sits under "%2$s", which is in the trash. Restore the parent or move the page.', 'optima-build' ), (string) $row->post_title, (string) $row->parent_title );
+			$link    = $link ? $link : admin_url( 'edit.php?post_type=page' );
+		}
+
+		// 2. A second page titled Home.
+		$front = 'page' === get_option( 'show_on_front' ) ? (int) get_option( 'page_on_front' ) : 0;
+		$homes = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			"SELECT ID FROM {$wpdb->posts} WHERE post_type = 'page' AND post_status = 'publish' AND LOWER( TRIM( post_title ) ) = 'home' ORDER BY ID LIMIT 20"
+		);
+		$homes = array_map( 'intval', (array) $homes );
+		$extra = $front ? array_values( array_diff( $homes, array( $front ) ) ) : ( count( $homes ) > 1 ? $homes : array() );
+		foreach ( $extra as $id ) {
+			/* translators: %s: page address */
+			$lines[] = sprintf( __( 'A page titled Home at %s is not the front page. Visitors and search engines can reach a second home page.', 'optima-build' ), wp_make_link_relative( (string) get_permalink( $id ) ) );
+			$link    = $link ? $link : admin_url( 'edit.php?post_type=page' );
+		}
+
+		// 3. Published copies: an address ending in -copy or -2.
+		$types = array_values( array_diff( get_post_types( array( 'public' => true ) ), array( 'attachment' ) ) );
+		if ( $types ) {
+			$in     = implode( ', ', array_fill( 0, count( $types ), '%s' ) );
+			$copies = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->prepare( "SELECT ID, post_name FROM {$wpdb->posts} WHERE post_status = 'publish' AND post_type IN ( {$in} ) AND ( post_name LIKE %s OR post_name LIKE %s ) ORDER BY ID LIMIT 20", array_merge( $types, array( '%-copy', '%-2' ) ) ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- placeholders built above.
+			);
+			foreach ( (array) $copies as $row ) {
+				/* translators: %s: page address */
+				$lines[] = sprintf( __( '%s is published and its address ends like a copy. Check it is not a duplicate of another page; if it is, unpublish it and redirect its address.', 'optima-build' ), wp_make_link_relative( (string) get_permalink( (int) $row->ID ) ) );
+				$link    = $link ? $link : admin_url( 'edit.php?post_type=' . get_post_type( (int) $row->ID ) );
+			}
+		}
+
+		if ( ! $lines ) {
+			return array(
+				'label' => __( 'Page tree', 'optima-build' ),
+				'value' => __( 'Clean', 'optima-build' ),
+				'state' => 'good',
+				'note'  => __( 'No pages under a trashed parent, one Home page, and no published copies.', 'optima-build' ),
+			);
+		}
+		return array(
+			'label'     => __( 'Page tree', 'optima-build' ),
+			/* translators: %d: number of problems */
+			'value'     => sprintf( _n( '%d to check', '%d to check', count( $lines ), 'optima-build' ), count( $lines ) ),
+			'state'     => 'warn',
+			/* translators: %d: number of problems */
+			'note'      => sprintf( _n( '%d page needs a look: it can show visitors a stray or broken address.', '%d pages need a look: they can show visitors stray or broken addresses.', count( $lines ), 'optima-build' ), count( $lines ) ),
+			'list'      => $lines,
+			'link'      => $link,
+			'link_text' => __( 'Pages', 'optima-build' ),
+		);
+	}
+
+	/**
 	 * @return array<int, array{label:string, value:string, state:string, note:string}>
 	 *         state is good | warn | bad.
 	 */
@@ -659,6 +750,7 @@ final class Optima_Hub_Health {
 		if ( $reviews ) {
 			$out[] = $reviews;
 		}
+		$out[] = self::page_tree();
 
 		$health = json_decode( (string) get_transient( 'health-check-site-status-result' ), true );
 		if ( is_array( $health ) ) {

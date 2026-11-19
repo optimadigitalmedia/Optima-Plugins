@@ -161,6 +161,7 @@ final class Optima_Redirects_Admin {
 		header( 'Content-Disposition: attachment; filename="redirects-' . gmdate( 'Y-m-d' ) . '.csv"' );
 		$out = fopen( 'php://output', 'w' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen
 		fputcsv( $out, array( 'from', 'to', 'type', 'hits', 'last_used' ) );
+		Optima_Redirects_Store::flush_hits();
 		foreach ( Optima_Redirects_Store::all() as $row ) {
 			fputcsv( $out, array( self::csv_cell( $row->source ), self::csv_cell( $row->target ), (int) $row->type, (int) $row->hits, (string) $row->last_hit ) );
 		}
@@ -367,16 +368,22 @@ final class Optima_Redirects_Admin {
 		$to      = '' !== $pre_to ? $pre_to : ( $editing ? $editing->target : '' );
 		$type    = $editing ? (int) $editing->type : 301;
 
+		// Counted uses reach the table first, so the Hits column is current.
+		Optima_Redirects_Store::flush_hits();
+		Optima_Redirects::sweep_noise();
 		$s        = Optima_Redirects::settings();
 		$total    = Optima_Redirects_Store::count();
 		$listed   = '' !== $search ? Optima_Redirects_Store::search_count( $search ) : $total;
 		$rows     = Optima_Redirects_Store::page( self::PER_PAGE, ( $paged - 1 ) * self::PER_PAGE, $search );
 		$week     = gmdate( 'Y-m-d H:i:s', time() - WEEK_IN_SECONDS );
 		$missing7 = Optima_Redirects_Store::log_count_since( $week );
+		// Checked again before counting, so the count and the list agree.
+		$internal = Optima_Redirects::broken_links( 10 );
 		$broken   = Optima_Redirects_Store::log_count_since( '1970-01-01 00:00:00', true );
-		$missing  = Optima_Redirects_Store::log_list( $all_404 ? $s['log_cap'] : 10 );
+		// Visits from search and broken links on the site first, then the rest by visits.
+		$missing  = Optima_Redirects::sort_missing( Optima_Redirects_Store::log_list( $s['log_cap'] ) );
+		$missing  = $all_404 ? $missing : array_slice( $missing, 0, 10 );
 		$logged   = Optima_Redirects_Store::log_count_since( '1970-01-01 00:00:00' );
-		$internal = Optima_Redirects_Store::log_list( 10, true );
 		$post_url = admin_url( 'admin-post.php' );
 
 		Optima_Admin_UI::open(

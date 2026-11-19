@@ -40,9 +40,11 @@ delete_option( 'optima_business' );
 delete_option( 'optima_seo_defaults' );
 delete_option( 'optima_core_protection' );
 delete_option( 'optima_seo_sitemap_found' );
+delete_option( 'optima_core_offices' );
+delete_option( 'optima_core_offices_settings' );
 wp_clear_scheduled_hook( 'optima_seo_sitemap_check' );
 
-foreach ( array( '_optima_seo_title', '_optima_seo_desc', '_optima_seo_canonical', '_optima_seo_noindex' ) as $optima_core_meta_key ) {
+foreach ( array( '_optima_seo_title', '_optima_seo_desc', '_optima_seo_canonical', '_optima_seo_noindex', '_optima_primary_practice', '_optima_content_changed' ) as $optima_core_meta_key ) {
 	delete_post_meta_by_key( $optima_core_meta_key );
 }
 

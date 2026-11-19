@@ -53,3 +53,14 @@
 	.sh .sr-shortcodes td { border-bottom: 0; padding: 2px 0; }
 	.sr-shortcodes tr { padding: 8px 0; border-bottom: 1px solid rgba(0, 0, 0, .08); }
 }
+
+/* Release 1: role, gross or net, venue, what happened after, and the consent date. */
+.sr-post-verdict { border: 0; padding: 0; min-width: 0; }
+.sr-post-verdict legend {
+	padding: 0; margin: 0 0 6px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 11px; letter-spacing: 1.2px;
+	text-transform: uppercase; font-weight: 500; color: var(--optima-ink-2);
+}
+.sr-checks { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.sr-checks label { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; font-size: 14px; color: var(--optima-ink); }
+.sr-post-verdict input[type="text"] { width: 100%; min-height: 44px; border: 1px solid var(--optima-line); border-radius: 10px; padding: 8px 12px; color: var(--optima-ink); background: var(--optima-surface); }
+.sr-blocked { margin: 12px 0 0; padding: 10px 12px; border-left: 3px solid var(--optima-negative); color: var(--optima-ink); background: color-mix(in srgb, var(--optima-negative) 8%, var(--optima-surface)); font-size: 13px; font-weight: 600; }

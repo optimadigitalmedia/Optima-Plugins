@@ -1,6 +1,8 @@
 /* Optima Call Buttons: opens and closes the "Let's talk" sheet. Taps on the
    call, text and book links are reported by Optima Analytics when it is on
-   (data-optima-track). */
+   (data-optima-track: call_click, text_click, booking_click). Opening the
+   sheet is not one of the standard events, so it sends only its old name,
+   contact_open, and only on sites with old event names turned on. */
 (function () {
   var root = document.querySelector('[data-scc]');
   if (!root) return;
@@ -14,7 +16,7 @@
   }
   opener.addEventListener('click', function () {
     sheet.showModal();
-    if (window.optimaTrack) window.optimaTrack('contact_open', { link_label: 'Lets talk' });
+    if (window.optimaTrack) window.optimaTrack('', { link_label: 'Lets talk', location: 'call_bar' }, 'contact_open');
   });
   sheet.addEventListener('click', function (e) {
     if (e.target.closest('[data-odc-close]')) { sheet.close(); return; }

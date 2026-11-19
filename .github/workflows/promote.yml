@@ -12,7 +12,8 @@ name: Promote
 # newest normal release. Only the flag changes. Nothing is rebuilt, so the zip
 # the test site ran is exactly the zip every other site installs. Then it
 # rewrites the version list, and stable sites pick the release up within a
-# few hours. Optima Core goes first.
+# few hours. Optima Core goes first. The feature catalog Optima Build reads
+# is promoted with it (catalog-test.json becomes catalog.json).
 #
 # "Dry run" lists what would be promoted without changing anything.
 
@@ -78,8 +79,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build releases.json and publish it on the version-list branch
+      # Rewrites the list (with each zip's sha256, carried over or read from
+      # GitHub's digest) and sends the checked catalog out: catalog-test.json
+      # becomes catalog.json, which every stable site reads.
+      - name: Build releases.json and the catalog, publish them on the version-list branch
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
+          FEED_EVENT: promote
         run: bash tools/release/publish-feed.sh

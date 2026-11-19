@@ -45,6 +45,8 @@
 .st-remove.button-link { min-height: 44px; padding: 0 8px; color: var(--optima-negative); text-decoration: underline; }
 .st-remove.button-link:focus-visible, .st-add:focus-visible { outline: 2px solid var(--st-accent-text); outline-offset: 2px; box-shadow: none; }
 .optima-team-form .button.st-add { margin: 12px 0 12px; min-height: 44px; }
+.st-practice-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0 18px; margin: 0 0 12px; }
+.st-practice-list label { display: flex; align-items: center; gap: 8px; min-height: 44px; }
 .st-check { margin: 0 0 12px; }
 .st-check label { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-weight: 600; }
 .st-law { margin-bottom: 4px; }

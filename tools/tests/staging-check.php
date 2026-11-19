@@ -47,5 +47,20 @@ ok( 'warn' === $r['state'] && 'Hidden' === $r['value'], 'staging address, hidden
 $r = row( 'https://wpenginepowered.com.example-firm.com', 'production', '1' );
 ok( 'good' === $r['state'], 'a live domain that only contains a staging suffix stays good' );
 
+// The site's checks of its own pages verify HTTPS everywhere but a local copy.
+function verify( $home, $env ) {
+	$GLOBALS['t_home'] = $home;
+	$GLOBALS['t_env']  = $env;
+	return Optima_Hub_Health::self_sslverify();
+}
+ok( true === verify( 'https://example-firm.com', 'production' ), 'self-check, live site: verifies HTTPS' );
+ok( true === verify( 'https://examplestage.wpenginepowered.com', 'production' ), 'self-check, host staging address: verifies HTTPS (real certificate)' );
+ok( true === verify( 'https://example-firm.com', 'staging' ), 'self-check, environment staging on a real domain: verifies HTTPS' );
+ok( false === verify( 'https://localhost:8443', 'production' ), 'self-check, localhost: does not verify' );
+ok( false === verify( 'https://firm.local', 'production' ), 'self-check, .local: does not verify' );
+ok( false === verify( 'https://192.168.1.20', 'production' ), 'self-check, private IP: does not verify' );
+ok( false === verify( 'https://example-firm.com', 'development' ), 'self-check, environment development: does not verify' );
+ok( true === verify( 'https://8.8.8.8', 'production' ), 'self-check, public IP: verifies' );
+
 echo $fail ? "$fail failed\n" : "All passed\n";
 exit( $fail ? 1 : 0 );

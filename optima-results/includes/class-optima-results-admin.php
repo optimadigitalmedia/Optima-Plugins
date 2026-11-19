@@ -92,11 +92,44 @@ final class Optima_Results_Admin {
 		if ( $text === Optima_Results::default_disclaimer( $state ) ) {
 			$text = '';
 		}
+		// The disclaimer's approver: a named person saving this exact state and
+		// wording approves it. A new state or new wording needs a new save by name.
+		$approver = sanitize_text_field( (string) ( $in['approver'] ?? '' ) );
+		$prev     = Optima_Results::settings();
+		$wording  = Optima_Results::wording( $state, $text );
+		$hash     = '' !== $approver ? Optima_Results::approval_hash( $state, $wording ) : '';
+		$on       = '';
+		if ( '' !== $hash ) {
+			$on = ( $hash === $prev['approved_for'] && $approver === $prev['approver'] && '' !== $prev['approved_on'] ) ? $prev['approved_on'] : current_time( 'Y-m-d' );
+		}
 		return array(
-			'state'      => $state,
-			'disclaimer' => $text,
-			'threshold'  => max( 0, (int) preg_replace( '/\D/', '', (string) ( $in['threshold'] ?? '1000000' ) ) ),
+			'state'        => $state,
+			'disclaimer'   => $text,
+			'threshold'    => max( 0, (int) preg_replace( '/\D/', '', (string) ( $in['threshold'] ?? '1000000' ) ) ),
+			'approver'     => $approver,
+			'approved_on'  => $on,
+			'approved_for' => $hash,
+			'page'         => self::page_path( (string) ( $in['page'] ?? '' ) ),
 		);
+	}
+
+	/** The results page as a path on this site ("/case-results/"), or '' for anything else. */
+	private static function page_path( string $value ): string {
+		$value = trim( sanitize_text_field( $value ) );
+		if ( '' === $value ) {
+			return '';
+		}
+		$parts = wp_parse_url( $value );
+		if ( ! is_array( $parts ) ) {
+			return '';
+		}
+		if ( isset( $parts['host'] ) && strtolower( (string) $parts['host'] ) !== strtolower( (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) ) ) {
+			return '';
+		}
+		if ( ! isset( $parts['host'] ) && '/' !== substr( $value, 0, 1 ) ) {
+			return '';
+		}
+		return '/' . ltrim( preg_replace( '#[^A-Za-z0-9/_.~%-]#', '', (string) ( $parts['path'] ?? '/' ) ), '/' );
 	}
 
 	/** Counts of approved, waiting and draft results. */
@@ -113,7 +146,8 @@ final class Optima_Results_Admin {
 			)
 		);
 		foreach ( $ids as $id ) {
-			$approved = Optima_Results::is_approved( '1' === (string) get_post_meta( $id, Optima_Results::META['approved'], true ), (string) get_post_meta( $id, Optima_Results::META['approver'], true ) );
+			$approved = Optima_Results::is_approved( '1' === (string) get_post_meta( $id, Optima_Results::META['approved'], true ), (string) get_post_meta( $id, Optima_Results::META['approver'], true ) )
+				&& ! Optima_Results::consent_missing( array( 'consent_on' => (string) get_post_meta( $id, Optima_Results::META['consent_on'], true ) ) );
 			if ( 'publish' === get_post_status( $id ) && $approved ) {
 				++$live;
 			} elseif ( ! $approved ) {
@@ -154,10 +188,22 @@ final class Optima_Results_Admin {
 				<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php echo esc_html( sprintf( /* translators: %d: number */ _n( '%d result', '%d results', $counts['waiting'], 'optima-results' ), $counts['waiting'] ) ); ?></p>
 				<p class="sh-note"><?php esc_html_e( 'A result goes live once the firm ticks "Approved by the firm" and adds the approver\'s name.', 'optima-results' ); ?></p>
 			</section>
-			<section class="sh-box sh-check is-good">
+			<?php $flagged = Optima_Results::disclaimer_flagged(); ?>
+			<section class="sh-box sh-check is-<?php echo $flagged ? 'warn' : 'good'; ?>">
 				<p class="sh-label"><?php esc_html_e( 'Disclaimer', 'optima-results' ); ?></p>
-				<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php esc_html_e( 'On every result', 'optima-results' ); ?></p>
-				<p class="sh-note"><?php esc_html_e( 'Printed beside each result in the grid. It cannot be switched off for a single result.', 'optima-results' ); ?></p>
+				<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php echo esc_html( $flagged ? __( 'Not approved', 'optima-results' ) : __( 'On every result', 'optima-results' ) ); ?></p>
+				<p class="sh-note">
+					<?php
+					if ( $flagged ) {
+						esc_html_e( 'This state\'s wording is a placeholder marked [VERIFY: counsel]. Put in the wording the firm\'s counsel gives you, type the approver\'s name and save.', 'optima-results' );
+					} elseif ( Optima_Results::disclaimer_approved() ) {
+						/* translators: 1: approver name, 2: date */
+						echo esc_html( sprintf( __( 'Approved by %1$s, %2$s. Printed above the results and on every result.', 'optima-results' ), $s['approver'], $s['approved_on'] ) );
+					} else {
+						esc_html_e( 'Printed above the results, before the first amount, and on every result. It cannot be switched off for a single result.', 'optima-results' );
+					}
+					?>
+				</p>
 			</section>
 		</div>
 
@@ -177,7 +223,7 @@ final class Optima_Results_Admin {
 									<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $s['state'], $key ); ?>><?php echo esc_html( $label ); ?></option>
 								<?php endforeach; ?>
 							</select>
-							<p class="description"><?php esc_html_e( 'Sets the starting wording. North Carolina, Virginia and Florida each have their own advertising rules, so the firm checks the final text.', 'optima-results' ); ?></p>
+							<p class="description"><?php esc_html_e( 'Sets the starting wording. Every state has its own advertising rules, so the firm checks the final text. Louisiana, the District of Columbia, Maryland and South Carolina start from a placeholder marked [VERIFY: counsel] until counsel\'s wording is saved. Florida also needs the client\'s consent date on every result before it can be approved or shown.', 'optima-results' ); ?></p>
 						</td>
 					</tr>
 					<tr>
@@ -188,10 +234,33 @@ final class Optima_Results_Admin {
 						</td>
 					</tr>
 					<tr>
+						<th scope="row"><label for="sr-page"><?php esc_html_e( 'Results page', 'optima-results' ); ?></label></th>
+						<td>
+							<input id="sr-page" type="text" class="regular-text code" name="<?php echo esc_attr( $o ); ?>[page]" value="<?php echo esc_attr( $s['page'] ); ?>" placeholder="/case-results/">
+							<p class="description"><?php esc_html_e( 'The page with every result. Practice pages link to it as "See all ... results", filtered to their practice area. Leave blank to use the page at /case-results/ or /results/.', 'optima-results' ); ?></p>
+						</td>
+					</tr>
+					<tr>
 						<th scope="row"><label for="sr-disclaimer"><?php esc_html_e( 'Disclaimer wording', 'optima-results' ); ?></label></th>
 						<td>
 							<textarea id="sr-disclaimer" class="large-text" rows="5" name="<?php echo esc_attr( $o ); ?>[disclaimer]" placeholder="<?php echo esc_attr( Optima_Results::default_disclaimer( $s['state'] ) ); ?>"><?php echo esc_textarea( $s['disclaimer'] ); ?></textarea>
 							<p class="description"><?php esc_html_e( 'Leave blank to use the state\'s starting wording shown in gray. A blank disclaimer is never printed; the starting wording is used instead.', 'optima-results' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="sr-disclaimer-approver"><?php esc_html_e( 'Wording approved by', 'optima-results' ); ?></label></th>
+						<td>
+							<input id="sr-disclaimer-approver" type="text" class="regular-text" autocomplete="name" name="<?php echo esc_attr( $o ); ?>[approver]" value="<?php echo esc_attr( $s['approver'] ); ?>">
+							<p class="description">
+								<?php
+								if ( Optima_Results::disclaimer_approved() ) {
+									/* translators: %s: date */
+									echo esc_html( sprintf( __( 'Approved on %s for this state and wording. Changing either one needs a new save with the approver\'s name.', 'optima-results' ), $s['approved_on'] ) );
+								} else {
+									esc_html_e( 'The person at the firm who approved this exact wording. Saving with a name records the approval for this state and wording; wording still marked [VERIFY: counsel] never counts as approved.', 'optima-results' );
+								}
+								?>
+							</p>
 						</td>
 					</tr>
 				</table>
@@ -229,6 +298,9 @@ final class Optima_Results_Admin {
 				<tr><td>[optima_results area="car-accidents"]</td><td><?php esc_html_e( 'Only one practice area, for that practice area\'s page. Use the slug from Case results, Practice areas.', 'optima-results' ); ?></td></tr>
 				<tr><td>[optima_results heading="Case results" limit="6"]</td><td><?php esc_html_e( 'A heading above the grid and a cap on how many show.', 'optima-results' ); ?></td></tr>
 				<tr><td>[optima_results filters="no"]</td><td><?php esc_html_e( 'The grid without the filter buttons.', 'optima-results' ); ?></td></tr>
+				<tr><td>[optima_results attorney="12"]</td><td><?php esc_html_e( 'Only the results that name this attorney (a People profile ID or the profile\'s address name).', 'optima-results' ); ?></td></tr>
+				<tr><td>[optima_results variant="ledger"]</td><td><?php esc_html_e( 'A different layout: grid (the default), ledger (one result per row) or feature (the newest result large).', 'optima-results' ); ?></td></tr>
+				<tr><td>optima_slot( 'practice-results', array( 'practice' =&gt; 'truck-accidents' ) )</td><td><?php esc_html_e( 'On a practice page: its results with a See all link to the results page. optima_slot( \'bio-results\' ) does the same on a bio.', 'optima-results' ); ?></td></tr>
 				<tr><td>[optima_result id="12"]</td><td><?php esc_html_e( 'One result by its ID, with the disclaimer.', 'optima-results' ); ?></td></tr>
 			</table>
 		</section>
@@ -247,11 +319,22 @@ final class Optima_Results_Admin {
 			array(
 				'post_type'      => Optima_Results::POST_TYPE,
 				'post_status'    => array( 'publish', 'pending', 'draft', 'future' ),
-				'posts_per_page' => 25,
+				'posts_per_page' => 500,
 				'orderby'        => 'date',
 				'order'          => 'DESC',
 			)
 		);
+		// The same order as the site: the result's year, then its date, then the date it was added.
+		usort(
+			$rows,
+			static function ( $x, $y ): int {
+				return Optima_Results_Render::newest_first(
+					array( 'date' => (string) get_post_meta( $x->ID, Optima_Results::META['date'], true ), 'post_date' => $x->post_date ),
+					array( 'date' => (string) get_post_meta( $y->ID, Optima_Results::META['date'], true ), 'post_date' => $y->post_date )
+				);
+			}
+		);
+		$rows = array_slice( $rows, 0, 25 );
 		$all  = (int) array_sum( (array) wp_count_posts( Optima_Results::POST_TYPE ) );
 		$line = Optima_Results::settings()['threshold'];
 		echo '<section class="sh-box"><h2 class="sh-title">' . esc_html__( 'Results', 'optima-results' ) . '</h2>';
@@ -259,7 +342,7 @@ final class Optima_Results_Admin {
 			0 === $line
 				? __( 'This firm has no threshold: every result may show.', 'optima-results' )
 				/* translators: %s: amount */
-				: sprintf( __( 'Threshold: %s. A result below it stays in the Knowledge Hub and is not published.', 'optima-results' ), '$' . number_format_i18n( $line ) )
+				: sprintf( __( 'Threshold: %s. A result below it stays in the Knowledge Hub and the site never shows it, even when approved. A result with no figure in its amount shows once approved.', 'optima-results' ), '$' . number_format_i18n( $line ) )
 		) . '</p>';
 		if ( $rows ) {
 			echo '<div class="sh-scroll"><table class="widefat striped"><thead><tr>';
@@ -274,9 +357,14 @@ final class Optima_Results_Admin {
 				echo '<td>' . esc_html( $r['type_label'] ) . '</td>';
 				echo '<td>' . esc_html( '' !== $r['date'] ? substr( $r['date'], 0, 4 ) : '' ) . '</td>';
 				echo '<td>' . esc_html( '' !== $r['attorney'] ? $r['attorney'] : __( 'Not named', 'optima-results' ) ) . '</td>';
-				$above = Optima_Results::above_threshold( $r['amount'] );
-				echo '<td><span class="sh-pill ' . ( $above ? 'is-done' : 'is-received' ) . '">' . esc_html( $above ? __( 'Yes', 'optima-results' ) : __( 'No', 'optima-results' ) ) . '</span></td>';
-				echo '<td>' . esc_html( Optima_Results::is_approved( $r['approved'], $r['approver'] ) ? __( 'Approved', 'optima-results' ) : __( 'Waiting', 'optima-results' ) ) . '</td></tr>';
+				$status = Optima_Results::threshold_status( $r['amount'] );
+				echo '<td><span class="sh-pill ' . ( 'below' === $status ? 'is-received' : ( 'unknown' === $status ? 'is-needs' : 'is-done' ) ) . '">' . esc_html( Optima_Results::threshold_label( $r['amount'] ) ) . '</span></td>';
+				if ( Optima_Results::is_approved( $r['approved'], $r['approver'] ) && Optima_Results::consent_missing( $r ) ) {
+					$approval = __( 'Needs the client\'s consent date (Florida)', 'optima-results' );
+				} else {
+					$approval = Optima_Results::is_approved( $r['approved'], $r['approver'] ) ? __( 'Approved', 'optima-results' ) : __( 'Waiting', 'optima-results' );
+				}
+				echo '<td>' . esc_html( $approval ) . '</td></tr>';
 			}
 			echo '</tbody></table></div>';
 		} else {

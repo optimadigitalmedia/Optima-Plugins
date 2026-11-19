@@ -80,8 +80,16 @@
 			if (sample) { sample.hidden = true; }
 			run.hidden = false;
 			run.querySelector('[data-ssc-site]').textContent = job.site;
-			var ask = function (step) {
+			/* Speed can come back "pending": Google's tool is still working in the
+			   background, so ask again every few seconds. The site gives up and
+			   leaves speed out after a couple of minutes; this stops asking after 40 tries. */
+			var ask = function (step, tries) {
+				tries = tries || 0;
 				return post('/step', { id: job.id, token: job.token, step: step }).then(function (res) {
+					if (res.pending && tries < 40) {
+						return new Promise(function (resolve) { setTimeout(resolve, 5000); }).then(function () { return ask(step, tries + 1); });
+					}
+					if (res.pending) { return null; }
 					if (!res.ok) { throw new Error(res.message); }
 					done(step);
 					return res.report || null;
@@ -89,7 +97,7 @@
 			};
 			return ask('basics').then(function (first) {
 				if (first) { return first; }
-				return Promise.allSettled(cfg.steps.filter(function (s) { return s !== 'basics'; }).map(ask)).then(function (results) {
+				return Promise.allSettled(cfg.steps.filter(function (s) { return s !== 'basics'; }).map(function (s) { return ask(s); })).then(function (results) {
 					for (var i = 0; i < results.length; i++) {
 						if (results[i].status === 'fulfilled' && results[i].value) { return results[i].value; }
 					}

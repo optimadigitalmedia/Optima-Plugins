@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.9.10 (2026-11-12)
+
+- **Scanner probes never reach the database.** Hidden files and folders (`/.env`, `/.git/`), any file other than an .html page (`/wp-config.php.bak`, `/terraform.tfvars`, `/db.sql`, `/backup.zip`), log-in and admin guesses, and paths like /phpmyadmin, /vendor, /api and /swagger are left out of Missing pages, and so are requests that do not ask for a web page or come as HEAD. Ones already logged are cleared the first time the screen opens. A site with a real page on that list can drop one entry with the `optima_redirects_noise_patterns` filter.
+- **Broken links are real links.** A missing page counts as a broken link only when the referring page's content, or one of the site's menus, really links to it, so faked referrers stop showing as broken links on the screen and in Site health. Missing pages from search and from your own pages are listed first.
+- **Fewer database writes.** A missing page is one insert-or-update instead of a lookup, a write, a count and a delete. On hosts with an object cache, redirect uses are counted in the cache and written in one pass every 100 uses and once an hour. The missing-page list is held to its size limit by an hourly tidy-up, which is taken off the schedule when the plugin is turned off.
+- CSV import and export and campaign tags carried through a redirect work as before.
+- Updates install only from the Optima Plugins release downloads (https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/). A release listed at any other address is skipped, and an update of an Optima plugin from any other address is refused with an error.
+- Every download is checked against the sha256 published in the version list before WordPress unpacks it. A mismatch deletes the file, stops the install with an error and writes a line to the PHP error log.
+- A release listed without a sha256 (one published before checksums were recorded) still installs as before, with a line in the PHP error log saying no checksum was checked.
+- Automatic updates run only for a package from the Optima Plugins releases.
+- The GitHub API fallback reads each asset's digest as its sha256, so the check works on that path too.
+
 ## 0.1.9.9 (2026-11-05)
 
 - Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).

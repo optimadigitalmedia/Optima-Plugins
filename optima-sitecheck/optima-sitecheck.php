@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Optima Site Check
  * Description:       A free website check visitors can run from your site. It checks speed, security, page titles, business info for Google, phone layout, AI crawlers, the sitemap and photo sizes, shows the result on the page, emails the full report, and saves every request to an inbox.
- * Version:           0.2.4.10
+ * Version:           0.2.4.11
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Author:            Optima Digital
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OPTIMA_SITECHECK_VERSION', '0.2.4.10' );
+define( 'OPTIMA_SITECHECK_VERSION', '0.2.4.11' );
 define( 'OPTIMA_SITECHECK_FILE', __FILE__ );
 define( 'OPTIMA_SITECHECK_URL', plugin_dir_url( __FILE__ ) );
 
@@ -36,6 +36,11 @@ require_once __DIR__ . '/includes/class-optima-sitecheck.php';
 require_once __DIR__ . '/includes/class-optima-sitecheck-checks.php';
 require_once __DIR__ . '/includes/class-optima-sitecheck-report.php';
 require_once __DIR__ . '/includes/class-optima-sitecheck-admin.php';
+require_once __DIR__ . '/includes/class-optima-sitecheck-privacy.php';
 
 Optima_Sitecheck::boot();
 Optima_Sitecheck_Admin::boot();
+Optima_Sitecheck_Privacy::boot();
+
+// Switched off: the daily clean-up and any finishing or speed jobs go with it.
+register_deactivation_hook( __FILE__, array( 'Optima_Sitecheck_Privacy', 'deactivate' ) );

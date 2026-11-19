@@ -1,0 +1,135 @@
+/* Optima Core on the client site: the breadcrumb and the office cards.
+   Dresses only from the --optima-* variables Optima Build prints from the
+   theme's DESIGN.md (plugin-first rule 7); type comes from the theme. */
+
+.optima-sr {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}
+
+/* Breadcrumb */
+.optima-breadcrumb ol {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .25em .5em;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	font-size: .875em;
+	color: var(--optima-ink-2, var(--optima-ink));
+}
+
+.optima-breadcrumb li {
+	display: inline-flex;
+	align-items: center;
+	gap: .5em;
+}
+
+.optima-breadcrumb li + li::before {
+	content: "\203A";
+	color: var(--optima-ink-2, var(--optima-ink));
+}
+
+.optima-breadcrumb a {
+	color: var(--optima-accent);
+}
+
+.optima-breadcrumb [aria-current="page"] {
+	color: var(--optima-ink);
+}
+
+/* Office cards */
+.optima-offices {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+	gap: 1.25rem;
+}
+
+.optima-office {
+	display: flex;
+	flex-direction: column;
+	gap: .6em;
+	padding: 1.25rem;
+	border: 1px solid var(--optima-line);
+	border-radius: var(--optima-radius-md, 12px);
+	background: var(--optima-surface);
+	color: var(--optima-ink);
+}
+
+.optima-office-name {
+	margin: 0;
+}
+
+.optima-office p,
+.optima-office ul {
+	margin: 0;
+}
+
+.optima-office ul {
+	padding: 0;
+	list-style: none;
+}
+
+.optima-office-label {
+	display: block;
+	font-size: .8em;
+	font-weight: 600;
+	letter-spacing: .04em;
+	text-transform: uppercase;
+	color: var(--optima-ink-2, var(--optima-ink));
+}
+
+.optima-office-phone a {
+	font-weight: 600;
+	color: var(--optima-accent);
+}
+
+.optima-office-actions {
+	margin-top: auto;
+}
+
+.optima-office-directions {
+	display: inline-block;
+	padding: .6em 1.1em;
+	border-radius: var(--optima-radius-sm, 8px);
+	background: var(--optima-accent);
+	color: var(--optima-accent-ink);
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.optima-office-map {
+	display: block;
+	overflow: hidden;
+	border-radius: var(--optima-radius-sm, 8px);
+	background: var(--optima-canvas);
+	color: var(--optima-accent);
+}
+
+.optima-office-map img {
+	display: block;
+	width: 100%;
+	height: auto;
+	aspect-ratio: 2 / 1;
+	object-fit: cover;
+}
+
+.optima-office-map.is-placeholder {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	aspect-ratio: 2 / 1;
+	border: 1px dashed var(--optima-line);
+	font-weight: 600;
+}
+
+.optima-office-directions:focus-visible,
+.optima-office-map:focus-visible,
+.optima-breadcrumb a:focus-visible {
+	outline: 3px solid var(--optima-accent);
+	outline-offset: 2px;
+}

@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.4.11 (2026-11-12)
+
+- The chat opens on a disclosure line, shown before the visitor types and saved with every conversation. The wording is a setting; the starting wording is marked for the firm to approve.
+- On a law-firm site the chat stays off the site until an operator saves the disclosure once, and the Chat screen opens on that to-do.
+- That wait is gone again in this release: a law-firm site's chat shows as soon as it is switched on, because the fixed line below is always there.
+- Law-firm sites: the chat window always opens on one fixed line, "AI assistant, not a lawyer. It can't give legal advice. Please don't share confidential details here." It is one constant in the plugin (placeholder wording until counsel approves it), so no setting can remove or change it. Wording the firm approves, saved by an operator, shows under it, never in place of it. The fixed line is saved with every lead.
+- Law-firm sites: AI answers are off by default, even with the AI server connected. The chat collects only, until an operator ticks "Give AI answers on this site" on the Chat screen, which carries a plain warning that a chatbot answering legal questions is the firm's responsibility (Florida Bar Ethics Opinion 24-1) and records who turned it on and when. Other sites keep AI answers whenever the server is connected.
+- Law-firm sites: the chat asks only for a name, a phone number and a short description (up to 500 characters). No email, no other fields, no files, and with AI answers off no free-text box. The server enforces it too: a phone number is required, and the email, the transcript, the page's query string and any other field the browser sends are dropped.
+- The chat never opens by itself. The greeting card that popped up a few seconds after the page loaded (once per visit, on by default) is retired on every site, with its setting; nothing ever opened the panel on a timer, on scroll or on leaving the page.
+- Faster pages: on load a site gets only the chat button (printed by the plugin, at its final size) with a small stylesheet (chat-button.css) and a small loader (chat-loader.js). chat.js and chat.css load on the first tap, click or key press on the button, then the panel opens and focus moves into it. The widget's settings ride in a data attribute, so there is no inline script; nothing per visitor is in the page and the chat takes no nonce, so cached pages stay correct. chat_start still goes out once, on the first open in a visit.
+- Saved conversations are deleted after 90 days by a daily job (a site can keep them only with a written reason), are reachable from WordPress's Export and Erase Personal Data tools by email, and are deleted with the plugin.
+- Events now follow rule 50: chat_start on the first open in a visit, booking_click for the booking link, form_submit when a visitor sends their details. Older names go out only with old event names turned on.
+- Updates install only from the Optima Plugins release downloads (https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/). A release listed at any other address is skipped, and an update of an Optima plugin from any other address is refused with an error.
+- Every download is checked against the sha256 published in the version list before WordPress unpacks it. A mismatch deletes the file, stops the install with an error and writes a line to the PHP error log.
+- A release listed without a sha256 (one published before checksums were recorded) still installs as before, with a line in the PHP error log saying no checksum was checked.
+- Automatic updates run only for a package from the Optima Plugins releases.
+- The GitHub API fallback reads each asset's digest as its sha256, so the check works on that path too.
+
 ## 0.2.4.10 (2026-11-05)
 
 - Optima admin kit 1.8.0.0 (dashboard release 3): grids use auto-fit, so three cards never leave an empty fourth column; Optima list screens wear the kit head; a screen that is part of another tab lights that tab; one 3px focus ring; green, gold, grey and red dots each mean one thing; tab rows on phones scroll with a fade on the edge that has more; a collapsed For developers box; facts typed on Details show read-only elsewhere (rule 45).

@@ -17,11 +17,32 @@
  * stay denied unless the site turns them on (only sites running paid ads).
  *
  * Clicks: any link with data-optima-track="event_name" (and optionally
- * data-optima-label) is reported, any element with data-optima-view="event_name"
- * reports once when the page loads, and scripts can call
- * window.optimaTrack( 'event_name', { link_label: '...' } ). With Tag Manager
- * the event goes into the dataLayer for the container's triggers; with only a
- * GA4 tag it is sent with gtag().
+ * data-optima-label and data-optima-location) is reported, any element with
+ * data-optima-view="event_name" reports once when the page loads, and scripts
+ * can call window.optimaTrack( 'event_name', { location: '...' }, 'old_name' ).
+ * With Tag Manager the event goes into the dataLayer for the container's
+ * triggers; with only a GA4 tag it is sent with gtag().
+ *
+ * Event names (docs/plugin-first.md rule 50): call_click, text_click,
+ * email_click, form_submit, booking_click, directions_click, chat_start. Each
+ * carries location (where on the page: call_bar, lets_talk_sheet, team_card,
+ * chat, form) and method (tel, sms, mailto, link, gravity_forms, chat). Phone
+ * numbers and email addresses never go into the dataLayer: a tel:, sms: or
+ * mailto: link sends its method, never its address, and a form sends its ID.
+ *
+ * Old names: before rule 50 the plugins sent contact_call, contact_text,
+ * contact_book, contact_open, team_call, team_email, chat_open, chat_book,
+ * chat_work, chat_link, chip_click, handoff and lead_submit. A site whose Tag
+ * Manager triggers still listen for them sets OPTIMA_ANALYTICS_LEGACY_EVENTS
+ * to true in wp-config.php (or returns true from the
+ * optima_analytics_legacy_events filter), and every click then also sends its
+ * old name. Off by default. See README.md.
+ *
+ * Gravity Forms: a confirmation sends form_submit once per submission, with
+ * the form ID only. AJAX forms report on Gravity Forms' own
+ * gform_confirmation_loaded event; a form that reloads the page leaves a
+ * hidden marker in its confirmation; a form that redirects leaves a
+ * five-minute cookie holding the form ID, read and cleared on the next page.
  *
  * Nothing loads on staging or local copies, or for people who edit the site.
  *
@@ -42,6 +63,57 @@ final class Optima_Analytics {
 		add_action( 'wp_body_open', array( __CLASS__, 'body_open' ), 1 );
 		add_action( 'wp_footer', array( __CLASS__, 'footer' ), 20 );
 		add_shortcode( 'optima_privacy_choices', array( __CLASS__, 'choices_link' ) );
+		add_filter( 'gform_confirmation', array( __CLASS__, 'form_confirmation' ), 20, 4 );
+	}
+
+	/** The cookie a redirecting Gravity Forms confirmation leaves for the next page. */
+	const FORM_COOKIE = 'optima_form_submit';
+
+	/**
+	 * Also send the pre-rule-50 event names? Off unless wp-config sets
+	 * OPTIMA_ANALYTICS_LEGACY_EVENTS to true or the filter says so.
+	 */
+	public static function legacy_events(): bool {
+		$on = defined( 'OPTIMA_ANALYTICS_LEGACY_EVENTS' ) && (bool) OPTIMA_ANALYTICS_LEGACY_EVENTS;
+		return (bool) apply_filters( 'optima_analytics_legacy_events', $on );
+	}
+
+	/**
+	 * Gravity Forms confirmation: leave a marker (text confirmation) or a short
+	 * cookie (redirect) so the page reports form_submit once. Only the form ID
+	 * travels, never anything the visitor typed. AJAX confirmations also fire
+	 * Gravity Forms' gform_confirmation_loaded, which the script uses; the marker
+	 * keeps the two from counting twice.
+	 *
+	 * @param mixed $confirmation A message (string) or array( 'redirect' => url ).
+	 * @param mixed $form         The form.
+	 * @return mixed
+	 */
+	public static function form_confirmation( $confirmation, $form, $entry = null, $ajax = false ) {
+		$id = is_array( $form ) ? absint( $form['id'] ?? 0 ) : 0;
+		if ( ! $id || '' === self::tag() ) {
+			return $confirmation;
+		}
+		if ( is_array( $confirmation ) && ! empty( $confirmation['redirect'] ) ) {
+			if ( ! headers_sent() ) {
+				setcookie(
+					self::FORM_COOKIE,
+					(string) $id,
+					array(
+						'expires'  => time() + 5 * MINUTE_IN_SECONDS,
+						'path'     => '/', // The page script clears it at the same path.
+						'secure'   => is_ssl(),
+						'httponly' => false, // The page script reads and clears it.
+						'samesite' => 'Lax',
+					)
+				);
+			}
+			return $confirmation;
+		}
+		if ( is_string( $confirmation ) ) {
+			$confirmation .= '<span hidden data-optima-form-submit="' . esc_attr( (string) $id ) . '"></span>';
+		}
+		return $confirmation;
 	}
 
 	/** @return array{gtm:string, ga4:string, mode:string, ads:bool, skip_editors:bool, notice:string, privacy_page:int, late:bool} */
@@ -106,6 +178,8 @@ final class Optima_Analytics {
 			'ads'    => $s['ads'],
 			'cookie' => self::COOKIE,
 			'tag'    => self::tag(),
+			'legacy' => self::legacy_events(),
+			'form'   => self::FORM_COOKIE,
 		);
 		// Consent defaults first, before any Google tag.
 		?>
@@ -229,10 +303,25 @@ function show(){if(box){box.hidden=false;var b=box.querySelector('.optima-consen
 if(box){box.addEventListener('click',function(e){var b=e.target.closest('[data-optima-consent]');if(b)set(b.getAttribute('data-optima-consent'));});
 box.addEventListener('keydown',function(e){if(e.key==='Escape')box.hidden=true;});}
 if(!has()&&navigator.globalPrivacyControl!==true&&box)box.hidden=false;
-window.optimaTrack=function(name,params){params=params||{};if(c.tag==='gtm'){var o={event:name};for(var k in params)o[k]=params[k];window.dataLayer.push(o);}else{gtag('event',name,params);}};
+/* Rule 50 names. Old names go out too only when the site turns legacy events on. */
+var ALIAS={team_call:['call_click','team_card'],team_email:['email_click','team_card']};
+function push(name,params){if(c.tag==='gtm'){var o={event:name};for(var k in params){if(params[k]!==''&&params[k]!=null)o[k]=params[k];}window.dataLayer.push(o);}else{gtag('event',name,params);}}
+window.optimaTrack=function(name,params,legacy){params=params||{};if(name)push(name,params);if(legacy&&c.legacy)push(legacy,params);};
+function how(h){var m=/^(tel|sms|mailto):/i.exec(h||'');return m?m[1].toLowerCase():'link';}
 [].forEach.call(document.querySelectorAll('[data-optima-view]'),function(v){window.optimaTrack(v.getAttribute('data-optima-view'),{link_label:v.getAttribute('data-optima-label')||document.title});});
 document.addEventListener('click',function(e){var p=e.target.closest('[data-optima-privacy],a[href="#privacy-choices"]');if(p){e.preventDefault();show();return;}
-var t=e.target.closest('[data-optima-track]');if(t){var params={link_label:t.getAttribute('data-optima-label')||(t.textContent||'').trim().slice(0,80)};if(t.href)params.link_url=t.href;window.optimaTrack(t.getAttribute('data-optima-track'),params);}});})();
+var t=e.target.closest('[data-optima-track],[data-optima-legacy]');if(!t)return;
+var name=t.getAttribute('data-optima-track')||'',old=t.getAttribute('data-optima-legacy')||'',loc=t.getAttribute('data-optima-location')||'';
+if(ALIAS[name]){old=old||name;loc=loc||ALIAS[name][1];name=ALIAS[name][0];}
+var h=t.getAttribute('href')||'',params={link_label:t.getAttribute('data-optima-label')||(t.textContent||'').trim().slice(0,80),method:how(h)};
+if(loc)params.location=loc;if(/^https?:/i.test(t.href||''))params.link_url=t.href;
+window.optimaTrack(name,params,old);});
+/* Gravity Forms: form_submit once per submission, with the form ID only. */
+var sent={};function formSent(id){id=String(id||'');if(!/^\d+$/.test(id))return;var now=Date.now();if(sent[id]&&now-sent[id]<5000)return;sent[id]=now;window.optimaTrack('form_submit',{form_id:id,location:'form',method:'gravity_forms'});}
+[].forEach.call(document.querySelectorAll('[data-optima-form-submit]'),function(m){if(m.getAttribute('data-optima-fired'))return;m.setAttribute('data-optima-fired','1');formSent(m.getAttribute('data-optima-form-submit'));});
+var fc=document.cookie.match(new RegExp('(?:^|; )'+c.form+'=(\\d+)'));if(fc){document.cookie=c.form+'=; Max-Age=0; Path=/; SameSite=Lax';formSent(fc[1]);}
+function gf(){var $=window.jQuery;if(!$||gf.on)return;gf.on=1;$(document).on('gform_confirmation_loaded',function(ev,id){var mk=document.querySelector('[data-optima-form-submit="'+String(id).replace(/\D/g,'')+'"]:not([data-optima-fired])');if(mk)mk.setAttribute('data-optima-fired','1');formSent(id);});}
+gf();if(!gf.on){document.addEventListener('DOMContentLoaded',gf);window.addEventListener('load',gf);}})();
 JS;
 	}
 }

@@ -23,6 +23,43 @@ final class Optima_Team_Front {
 	/** Guards against the_content running inside itself. */
 	private static $rendering = false;
 
+	/** Set once the stylesheet printed beside a block that rendered after the head. */
+	private static $printed = false;
+
+	/**
+	 * The at-a-glance card already printed on this page (release 2): the
+	 * profile id and whether it showed the photo, so the profile below it
+	 * leaves out what the card already says.
+	 *
+	 * @var array{id:int, photo:bool}
+	 */
+	public static $glance = array( 'id' => 0, 'photo' => false );
+
+	/**
+	 * The stylesheet for blocks printed through a slot: enqueued while the
+	 * head is still to come, else printed once beside the first block.
+	 */
+	public static function style_tag(): string {
+		if ( ! wp_style_is( 'optima-team', 'registered' ) ) {
+			wp_register_style( 'optima-team', OPTIMA_TEAM_URL . 'assets/optima-team.css', array(), OPTIMA_TEAM_VERSION );
+		}
+		if ( self::$printed || wp_style_is( 'optima-team', 'done' ) ) {
+			return '';
+		}
+		if ( ! did_action( 'wp_head' ) || is_admin() ) {
+			wp_enqueue_style( 'optima-team' );
+			return '';
+		}
+		$styles = wp_styles();
+		wp_dequeue_style( 'optima-team' );
+		ob_start();
+		$styles->do_item( 'optima-team' );
+		$link           = (string) ob_get_clean();
+		$styles->done[] = 'optima-team';
+		self::$printed  = true;
+		return $link;
+	}
+
 	public static function boot(): void {
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'assets' ) );
 		add_filter( 'the_content', array( __CLASS__, 'profile' ), 20 );
@@ -74,13 +111,20 @@ final class Optima_Team_Front {
 		$name     = get_the_title( $id );
 		$military = Optima_Team::military_line( $p );
 		$langs    = Optima_Team::languages( $p );
+		// The at-a-glance card above already shows the role, languages, contact and maybe the photo.
+		$glanced  = self::$glance['id'] === $id;
+		if ( $glanced ) {
+			$p['role'] = '';
+			$langs     = array();
+			$s['contact'] = 0;
+		}
 
 		ob_start();
 		?>
 		<div class="optima-team-profile" data-optima-view="team_profile_view" data-optima-label="<?php echo esc_attr( wp_strip_all_tags( $name ) ); ?>">
 			<div class="optima-team-profile__head">
 				<?php
-				if ( has_post_thumbnail( $id ) ) {
+				if ( has_post_thumbnail( $id ) && ! ( $glanced && self::$glance['photo'] ) ) {
 					self::$own_photo = true;
 					echo '<div class="optima-team-profile__photo">' . get_the_post_thumbnail( $id, 'medium_large', array( 'alt' => esc_attr( wp_strip_all_tags( $name ) ), 'fetchpriority' => 'high', 'loading' => 'eager' ) ) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- core image markup.
 					self::$own_photo = false;
@@ -112,6 +156,12 @@ final class Optima_Team_Front {
 
 			<div class="optima-team-profile__facts">
 				<?php
+				$items = array();
+				foreach ( Optima_Team::practice_links( $p ) as $area ) {
+					$items[] = '' !== $area['url'] ? '<a href="' . esc_url( $area['url'] ) . '">' . esc_html( $area['name'] ) . '</a>' : esc_html( $area['name'] );
+				}
+				self::section( __( 'Practice areas', 'optima-team' ), $items );
+
 				if ( Optima_Team::is_law() && $p['attorney'] && $p['bar'] ) {
 					$items = array();
 					foreach ( $p['bar'] as $row ) {
@@ -138,6 +188,16 @@ final class Optima_Team_Front {
 				}
 
 				$items = array();
+				foreach ( (array) $p['certifications'] as $row ) {
+					$item = esc_html( Optima_Team::certification_line( $row ) );
+					if ( '' !== (string) ( $row['url'] ?? '' ) ) {
+						$item .= '<span class="optima-team-sub"><a href="' . esc_url( $row['url'] ) . '" rel="noopener">' . esc_html__( 'Check the certification', 'optima-team' ) . '</a></span>';
+					}
+					$items[] = $item;
+				}
+				self::section( __( 'Board certification', 'optima-team' ), $items );
+
+				$items = array();
 				foreach ( $p['education'] as $row ) {
 					$items[] = esc_html( implode( ', ', array_filter( array( $row['degree'], $row['school'], $row['year'] ) ) ) );
 				}
@@ -150,8 +210,8 @@ final class Optima_Team_Front {
 				self::section( __( 'Professional memberships', 'optima-team' ), array_map( 'esc_html', $p['memberships'] ) );
 
 				$items = array();
-				foreach ( $p['awards'] as $row ) {
-					$items[] = esc_html( implode( ', ', array_filter( array( $row['name'], $row['issuer'], $row['year'] ) ) ) );
+				foreach ( Optima_Team::printable_awards( $p ) as $row ) {
+					$items[] = self::award_html( $row );
 				}
 				self::section( __( 'Awards and honors', 'optima-team' ), $items );
 
@@ -192,6 +252,20 @@ final class Optima_Team_Front {
 		echo '</ul></section>';
 	}
 
+	/**
+	 * One award: its line, and the issuer's "How this is awarded" page beside
+	 * it when the setup file names one.
+	 *
+	 * @param array $row A printable award row.
+	 */
+	public static function award_html( array $row ): string {
+		$html = esc_html( Optima_Team::award_line( $row ) );
+		if ( '' !== (string) ( $row['standards_url'] ?? '' ) ) {
+			$html .= ' <a class="optima-team-standards" href="' . esc_url( $row['standards_url'] ) . '" rel="noopener">' . esc_html__( 'How this is awarded', 'optima-team' ) . '<span class="screen-reader-text"> ' . esc_html( (string) $row['name'] ) . '</span></a>';
+		}
+		return $html;
+	}
+
 	/** A readable name for a profile link. */
 	public static function site_label( string $url ): string {
 		$host  = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
@@ -222,7 +296,11 @@ final class Optima_Team_Front {
 	/* ---------- the grid ---------- */
 
 	/**
-	 * [optima_team columns="3" ids="12,15" limit="-1" bio="yes" heading="h3"]
+	 * [optima_team columns="3" ids="12,15" limit="-1" bio="yes" heading="h3" group="auto"]
+	 *
+	 * group="auto" (the default) lists attorneys first and everyone else under
+	 * their group once any profile has a group saved; "yes" always groups;
+	 * "no" keeps one list in profile order, as before release 2.
 	 *
 	 * @param array|string $atts Shortcode attributes.
 	 */
@@ -235,6 +313,7 @@ final class Optima_Team_Front {
 				'limit'   => '-1',
 				'bio'     => 'yes',
 				'heading' => 'h3',
+				'group'   => 'auto',
 			),
 			$atts,
 			'optima_team'
@@ -264,34 +343,77 @@ final class Optima_Team_Front {
 
 		wp_enqueue_style( 'optima-team' );
 
-		ob_start();
-		echo '<ul class="optima-team-grid" style="--optima-team-cols:' . (int) $cols . '">';
+		// Groups: attorneys first, then the rest by group, then anyone without one.
+		$sets  = array( '' => $people );
+		$named = false;
 		foreach ( $people as $person ) {
-			$p    = Optima_Team::profile( (int) $person->ID );
-			$name = get_the_title( $person );
-			$url  = get_permalink( $person );
-			echo '<li class="optima-team-card">';
-			if ( has_post_thumbnail( $person ) ) {
-				echo '<a class="optima-team-card__photo" href="' . esc_url( $url ) . '" tabindex="-1" aria-hidden="true" data-optima-track="team_profile_click" data-optima-label="' . esc_attr( wp_strip_all_tags( $name ) ) . '">';
-				echo get_the_post_thumbnail( $person, 'medium_large', array( 'alt' => '', 'loading' => 'lazy' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- core image markup.
-				echo '</a>';
+			if ( '' !== (string) Optima_Team::profile( (int) $person->ID )['group'] ) {
+				$named = true;
+				break;
 			}
-			echo '<div class="optima-team-card__text">';
-			echo '<' . esc_html( $heading ) . ' class="optima-team-card__name"><a href="' . esc_url( $url ) . '" data-optima-track="team_profile_click">' . esc_html( wp_strip_all_tags( $name ) ) . '</a></' . esc_html( $heading ) . '>';
-			if ( '' !== $p['role'] ) {
-				echo '<p class="optima-team-card__role">' . esc_html( $p['role'] ) . '</p>';
-			}
-			$military = Optima_Team::military_line( $p );
-			if ( '' !== $military ) {
-				echo '<p class="optima-team-card__meta">' . esc_html( $military ) . '</p>';
-			}
-			if ( 'no' !== $atts['bio'] && '' !== $p['bio'] ) {
-				echo '<p class="optima-team-card__bio">' . esc_html( $p['bio'] ) . '</p>';
-			}
-			echo '</div></li>';
 		}
-		echo '</ul>';
+		$grouped = 'yes' === $atts['group'] || ( 'auto' === $atts['group'] && $named );
+		if ( $grouped ) {
+			$sets = array_fill_keys( array_keys( Optima_Team::team_groups() ), array() );
+			$rest = array();
+			foreach ( $people as $person ) {
+				$g = Optima_Team::group_of( Optima_Team::profile( (int) $person->ID ) );
+				if ( '' !== $g ) {
+					$sets[ $g ][] = $person;
+				} else {
+					$rest[] = $person;
+				}
+			}
+			$sets['_other'] = $rest;
+			$sets           = array_filter( $sets );
+		}
+		$group_heading = array( 'h3' => 'h2', 'h4' => 'h3' )[ $heading ] ?? '';
+
+		ob_start();
+		foreach ( $sets as $key => $list ) {
+			if ( $grouped && count( $sets ) > 1 && '' !== $group_heading ) {
+				$label = Optima_Team::team_groups()[ $key ] ?? __( 'Our team', 'optima-team' );
+				echo '<' . esc_html( $group_heading ) . ' class="optima-team-group">' . esc_html( $label ) . '</' . esc_html( $group_heading ) . '>';
+			}
+			echo '<ul class="optima-team-grid" style="--optima-team-cols:' . (int) $cols . '">';
+			foreach ( $list as $person ) {
+				echo self::card( $person, $heading, 'no' !== $atts['bio'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in card().
+			}
+			echo '</ul>';
+		}
 		return (string) ob_get_clean();
+	}
+
+	/**
+	 * One person on the team grid.
+	 *
+	 * @param WP_Post $person  Profile post.
+	 * @param string  $heading h2, h3 or h4.
+	 * @param bool    $bio     Show the short bio.
+	 */
+	public static function card( WP_Post $person, string $heading = 'h3', bool $bio = true ): string {
+		$p    = Optima_Team::profile( (int) $person->ID );
+		$name = get_the_title( $person );
+		$url  = get_permalink( $person );
+		$h    = '<li class="optima-team-card">';
+		if ( has_post_thumbnail( $person ) ) {
+			$h .= '<a class="optima-team-card__photo" href="' . esc_url( $url ) . '" tabindex="-1" aria-hidden="true" data-optima-track="team_profile_click" data-optima-label="' . esc_attr( wp_strip_all_tags( $name ) ) . '">';
+			$h .= get_the_post_thumbnail( $person, 'medium_large', array( 'alt' => '', 'loading' => 'lazy' ) );
+			$h .= '</a>';
+		}
+		$h .= '<div class="optima-team-card__text">';
+		$h .= '<' . esc_html( $heading ) . ' class="optima-team-card__name"><a href="' . esc_url( $url ) . '" data-optima-track="team_profile_click">' . esc_html( wp_strip_all_tags( $name ) ) . '</a></' . esc_html( $heading ) . '>';
+		if ( '' !== $p['role'] ) {
+			$h .= '<p class="optima-team-card__role">' . esc_html( $p['role'] ) . '</p>';
+		}
+		$military = Optima_Team::military_line( $p );
+		if ( '' !== $military ) {
+			$h .= '<p class="optima-team-card__meta">' . esc_html( $military ) . '</p>';
+		}
+		if ( $bio && '' !== $p['bio'] ) {
+			$h .= '<p class="optima-team-card__bio">' . esc_html( $p['bio'] ) . '</p>';
+		}
+		return $h . '</div></li>';
 	}
 
 	/* ---------- excerpts and bylines ---------- */

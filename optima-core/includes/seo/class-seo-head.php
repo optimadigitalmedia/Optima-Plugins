@@ -16,9 +16,51 @@ final class Optima_SEO_Head {
 
 	public static function init() {
 		add_filter( 'pre_get_document_title', array( __CLASS__, 'document_title' ), 20 );
+		// Last, so no SEO box, theme data or theme filter can put a private page's name back.
+		add_filter( 'pre_get_document_title', array( __CLASS__, 'private_document_title' ), PHP_INT_MAX );
 		add_action( 'wp', array( __CLASS__, 'replace_core_canonical' ) );
 		add_action( 'wp_head', array( __CLASS__, 'output' ), 1 );
 		add_filter( 'wp_robots', array( __CLASS__, 'robots' ) );
+		// The REST API: a protected page's title stays generic for anyone who cannot edit it.
+		add_filter( 'the_title', array( __CLASS__, 'rest_private_title' ), PHP_INT_MAX, 2 );
+		add_action( 'rest_api_init', array( __CLASS__, 'rest_private_hooks' ) );
+	}
+
+	/** True when this REST reader may not see a protected post's own name. */
+	private static function hide_in_rest( $post ): bool {
+		$post = get_post( $post );
+		return $post instanceof WP_Post
+			&& '' !== (string) $post->post_password
+			&& ! current_user_can( 'edit_post', $post->ID );
+	}
+
+	/**
+	 * In a REST request (wp/v2/pages, posts, search), a password-protected
+	 * post's title reads "Private page" for anyone who cannot edit it.
+	 */
+	public static function rest_private_title( $title, $post_id = 0 ) {
+		if ( ! defined( 'REST_REQUEST' ) || ! REST_REQUEST || ! $post_id || ! self::hide_in_rest( $post_id ) ) {
+			return $title;
+		}
+		return self::private_title();
+	}
+
+	public static function rest_private_hooks() {
+		foreach ( get_post_types( array( 'show_in_rest' => true ), 'names' ) as $type ) {
+			add_filter( 'rest_prepare_' . $type, array( __CLASS__, 'rest_private_response' ), PHP_INT_MAX, 2 );
+		}
+	}
+
+	/** The same in the response itself, in case a theme or plugin built the title another way. */
+	public static function rest_private_response( $response, $post ) {
+		if ( $response instanceof WP_REST_Response && self::hide_in_rest( $post ) ) {
+			$data = $response->get_data();
+			if ( isset( $data['title'] ) && is_array( $data['title'] ) ) {
+				$data['title'] = array( 'rendered' => self::private_title() );
+				$response->set_data( $data );
+			}
+		}
+		return $response;
 	}
 
 	/**
@@ -41,11 +83,50 @@ final class Optima_SEO_Head {
 		}
 		// The theme's per-URL title from optima-setup.json (seo.pages), used as written.
 		// A title that uses %page% is applied once WordPress has built that part (Optima_SEO_Setup::format_title).
+		// A title naming %title% (itself) is ignored: WordPress builds the title instead.
 		$setup = (string) Optima_SEO_Setup::page( 'title' );
-		if ( '' !== $setup && false === strpos( $setup, '%page%' ) ) {
+		if ( '' !== $setup && false === strpos( $setup, '%page%' ) && false === strpos( $setup, '%title%' ) ) {
 			return Optima_SEO_Setup::tokens( $setup );
 		}
 		return $title;
+	}
+
+	/**
+	 * True when this post (default: the page being viewed) is password protected.
+	 * Checked on the post, not the visitor's cookie, so a cached copy and a
+	 * visitor who has not typed the password see the same generic words.
+	 *
+	 * @param int|WP_Post|null $post
+	 */
+	public static function is_private( $post = null ): bool {
+		if ( null === $post ) {
+			if ( ! is_singular() ) {
+				return false;
+			}
+			$post = get_queried_object_id();
+		}
+		$post = get_post( $post );
+		return $post instanceof WP_Post && '' !== (string) $post->post_password;
+	}
+
+	/** The generic name a password-protected page shows in public (title, share title, oEmbed). */
+	public static function private_title(): string {
+		$title = (string) apply_filters( 'optima_core_private_title', 'Private page' );
+		return '' !== $title ? $title : 'Private page';
+	}
+
+	/**
+	 * A password-protected page's <title> is generic ("Private page | Site"), so a
+	 * private partner page never leaks the name in its title, share tags or tab.
+	 */
+	public static function private_document_title( $title ) {
+		if ( ! self::is_private() ) {
+			return $title;
+		}
+		$site = (string) Optima_SEO_Setup::site( 'site_name' );
+		$site = '' !== $site ? $site : wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
+		$sep  = (string) apply_filters( 'document_title_separator', '-' );
+		return '' !== $site ? self::private_title() . ' ' . $sep . ' ' . $site : self::private_title();
 	}
 
 	/**
@@ -88,6 +169,13 @@ final class Optima_SEO_Head {
 		}
 		$locale      = (string) Optima_SEO_Setup::site( 'locale' );
 		$locale      = '' !== $locale ? $locale : get_locale();
+		// A password-protected page: the generic title everywhere, no description, no image alt text.
+		if ( self::is_private() ) {
+			$description = '';
+			$og_title    = $title;
+			$og_desc     = '';
+			unset( $image['alt'] );
+		}
 
 		$tags = array();
 
@@ -124,7 +212,7 @@ final class Optima_SEO_Head {
 		if ( $is_article && Optima_SEO_Setup::prints( 'article_times' ) ) {
 			$id     = get_queried_object_id();
 			$tags[] = sprintf( '<meta property="article:published_time" content="%s" />', esc_attr( get_the_date( 'c', $id ) ) );
-			$tags[] = sprintf( '<meta property="article:modified_time" content="%s" />', esc_attr( get_the_modified_date( 'c', $id ) ) );
+			$tags[] = sprintf( '<meta property="article:modified_time" content="%s" />', esc_attr( Optima_Core_Content_Changed::formatted( $id, 'c' ) ) );
 		}
 
 		// Twitter.
@@ -173,7 +261,9 @@ final class Optima_SEO_Head {
 				$robots = Optima_SEO_Setup::apply_robots( (array) $robots, $rule );
 			}
 		}
-		if ( is_singular() && get_post_meta( get_queried_object_id(), OPTIMA_SEO_META_NOINDEX, true ) ) {
+		// Out of search: the page's own noindex switch, a password-protected page,
+		// and a single testimonial or FAQ (they show inside pages and stay out of the sitemap).
+		if ( is_singular() && ( get_post_meta( get_queried_object_id(), OPTIMA_SEO_META_NOINDEX, true ) || self::is_private() || Optima_SEO_Sitemap::is_skipped_single() ) ) {
 			$robots['noindex'] = true;
 			unset( $robots['index'] );
 		}
@@ -246,9 +336,11 @@ final class Optima_SEO_Head {
 			if ( false === $setup ) {
 				return '';
 			}
-			$setup = Optima_SEO_Setup::tokens( (string) $setup );
+			// %link% is this very address, so a canonical naming it means the default below.
+			// Resolving it here would call canonical_url() again, without end.
+			$setup = (string) $setup;
 			if ( '' !== $setup && false === strpos( $setup, '%link%' ) ) {
-				return Optima_SEO_Setup::resolve( $setup );
+				return Optima_SEO_Setup::resolve( Optima_SEO_Setup::tokens( $setup ) );
 			}
 		}
 		if ( is_singular() ) {

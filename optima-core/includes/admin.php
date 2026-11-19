@@ -67,6 +67,7 @@ final class Optima_Core_Admin {
 			add_submenu_page( $parent, 'Search health', 'Search health', 'manage_options', 'optima', array( __CLASS__, 'render' ) );
 			add_submenu_page( $parent, 'Details', 'Details', 'manage_options', 'optima&tab=business', array( __CLASS__, 'render' ) );
 		}
+		add_submenu_page( $parent, 'Offices', 'Offices', 'manage_options', 'optima&tab=offices', array( __CLASS__, 'render' ) );
 		// Testimonials and FAQs are content: their lists sit under Optima, Content (rules 9 and 10).
 		if ( post_type_exists( 'testimonial' ) ) {
 			add_submenu_page( $parent, 'Testimonials', 'Testimonials', 'edit_posts', 'edit.php?post_type=testimonial' );
@@ -90,8 +91,8 @@ final class Optima_Core_Admin {
 	/** @return array<string,string> tab => label */
 	private static function tabs() {
 		$tabs = self::hub()
-			? array( 'business' => 'Details', 'seo' => 'SEO' )
-			: array( 'dashboard' => 'Search health', 'business' => 'Details', 'seo' => 'SEO' );
+			? array( 'business' => 'Details', 'offices' => 'Offices', 'seo' => 'SEO' )
+			: array( 'dashboard' => 'Search health', 'business' => 'Details', 'offices' => 'Offices', 'seo' => 'SEO' );
 		$tabs['sync']    = 'Approved copy';
 		$tabs['protect'] = 'Spam protection';
 		foreach ( self::groups() as $slug => $group ) {
@@ -115,6 +116,7 @@ final class Optima_Core_Admin {
 		$ledes = array(
 			'dashboard' => 'A quick check that search engines and AI tools can find the business and read it correctly.',
 			'business'  => 'The business name, phone, address and profiles, typed once here. Every other screen shows them read-only with a link back. Keep them identical to the Google Business Profile.',
+			'offices'   => 'Every office, typed once here: address, phone, Place ID, walk-in hours and phone hours. Each office page gets its own entry in the schema and the office cards show them. With no offices, the site uses the one address on Details.',
 			'sync'      => 'Keeps each page in step with the copy the theme ships. Pages nobody has edited update on their own after a theme update; anything changed in WordPress waits for you.',
 			'protect'   => 'What keeps spam away from the business: the form guard and two switches. Both switches are on unless you turn them off.',
 			'seo'       => 'How the site shows in search results: the checks first, then the site-wide settings. Each page sets its own title and description in its SEO box; the sitemap is built at /wp-sitemap.xml.',
@@ -125,6 +127,8 @@ final class Optima_Core_Admin {
 
 		if ( 'business' === $tab ) {
 			self::tab_business();
+		} elseif ( 'offices' === $tab ) {
+			Optima_Core_Offices::render_tab();
 		} elseif ( 'seo' === $tab ) {
 			self::tab_seo();
 		} elseif ( 'sync' === $tab ) {
@@ -294,11 +298,29 @@ final class Optima_Core_Admin {
 			'no_found_rows'  => true,
 		) );
 		$out = array();
+		// The theme's setup data (optima-setup.json, seo.pages) describes pages by
+		// address. A page it covers is not a gap: Core prints that description, and
+		// typing one into the SEO box would override the approved words.
+		$setup = class_exists( 'Optima_SEO_Setup' ) && Optima_SEO_Setup::active()
+			? (array) ( Optima_SEO_Setup::data()['pages'] ?? array() )
+			: array();
+		$base  = (string) wp_parse_url( home_url( '/' ), PHP_URL_PATH );
 		foreach ( $ids as $id ) {
 			$desc = get_post_meta( $id, OPTIMA_SEO_META_DESC, true );
-			if ( '' === $desc && ! has_excerpt( $id ) ) {
-				$out[] = (int) $id;
+			if ( '' !== $desc || has_excerpt( $id ) ) {
+				continue;
 			}
+			if ( $setup ) {
+				$path = (string) wp_parse_url( (string) get_permalink( $id ), PHP_URL_PATH );
+				if ( '' !== $base && '/' !== $base && 0 === strpos( $path, rtrim( $base, '/' ) ) ) {
+					$path = substr( $path, strlen( rtrim( $base, '/' ) ) );
+				}
+				$path = (int) get_option( 'page_on_front' ) === (int) $id ? '/' : Optima_SEO_Setup::normalize_path( $path );
+				if ( isset( $setup[ $path ] ) && is_array( $setup[ $path ] ) && array_key_exists( 'description', $setup[ $path ] ) ) {
+					continue;
+				}
+			}
+			$out[] = (int) $id;
 		}
 		return $out;
 	}
@@ -353,7 +375,8 @@ final class Optima_Core_Admin {
 					$types = Optima_Core_Business::types();
 					echo '<select id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '"><option value="">Not set</option>';
 					if ( '' !== $values[ $key ] && ! isset( $types[ $values[ $key ] ] ) ) {
-						echo '<option value="' . esc_attr( $values[ $key ] ) . '" selected>' . esc_html( $values[ $key ] ) . '</option>';
+						$own = 'Attorney' === $values[ $key ] ? 'Attorney (shows in search as LegalService; choose Law firm)' : $values[ $key ];
+						echo '<option value="' . esc_attr( $values[ $key ] ) . '" selected>' . esc_html( $own ) . '</option>';
 					}
 					foreach ( $types as $type => $label ) {
 						echo '<option value="' . esc_attr( $type ) . '"' . selected( $values[ $key ], $type, false ) . '>' . esc_html( $label ) . '</option>';
@@ -413,6 +436,9 @@ final class Optima_Core_Admin {
 			echo '<tr><th scope="row"><label for="' . esc_attr( $id ) . '">' . esc_html( 'default_image' === $key ? 'Default share image' : $label ) . '</label></th><td>';
 			if ( 'home_description' === $key ) {
 				printf( '<textarea id="%s" name="%s" rows="3" class="large-text">%s</textarea>', esc_attr( $id ), esc_attr( $name ), esc_textarea( $values[ $key ] ) );
+			} elseif ( 'alternate_name' === $key ) {
+				printf( '<textarea id="%s" name="%s" rows="2" class="large-text">%s</textarea>', esc_attr( $id ), esc_attr( $name ), esc_textarea( $values[ $key ] ) );
+				echo '<p class="description">Optional. One per line, such as the name the business trades under or a short name people type. Search engines read it as another name for this site. Leave empty when the business has one name.</p>';
 			} else {
 				$url = (string) $values[ $key ];
 				echo '<div class="optima-media">';
