@@ -326,6 +326,108 @@ ok(!is_wp_error($res) && 1===$res['restored'] && !empty($form['is_trash']) && em
 ok('missing'===states()['form/contact'], 'and it can be added again');
 delete_option('synctest_gf');
 
+// 1.6.1: status keeping and the retire list. Neither ever runs on its own.
+foreach (get_posts(array('post_type'=>'page','numberposts'=>-1,'post_status'=>array('publish','draft','pending','private','future','trash'),'fields'=>'ids')) as $id) wp_delete_post($id, true);
+foreach (array(Optima_Sync::BASES, Optima_Sync::JOURNAL) as $o) delete_option($o);
+function pg($slug, $status='publish', $parent=0){ return wp_insert_post(array('post_type'=>'page','post_name'=>$slug,'post_title'=>ucfirst($slug),'post_status'=>$status,'post_parent'=>$parent,'post_content'=>'x')); }
+$soon = pg('coming-soon'); $launch = pg('launch', 'draft'); $members = pg('members', 'private');
+$front = pg('home'); update_option('show_on_front','page'); update_option('page_on_front',$front);
+$ind = pg('industries'); $good = pg('truck-drivers', 'publish', $ind);
+$oldind = pg('industries-x'); $junk = pg('truck-drivers', 'publish', $oldind); wp_trash_post($oldind); // WordPress renames the parent: industries-x__trashed
+$junkpath = get_page_uri($junk);
+$oldp = pg('old-parent'); $keeper = pg('keeper', 'publish', $oldp);
+$dupp = pg('dup-parent'); $dupc = pg('dup-child', 'publish', $dupp);
+$m = array('sync_version'=>1,
+  'pages'=>array(
+    array('slug'=>'coming-soon','status'=>'draft'),
+    array('slug'=>'launch','status'=>'publish'),
+    array('slug'=>'members','status'=>'publish'),
+    array('slug'=>'new-page','status'=>'publish','content'=>'New','create'=>true),
+    array('slug'=>'clash','status'=>'draft','content'=>'x','create'=>array('status'=>'publish')),
+    array('slug'=>'bad','status'=>'private'),
+  ),
+  'retire'=>array(
+    array('path'=>$junkpath,'reason'=>'Duplicate of /industries/truck-drivers/','redirect'=>'/industries/truck-drivers/'),
+    array('path'=>'home','reason'=>'x'),
+    array('path'=>'launch','reason'=>'x'),
+    array('path'=>'no-such-page','reason'=>'Gone already'),
+    array('path'=>'old-parent','reason'=>'x'),
+    array('path'=>'dup-parent','reason'=>'x'),
+    array('path'=>'dup-parent/dup-child','reason'=>'x'),
+    array('reason'=>'no path'),
+  ),
+);
+manifest($m); bump('1.6.3');
+$s = states(); $r = rows(); $errs = Optima_Sync::plan()['errors'];
+ok('industries-x__trashed/truck-drivers' === $junkpath, 'the stand-in junk page sits under a trashed parent: '.$junkpath);
+ok('published_early'===$s['page/coming-soon#status'], 'the theme says draft and the page is published: published early');
+ok('ready_to_publish'===$s['page/launch#status'], 'the theme says publish and the page is a draft: ready to publish');
+ok('current'===$s['page/members#status'], 'a private page was set that way on purpose and reads current');
+ok('missing'===$s['page/new-page#status'] && !empty($r['page/new-page#status']['covered']) && 'publish'===$r['page/new-page#create']['status'], 'a page not on the site leaves its status to its create block, which takes the entry status');
+ok((bool) preg_grep('/clash has status "draft" but its "create" block says "publish"/', $errs), 'an entry status and a create status that disagree are refused');
+ok((bool) preg_grep('/The "status" for bad must be/', $errs), 'a status other than publish or draft is refused');
+ok('retire'===$s['retire/page/'.$junkpath] && empty($r['retire/page/'.$junkpath]['blocked']), 'a retired page still on the site is listed: match');
+ok('current'===$s['retire/page/no-such-page'], 'a retired page that is not on the site needs nothing: miss');
+ok(false !== strpos((string) ($r['retire/page/home']['blocked'] ?? ''), 'front page'), 'the front page is refused');
+ok(!isset($s['retire/page/launch']) && (bool) preg_grep('/lists \/launch\/ as a live page/', $errs), 'a page the manifest lists as live is refused');
+ok(false !== strpos((string) ($r['retire/page/old-parent']['blocked'] ?? ''), 'does not retire'), 'a page with a live page under it is refused');
+ok(empty($r['retire/page/dup-parent']['blocked']), 'a parent whose pages the theme also retires is allowed');
+ok((bool) preg_grep('/A retire entry needs a "path"/', $errs), 'a retire entry with no path is reported');
+$review = Optima_Sync::summary(true)['review'];
+ok(13 === $review, 'review count: early, ready, five retire rows, the new page, the clash page with no create block, four manifest errors (covered status rows not counted): '.$review);
+Optima_Sync::maybe_auto_run();
+ok('publish'===get_post_status($soon) && 'draft'===get_post_status($launch) && 'publish'===get_post_status($junk), 'the automatic run never changes a status or trashes a page');
+$res = Optima_Sync::apply('', 'safe', array(), 'auto');
+ok('publish'===get_post_status($soon) && 'publish'===get_post_status($junk), 'nor does a safe run');
+
+// Status: set back to draft and publish, then undo.
+$res = Optima_Sync::apply(hashnow(), 'status', array('page/coming-soon#status','page/launch#status'));
+ok(!is_wp_error($res) && 2===$res['written'] && 'draft'===get_post_status($soon) && 'publish'===get_post_status($launch), 'set back to draft and publish, as ticked');
+$s = states();
+ok('current'===$s['page/coming-soon#status'] && 'current'===$s['page/launch#status'], 'and both read current');
+$res = Optima_Sync::undo();
+ok(!is_wp_error($res) && 2===$res['restored'] && 'publish'===get_post_status($soon) && 'draft'===get_post_status($launch), 'undo puts both statuses back');
+$res = Optima_Sync::apply(hashnow(), 'status', array('page/coming-soon#status'));
+wp_update_post(array('ID'=>$soon,'post_status'=>'pending'));
+$res = Optima_Sync::undo();
+ok(!is_wp_error($res) && in_array('coming-soon: status', $res['skipped'], true) && 'pending'===get_post_status($soon), 'undo leaves a status someone changed since');
+wp_update_post(array('ID'=>$soon,'post_status'=>'publish'));
+$res = Optima_Sync::apply(hashnow(), 'keep', array('page/coming-soon#status'));
+ok(!is_wp_error($res) && 'current'===states()['page/coming-soon#status'] && 'publish'===get_post_status($soon), '"Keep it as it is" clears the flag and changes nothing');
+$m['pages'][0]['status']='publish'; manifest($m); bump('1.6.4');
+$m['pages'][0]['status']='draft'; manifest($m); bump('1.6.5');
+ok('current'===states()['page/coming-soon#status'], 'a kept status stays quiet while neither side moves');
+wp_update_post(array('ID'=>$soon,'post_status'=>'draft')); wp_update_post(array('ID'=>$soon,'post_status'=>'publish'));
+delete_option(Optima_Sync::BASES);
+ok('published_early'===states()['page/coming-soon#status'], 'without the keep it is flagged again');
+
+// Retire: children with the parent, refused rows, the 301, undo.
+$res = Optima_Sync::apply(hashnow(), 'retire', array('retire/page/dup-parent'));
+ok(is_wp_error($res) && 'children'===$res->get_error_code() && 'publish'===get_post_status($dupp), 'a parent without its retired pages ticked is refused, nothing trashed');
+$res = Optima_Sync::apply(hashnow(), 'retire', array('retire/page/home'));
+ok(!is_wp_error($res) && 0===$res['written'] && 'publish'===get_post_status($front), 'the front page is never trashed, even when ticked');
+$redirects = class_exists('Optima_Redirects');
+$id = 'retire/page/'.$junkpath;
+ok($redirects ? !empty(rows()[$id]['redirect_ok']) : false !== strpos((string) rows()[$id]['redirect_note'], 'not active'), $redirects ? 'with Optima Redirects active the 301 is offered' : 'without Optima Redirects the screen says the 301 is not added here');
+$res = Optima_Sync::apply(hashnow(), 'retire', array($id, 'redirect:'.$id, 'retire/page/dup-parent', 'retire/page/dup-parent/dup-child'));
+ok(!is_wp_error($res) && 3===$res['written'] && 'trash'===get_post_status($junk) && 'trash'===get_post_status($dupp) && 'trash'===get_post_status($dupc), 'move to the trash: the junk page and a parent with its page, deepest first');
+ok('publish'===get_post_status($good) && null !== get_post($junk), 'the live page is untouched and nothing was deleted');
+if ($redirects) {
+  $red = Optima_Redirects_Store::find(Optima_Redirects::normalize_source('/'.$junkpath.'/'));
+  ok($red && '/industries/truck-drivers/'===$red->target && 301===(int)$red->type, 'the 301 from the old address was added');
+}
+$s = states();
+ok('current'===$s[$id] && 'current'===$s['retire/page/dup-parent'], 'trashed pages read current');
+$res = Optima_Sync::undo();
+ok(!is_wp_error($res) && 3===$res['restored'] && 'publish'===get_post_status($junk) && 'publish'===get_post_status($dupc), 'undo brings them back from the trash with the status they had');
+ok(get_page_by_path($junkpath) && $junk===(int) get_page_by_path($junkpath)->ID, 'at the address they had');
+if ($redirects) ok(null === Optima_Redirects_Store::find(Optima_Redirects::normalize_source('/'.$junkpath.'/')), 'and the 301 Site Sync added is gone');
+$res = Optima_Sync::apply(hashnow(), 'retire', array($id));
+wp_delete_post($junk, true);
+$res = Optima_Sync::undo();
+ok(!is_wp_error($res) && in_array('/'.$junkpath.'/: retired by the theme', $res['skipped'], true), 'undo names a retired page someone emptied from the trash since');
+update_option('show_on_front','posts'); delete_option('page_on_front');
+
 // No manifest: status only.
 unlink($theme.'/optima-sync.json');
 ok(Optima_Sync::plan()['manifest']===false && Optima_Sync::summary(true)['review']===0, 'no manifest means status only, nothing to review');

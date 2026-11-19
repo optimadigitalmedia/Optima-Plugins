@@ -12,7 +12,10 @@
  * right before each write, and can be undone. Since 1.6.1.0 the manifest can
  * also say how to create a page the site lacks (a page's "create" block) and
  * list Gravity Forms exports ("forms"), so a site owner never hand-imports a
- * WordPress import file or a form file again. The design started from the
+ * WordPress import file or a form file again. Since 1.6.1.0 it also keeps a
+ * page's status the theme names ("status": draft or publish) and lists the
+ * junk pages the theme retires ("retire"), so a theme never carries one-off
+ * cleanup code. Status changes and trashing always wait for a person. The design started from the
  * reviewed content update built for a client site in September 2026 and is
  * generalized here so every site shares it. Spec: docs/site-sync-spec.md.
  *
@@ -41,6 +44,12 @@ final class Optima_Sync {
 	const CONFLICT = 'conflict';  // Both changed, or an unknown saved value.
 	const MISSING  = 'missing';   // The page, post or form the item names is not there.
 	const OFF      = 'unavailable'; // A form row while Gravity Forms is not active: shown, never acted on.
+	const EARLY    = 'published_early';  // The theme says draft, the page is published.
+	const READY    = 'ready_to_publish'; // The theme says publish, the page is a draft or pending.
+	const RETIRE   = 'retire';           // A page the theme retires is still on the site.
+
+	/** States that wait for a person, beyond edited and conflict. */
+	const PERSON = array( self::MISSING, self::OFF, self::EARLY, self::READY, self::RETIRE );
 
 	/** Post statuses a manifest may create a page with. */
 	const CREATE_STATUSES = array( 'publish', 'draft' );
@@ -133,6 +142,14 @@ final class Optima_Sync {
 			if ( isset( $page['source'] ) || isset( $page['content'] ) ) {
 				$items[] = array( 'kind' => 'post', 'post_type' => $type, 'slug' => $slug, 'field' => 'content', 'source' => $page['source'] ?? null, 'value' => $page['content'] ?? null, 'previous' => $page['previous'] ?? array() );
 			}
+			if ( isset( $page['status'] ) ) {
+				$status = (string) $page['status'];
+				if ( ! in_array( $status, self::CREATE_STATUSES, true ) || '' === trim( $slug, '/' ) ) {
+					$errors[] = 'The "status" for ' . ( '' === $slug ? '(no slug)' : $slug ) . ' must be "publish" or "draft", on an entry with a slug.';
+				} else {
+					$items[] = array( 'kind' => 'status', 'post_type' => $type, 'slug' => $slug, 'field' => 'status', 'value' => $status );
+				}
+			}
 			if ( isset( $page['create'] ) ) {
 				$create = self::create_spec( $page, $type, $slug );
 				if ( is_string( $create ) ) {
@@ -200,6 +217,32 @@ final class Optima_Sync {
 				continue;
 			}
 			$items[] = array( 'kind' => 'form', 'file' => $file, 'title' => $title );
+		}
+
+		$live = array();
+		foreach ( (array) ( $manifest['pages'] ?? array() ) as $page ) {
+			$live[ sanitize_key( $page['post_type'] ?? 'page' ) . '/' . trim( (string) ( $page['slug'] ?? '' ), '/' ) ] = true;
+		}
+		foreach ( (array) ( $manifest['retire'] ?? array() ) as $r ) {
+			$path = is_array( $r ) ? trim( (string) ( $r['path'] ?? '' ), '/' ) : '';
+			$type = is_array( $r ) ? sanitize_key( $r['post_type'] ?? 'page' ) : 'page';
+			if ( '' === $path || preg_match( '#[^a-z0-9_\-/%]#i', $path ) || false !== strpos( $path, '//' ) ) {
+				$errors[] = 'A retire entry needs a "path" (the page address, like "services/old-page").';
+				continue;
+			}
+			if ( isset( $live[ $type . '/' . $path ] ) ) {
+				$errors[] = 'The theme lists /' . $path . '/ as a live page and also retires it; it is left alone.';
+				continue;
+			}
+			$items[] = array(
+				'kind'      => 'retire',
+				'post_type' => $type,
+				'slug'      => $path,
+				'field'     => 'retire',
+				'reason'    => is_array( $r ) ? trim( (string) ( $r['reason'] ?? '' ) ) : '',
+				'redirect'  => is_array( $r ) ? trim( (string) ( $r['redirect'] ?? '' ) ) : '',
+				'value'     => $path,
+			);
 		}
 
 		foreach ( $items as &$item ) {
@@ -275,7 +318,10 @@ final class Optima_Sync {
 		if ( '' !== $parent && '' !== $path && $parent !== $path ) {
 			return 'The "create" block for ' . $name . ' names parent "' . $parent . '", but its slug puts it under "' . $path . '".';
 		}
-		$status = (string) ( $c['status'] ?? 'draft' );
+		if ( isset( $c['status'], $page['status'] ) && $c['status'] !== $page['status'] ) {
+			return 'The entry for ' . $name . ' has status "' . $page['status'] . '" but its "create" block says "' . $c['status'] . '"; give one.';
+		}
+		$status = (string) ( $c['status'] ?? ( $page['status'] ?? 'draft' ) );
 		if ( ! in_array( $status, self::CREATE_STATUSES, true ) ) {
 			return 'The "create" block for ' . $name . ' has status "' . $status . '"; use "publish" or "draft".';
 		}
@@ -318,6 +364,9 @@ final class Optima_Sync {
 		if ( 'form' === $item['kind'] ) {
 			return 'form/' . sanitize_title( $item['title'] );
 		}
+		if ( 'retire' === $item['kind'] ) {
+			return 'retire/' . $item['post_type'] . '/' . $item['slug'];
+		}
 		return $item['post_type'] . '/' . $item['slug'] . '#' . $item['field'];
 	}
 
@@ -339,6 +388,12 @@ final class Optima_Sync {
 		}
 		if ( 'form' === $item['kind'] ) {
 			return 'Form: ' . $item['title'];
+		}
+		if ( 'status' === $item['kind'] ) {
+			return $item['slug'] . ': status';
+		}
+		if ( 'retire' === $item['kind'] ) {
+			return '/' . $item['slug'] . '/: retired by the theme';
 		}
 		if ( 'create' === $item['kind'] ) {
 			return $item['slug'] . ': new ' . ( 'page' === $item['post_type'] ? 'page' : $item['post_type'] );
@@ -604,6 +659,14 @@ final class Optima_Sync {
 				$rows[] = self::plan_form( $item, $bases );
 				continue;
 			}
+			if ( 'status' === $item['kind'] ) {
+				$rows[] = self::plan_status( $item, $cache, $bases );
+				continue;
+			}
+			if ( 'retire' === $item['kind'] ) {
+				$rows[] = self::plan_retire( $item, $bases );
+				continue;
+			}
 			if ( 'post' === $item['kind'] ) {
 				$item['post_id'] = self::post_id( $item, $cache );
 				if ( ! $item['post_id'] ) {
@@ -650,6 +713,7 @@ final class Optima_Sync {
 			}
 		}
 		unset( $row );
+		$rows = self::guard_retire( $rows );
 
 		$hash = self::hash(
 			wp_json_encode(
@@ -665,6 +729,159 @@ final class Optima_Sync {
 			)
 		);
 		return array( 'rows' => $rows, 'errors' => $parsed['errors'], 'hash' => $hash, 'manifest' => null !== self::manifest() );
+	}
+
+	/**
+	 * A status row. Only a person changes a status: a page the theme keeps as a
+	 * draft that is published reads "published early", a page the theme publishes
+	 * that is a draft or pending reads "ready to publish". Private and scheduled
+	 * pages were set that way on purpose and read current. A page that is not on
+	 * the site is left to its other rows (its "new page" row sets the status).
+	 *
+	 * @param array<string,array> $bases Bases recorded at the last sync (a kept status).
+	 */
+	private static function plan_status( array $item, array &$cache, array $bases ) {
+		$item['post_id'] = self::post_id( $item, $cache );
+		$item['t']       = self::hash( $item['theme'] );
+		if ( ! $item['post_id'] ) {
+			$item['state']   = self::MISSING;
+			$item['covered'] = true;
+			$item['d']       = '';
+			return $item;
+		}
+		$now         = (string) get_post_status( $item['post_id'] );
+		$item['raw'] = $now;
+		$item['d']   = self::hash( $now );
+		$state       = self::CURRENT;
+		if ( 'draft' === $item['theme'] && 'publish' === $now ) {
+			$state = self::EARLY;
+		} elseif ( 'publish' === $item['theme'] && in_array( $now, array( 'draft', 'pending' ), true ) ) {
+			$state = self::READY;
+		}
+		$base = $bases[ $item['id'] ] ?? null;
+		if ( self::CURRENT !== $state && is_array( $base ) && ! empty( $base['kept'] ) && ( $base['t'] ?? '' ) === $item['t'] && ( $base['d'] ?? '' ) === $item['d'] ) {
+			$state = self::CURRENT; // A person chose to keep this status; asked again only when either side moves.
+		}
+		$item['state'] = $state;
+		return $item;
+	}
+
+	/**
+	 * A retire row: "retire" while the page is on the site (not in the trash),
+	 * current once it is gone. Guards are added by guard_retire().
+	 *
+	 * @param array<string,array> $bases Bases recorded at the last sync (a kept page).
+	 */
+	private static function plan_retire( array $item, array $bases ) {
+		$item['t']       = self::hash( wp_json_encode( array( $item['slug'], $item['redirect'] ) ) );
+		$item['post_id'] = self::find_post( $item['post_type'], $item['slug'] );
+		$item['d']       = '';
+		$item['raw']     = '';
+		if ( ! $item['post_id'] ) {
+			$item['state'] = self::CURRENT; // Not on the site (or already in the trash): nothing to do.
+			return $item;
+		}
+		$post            = get_post( $item['post_id'] );
+		$item['raw']     = $post->post_status;
+		$item['title']   = $post->post_title;
+		$item['d']       = self::hash( $post->ID . '|' . $post->post_status . '|' . $post->post_modified_gmt );
+		$item['old_url'] = self::address( $post );
+		$base            = $bases[ $item['id'] ] ?? null;
+		$kept            = is_array( $base ) && ! empty( $base['kept'] ) && ( $base['t'] ?? '' ) === $item['t'] && ( $base['d'] ?? '' ) === $item['d'];
+		$item['state']   = $kept ? self::CURRENT : self::RETIRE;
+		if ( '' !== $item['redirect'] ) {
+			$item['redirect_note'] = self::redirect_note( $item );
+			$item['redirect_ok']   = '' === $item['redirect_note'];
+		}
+		return $item;
+	}
+
+	/** The address a page answers at, relative to the site ("/services/old-page/"), even on plain permalinks. */
+	private static function address( WP_Post $post ) {
+		if ( '' === (string) get_option( 'permalink_structure' ) && is_post_type_hierarchical( $post->post_type ) ) {
+			return '/' . get_page_uri( $post ) . '/';
+		}
+		return (string) wp_make_link_relative( (string) get_permalink( $post ) );
+	}
+
+	/** Why the 301 for a retired page cannot be added here, or '' when it can. */
+	private static function redirect_note( array $item ) {
+		if ( ! class_exists( 'Optima_Redirects' ) || ! class_exists( 'Optima_Redirects_Store' ) ) {
+			return 'Optima Redirects is not active, so the 301 to ' . $item['redirect'] . ' is not added here. The theme\'s redirects file carries it, or add it on the Redirects screen once the plugin is on.';
+		}
+		$source = Optima_Redirects::normalize_source( (string) ( $item['old_url'] ?? '' ) );
+		$found  = '' !== $source ? Optima_Redirects_Store::find( $source ) : null;
+		if ( $found ) {
+			return 'A redirect from this address already exists (to ' . $found->target . '), so it is left as it is.';
+		}
+		return '';
+	}
+
+	/**
+	 * Pages Site Sync never trashes: the front page, the posts page, the privacy
+	 * page, any page the manifest itself lists as live, and a page with pages
+	 * under it that the theme does not retire too (trashing a parent renames it,
+	 * which moves every page under it to a new address).
+	 *
+	 * @param array<int,array<string,mixed>> $rows Every planned row.
+	 * @return array<int,array<string,mixed>>
+	 */
+	private static function guard_retire( array $rows ) {
+		$live    = array();
+		$retired = array();
+		foreach ( $rows as $row ) {
+			if ( in_array( $row['kind'], array( 'post', 'create', 'status' ), true ) && ! empty( $row['post_id'] ) ) {
+				$live[ (int) $row['post_id'] ] = true;
+			}
+			if ( 'retire' === $row['kind'] && self::RETIRE === $row['state'] ) {
+				$retired[ (int) $row['post_id'] ] = true;
+			}
+		}
+		$keep = array(
+			(int) get_option( 'page_on_front' )              => 'It is the front page.',
+			(int) get_option( 'page_for_posts' )             => 'It is the posts page.',
+			(int) get_option( 'wp_page_for_privacy_policy' ) => 'It is the privacy policy page.',
+		);
+		unset( $keep[0] );
+		foreach ( $rows as &$row ) {
+			if ( 'retire' !== $row['kind'] || self::RETIRE !== $row['state'] ) {
+				continue;
+			}
+			$id = (int) $row['post_id'];
+			if ( isset( $keep[ $id ] ) ) {
+				$row['blocked'] = $keep[ $id ] . ' Site Sync never trashes it.';
+			} elseif ( isset( $live[ $id ] ) ) {
+				$row['blocked'] = 'The theme lists this page as live elsewhere in optima-sync.json, so it is left alone.';
+			} else {
+				$row['children'] = self::children( $row['post_type'], $id );
+				$stay            = array_diff( $row['children'], array_keys( $retired ) );
+				if ( $stay ) {
+					$row['blocked'] = sprintf( _n( 'It has %d page under it that the theme does not retire. Trashing it would move that page to a new address.', 'It has %d pages under it that the theme does not retire. Trashing it would move those pages to new addresses.', count( $stay ), 'optima-core' ), count( $stay ) );
+				}
+			}
+		}
+		unset( $row );
+		return $rows;
+	}
+
+	/** Ids of the pages directly under a page, in any status but the trash. */
+	private static function children( $type, $id ) {
+		if ( ! is_post_type_hierarchical( $type ) ) {
+			return array();
+		}
+		return array_map(
+			'intval',
+			get_posts(
+				array(
+					'post_type'        => $type,
+					'post_parent'      => (int) $id,
+					'post_status'      => array( 'publish', 'draft', 'pending', 'private', 'future' ),
+					'numberposts'      => -1,
+					'fields'           => 'ids',
+					'suppress_filters' => true,
+				)
+			)
+		);
 	}
 
 	/**
@@ -795,7 +1012,7 @@ final class Optima_Sync {
 			return $cached;
 		}
 		$plan   = self::plan();
-		$counts = array_fill_keys( array( self::CURRENT, self::UPDATE, self::EDITED, self::CONFLICT, self::MISSING, self::OFF ), 0 );
+		$counts = array_fill_keys( array_merge( array( self::CURRENT, self::UPDATE, self::EDITED, self::CONFLICT ), self::PERSON ), 0 );
 		foreach ( $plan['rows'] as $row ) {
 			if ( empty( $row['covered'] ) ) {
 				++$counts[ $row['state'] ];
@@ -805,7 +1022,7 @@ final class Optima_Sync {
 			'manifest' => $plan['manifest'],
 			'counts'   => $counts,
 			'errors'   => count( $plan['errors'] ),
-			'review'   => $counts[ self::EDITED ] + $counts[ self::CONFLICT ] + $counts[ self::MISSING ] + $counts[ self::OFF ] + count( $plan['errors'] ),
+			'review'   => $counts[ self::EDITED ] + $counts[ self::CONFLICT ] + array_sum( array_intersect_key( $counts, array_flip( self::PERSON ) ) ) + count( $plan['errors'] ),
 			'time'     => time(),
 		);
 		set_transient( self::SUMMARY, $summary, 12 * HOUR_IN_SECONDS );
@@ -819,8 +1036,9 @@ final class Optima_Sync {
 	 *
 	 * @param string   $hash The plan hash the person reviewed, or '' for automatic runs.
 	 * @param string   $mode 'safe' (every UPDATE row), 'take' (chosen rows, theme copy wins), 'keep' (chosen rows, record the WordPress copy),
-	 *                       'create' (chosen missing pages and forms are added) or 'restore' (chosen pages come back from the trash).
-	 * @param string[] $ids  Rows for every mode but 'safe'.
+	 *                       'create' (chosen missing pages and forms are added), 'restore' (chosen pages come back from the trash),
+	 *                       'status' (chosen pages get the status the theme names) or 'retire' (chosen retired pages go to the trash).
+	 * @param string[] $ids  Rows for every mode but 'safe'. In 'retire' mode, "redirect:<row id>" also adds that page's 301.
 	 * @param string   $who  'person', 'auto' or 'cli'.
 	 * @return array{written:int,notes:string[]}|WP_Error
 	 */
@@ -853,8 +1071,14 @@ final class Optima_Sync {
 					$ok = $chosen && self::MISSING === $row['state'] && ( 'form' === $row['kind'] || ( 'create' === $row['kind'] && empty( $row['trashed'] ) ) );
 				} elseif ( 'restore' === $mode ) {
 					$ok = $chosen && self::MISSING === $row['state'] && 'create' === $row['kind'] && ! empty( $row['trashed'] );
+				} elseif ( 'status' === $mode ) {
+					$ok = $chosen && 'status' === $row['kind'] && in_array( $row['state'], array( self::EARLY, self::READY ), true );
+				} elseif ( 'retire' === $mode ) {
+					$ok = $chosen && 'retire' === $row['kind'] && self::RETIRE === $row['state'];
+				} elseif ( 'keep' === $mode ) {
+					$ok = $chosen && ! in_array( $row['state'], array( self::MISSING, self::CURRENT ), true ) && 'create' !== $row['kind'];
 				} else {
-					$ok = $chosen && self::MISSING !== $row['state'] && self::CURRENT !== $row['state'] && 'create' !== $row['kind'];
+					$ok = $chosen && in_array( $row['state'], array( self::UPDATE, self::EDITED, self::CONFLICT ), true ) && in_array( $row['kind'], array( 'post', 'setting', 'option', 'user', 'form' ), true );
 				}
 				if ( $ok ) {
 					$pick[] = $row;
@@ -900,9 +1124,27 @@ final class Optima_Sync {
 				}
 			}
 
+			// Retired pages go deepest first; a page's own pages must be ticked with it.
+			if ( 'retire' === $mode ) {
+				usort(
+					$pick,
+					static function ( $a, $b ) {
+						return substr_count( $b['slug'], '/' ) <=> substr_count( $a['slug'], '/' );
+					}
+				);
+				$going = array_map( 'intval', wp_list_pluck( $pick, 'post_id' ) );
+				foreach ( $pick as &$row ) {
+					if ( array_diff( (array) ( $row['children'] ?? array() ), $going ) ) {
+						return new WP_Error( 'children', 'Tick the pages under it too: ' . self::label( $row ) . ' has pages under it that the theme also retires. Nothing was changed.' );
+					}
+					$row['add_redirect'] = ! empty( $row['redirect_ok'] ) && in_array( 'redirect:' . $row['id'], $ids, true );
+				}
+				unset( $row );
+			}
+
 			// Images are prepared before any text changes, so a failed import changes nothing.
 			foreach ( $pick as &$row ) {
-				$row['write'] = 'form' === $row['kind'] ? $row['form'] : $row['theme'];
+				$row['write'] = 'form' === $row['kind'] ? $row['form'] : ( 'retire' === $row['kind'] ? 'trash' : $row['theme'] );
 				if ( ! empty( $row['image'] ) ) {
 					$attachment = self::import_image( $row['file'] );
 					if ( ! $attachment ) {
@@ -937,6 +1179,10 @@ final class Optima_Sync {
 					$done = 'restore' === $mode ? self::restore_page( $row ) : self::create_page( $row, $journal['time'] );
 				} elseif ( 'form' === $row['kind'] ) {
 					$done = self::write_form( $row );
+				} elseif ( 'status' === $row['kind'] ) {
+					$done = self::write_status( $row );
+				} elseif ( 'retire' === $row['kind'] ) {
+					$done = self::retire_page( $row );
 				} else {
 					$done = self::write( $row, $row['raw'], $row['write'] ) ? array() : false;
 				}
@@ -965,6 +1211,11 @@ final class Optima_Sync {
 					}
 				} elseif ( 'form' === $row['kind'] ) {
 					$bases[ $row['id'] ] = array( 't' => $row['t'], 'd' => $done['written_d'], 'form_id' => $done['form_id'] );
+				} elseif ( in_array( $row['kind'], array( 'status', 'retire' ), true ) ) {
+					unset( $bases[ $row['id'] ] ); // A status or retire row keeps no base, only a person's "keep".
+					if ( ! empty( $done['note'] ) ) {
+						$notes[] = $done['note'];
+					}
 				} else {
 					$bases[ $row['id'] ] = array( 't' => $row['t'], 'd' => $row['t'] );
 				}
@@ -1008,7 +1259,7 @@ final class Optima_Sync {
 
 	/** What the undo record keeps of a row. */
 	private static function journal_row( array $row ) {
-		$keep = array( 'id', 'kind', 'post_type', 'slug', 'leaf', 'parent', 'title', 'status', 'field', 'group', 'key', 'option', 'post_id', 'email', 'user_id', 'image', 'raw', 'write', 'form_id', 'trashed' );
+		$keep = array( 'id', 'kind', 'post_type', 'slug', 'leaf', 'parent', 'title', 'status', 'field', 'group', 'key', 'option', 'post_id', 'email', 'user_id', 'image', 'raw', 'write', 'form_id', 'trashed', 'redirect' );
 		return array_intersect_key( $row, array_flip( $keep ) );
 	}
 
@@ -1089,6 +1340,63 @@ final class Optima_Sync {
 			return false;
 		}
 		return array( 'post_id' => $id, 'modified' => $post->post_modified_gmt );
+	}
+
+	/**
+	 * Give a page the status the theme names, after checking right before the
+	 * write that nobody changed its status since the review.
+	 *
+	 * @return array{write:string}|false
+	 */
+	private static function write_status( array $row ) {
+		$id = (int) $row['post_id'];
+		if ( (string) get_post_status( $id ) !== (string) $row['raw'] ) {
+			return false;
+		}
+		$result = wp_update_post( array( 'ID' => $id, 'post_status' => $row['theme'] ), true );
+		if ( is_wp_error( $result ) || get_post_status( $id ) !== $row['theme'] ) {
+			return false;
+		}
+		return array( 'write' => $row['theme'] );
+	}
+
+	/**
+	 * Move a retired page to the trash (never deleted), after checking right
+	 * before that it is the same page, unchanged and not protected. Adds its 301
+	 * when the person ticked it and no redirect from that address exists yet.
+	 *
+	 * @return array<string,mixed>|false
+	 */
+	private static function retire_page( array $row ) {
+		$id   = (int) $row['post_id'];
+		$post = get_post( $id );
+		if ( ! $post || self::find_post( $row['post_type'], $row['slug'] ) !== $id || self::hash( $post->ID . '|' . $post->post_status . '|' . $post->post_modified_gmt ) !== $row['d'] ) {
+			return false;
+		}
+		if ( in_array( $id, array( (int) get_option( 'page_on_front' ), (int) get_option( 'page_for_posts' ), (int) get_option( 'wp_page_for_privacy_policy' ) ), true ) ) {
+			return false;
+		}
+		$old_url = self::address( $post );
+		if ( ! wp_trash_post( $id ) || 'trash' !== get_post_status( $id ) ) {
+			return false;
+		}
+		$done = array( 'old_url' => $old_url, 'note' => '' );
+		if ( ! empty( $row['add_redirect'] ) ) {
+			if ( '' !== self::redirect_note( array( 'redirect' => $row['redirect'], 'old_url' => $old_url ) ) ) {
+				$done['note'] = 'The 301 from ' . $old_url . ' was not added: a redirect from that address exists now.';
+			} else {
+				$rid = Optima_Redirects::add( $old_url, $row['redirect'], 301, 'sync' );
+				if ( is_wp_error( $rid ) ) {
+					$done['note'] = 'The 301 from ' . $old_url . ' was not added: ' . $rid->get_error_message();
+				} else {
+					$saved                    = Optima_Redirects_Store::get( (int) $rid );
+					$done['redirect_id']      = (int) $rid;
+					$done['redirect_source']  = $saved ? (string) $saved->source : '';
+					$done['redirect_target']  = $saved ? (string) $saved->target : '';
+				}
+			}
+		}
+		return $done;
 	}
 
 	/**
@@ -1264,7 +1572,7 @@ final class Optima_Sync {
 				}
 				continue;
 			}
-			if ( 'create' === $row['kind'] || self::CURRENT !== $row['state'] || ! isset( $row['t'], $row['d'] ) || $row['t'] !== $row['d'] ) {
+			if ( in_array( $row['kind'], array( 'create', 'status', 'retire' ), true ) || self::CURRENT !== $row['state'] || ! isset( $row['t'], $row['d'] ) || $row['t'] !== $row['d'] ) {
 				continue; // Only identical copies; a kept WordPress copy keeps its base.
 			}
 			$base = $bases[ $row['id'] ] ?? null;
@@ -1281,8 +1589,9 @@ final class Optima_Sync {
 	 * Put back what the last sync replaced. A field edited since is left alone.
 	 * A page the sync created goes to the trash, a page it restored goes back to
 	 * the trash, a form it added is deactivated and trashed, and a form it
-	 * updated gets its saved earlier version back, each only if nobody changed
-	 * it since.
+	 * updated gets its saved earlier version back, a status change is reversed,
+	 * and a retired page comes out of the trash (its 301 removed), each only if
+	 * nobody changed it since.
 	 *
 	 * @return array{restored:int,skipped:string[]}|WP_Error
 	 */
@@ -1339,6 +1648,18 @@ final class Optima_Sync {
 					}
 					if ( $result ) {
 						unset( $bases[ $row['id'] ] );
+						++$restored;
+					} else {
+						$skipped[] = self::label( $row );
+					}
+					continue;
+				}
+				if ( 'status' === $row['kind'] || 'retire' === $row['kind'] ) {
+					$result = 'status' === $row['kind'] ? self::undo_status( $row ) : self::undo_retire( $row );
+					if ( null === $result ) {
+						continue;
+					}
+					if ( $result ) {
 						++$restored;
 					} else {
 						$skipped[] = self::label( $row );
@@ -1408,6 +1729,59 @@ final class Optima_Sync {
 			return false;
 		}
 		return wp_trash_post( $id ) ? $id : false;
+	}
+
+	/**
+	 * Undo one status change: back to the status it had, if nobody changed it since.
+	 *
+	 * @return bool|null
+	 */
+	private static function undo_status( array $row ) {
+		$id  = (int) ( $row['post_id'] ?? 0 );
+		$now = $id ? (string) get_post_status( $id ) : '';
+		if ( ! isset( $row['write'] ) || '' === $now || $now === (string) $row['raw'] ) {
+			return null; // Never written, gone, or already back.
+		}
+		if ( $now !== (string) $row['write'] ) {
+			return false;
+		}
+		$result = wp_update_post( array( 'ID' => $id, 'post_status' => (string) $row['raw'] ), true );
+		return ! is_wp_error( $result ) && get_post_status( $id ) === (string) $row['raw'];
+	}
+
+	/**
+	 * Undo one retired page: out of the trash with the status and address it had,
+	 * and the 301 Site Sync added for it removed if it still points where it did.
+	 *
+	 * @return bool|null
+	 */
+	private static function undo_retire( array $row ) {
+		$id = (int) ( $row['post_id'] ?? 0 );
+		if ( ! isset( $row['old_url'] ) || ! $id ) {
+			return null; // Never written.
+		}
+		if ( ! empty( $row['redirect_id'] ) && class_exists( 'Optima_Redirects_Store' ) ) {
+			$now = Optima_Redirects_Store::get( (int) $row['redirect_id'] );
+			if ( $now && (string) $now->source === (string) $row['redirect_source'] && (string) $now->target === (string) $row['redirect_target'] ) {
+				Optima_Redirects_Store::delete( (int) $row['redirect_id'] );
+			}
+		}
+		$post = get_post( $id );
+		if ( ! $post ) {
+			return false; // Emptied from the trash since: nothing to bring back.
+		}
+		if ( 'trash' !== $post->post_status ) {
+			return null; // Someone restored it already.
+		}
+		$previous = function_exists( 'wp_untrash_post_set_previous_status' );
+		if ( $previous ) {
+			add_filter( 'wp_untrash_post_status', 'wp_untrash_post_set_previous_status', 10, 3 );
+		}
+		$done = wp_untrash_post( $id );
+		if ( $previous ) {
+			remove_filter( 'wp_untrash_post_status', 'wp_untrash_post_set_previous_status', 10 );
+		}
+		return (bool) $done && 'trash' !== get_post_status( $id );
 	}
 
 	/**

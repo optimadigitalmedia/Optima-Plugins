@@ -2,10 +2,14 @@
 /**
  * WP-CLI: `wp optima sync status`, `wp optima sync run [--dry-run]`,
  * `wp optima sync create [<item>...] [--all] [--restore] [--dry-run]` and
+ * `wp optima sync set-status [<item>...] [--all] [--dry-run]`,
+ * `wp optima sync retire [<item>...] [--all] [--redirect] [--dry-run]` and
  * `wp optima sync undo`. `run` syncs only the safe rows; anything edited in
  * WordPress is left for a person on the Approved copy screen. `create` adds
  * the missing pages and forms it is named (or all of them), the same way the
- * screen's "Create the ticked items" does.
+ * screen's "Create the ticked items" does. `set-status` and `retire` are the
+ * screen's status and "Pages the theme retires" buttons: `status` lists them,
+ * and nothing changes until one of these is run with item ids or --all.
  *
  * @package Optima_Core
  */
@@ -52,6 +56,12 @@ final class Optima_Sync_CLI {
 				$note = 'Can be created: wp optima sync create ' . $row['id'];
 			} elseif ( ! empty( $row['covered'] ) ) {
 				$note = 'Filled when its page is created';
+			} elseif ( Optima_Sync::EARLY === $row['state'] ) {
+				$note = 'Published, the theme says draft: wp optima sync set-status ' . $row['id'];
+			} elseif ( Optima_Sync::READY === $row['state'] ) {
+				$note = 'Draft, the theme says publish: wp optima sync set-status ' . $row['id'];
+			} elseif ( Optima_Sync::RETIRE === $row['state'] ) {
+				$note = trim( ( '' !== $row['reason'] ? $row['reason'] . '. ' : '' ) . 'Trash it: wp optima sync retire ' . $row['id'] . ( ! empty( $row['redirect_ok'] ) ? ' --redirect' : '' ) );
 			}
 			$rows[] = array( 'item' => $row['id'], 'state' => $row['state'], 'note' => $note );
 		}
@@ -162,6 +172,111 @@ final class Optima_Sync_CLI {
 			WP_CLI::warning( $note );
 		}
 		WP_CLI::success( $result['written'] . ' item(s) ' . ( $restore ? 'restored.' : 'added. Undo with: wp optima sync undo' ) );
+	}
+
+	/**
+	 * Give pages the status the theme names (draft or publish).
+	 *
+	 * Back to draft for a page published early, published for a page the theme
+	 * publishes. Never run on its own.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [<item>...]
+	 * : Item ids from `status`, e.g. page/services/injury#status.
+	 *
+	 * [--all]
+	 * : Every page whose status differs from the theme's.
+	 *
+	 * [--dry-run]
+	 * : List what would change, change nothing.
+	 *
+	 * @subcommand set-status
+	 * @param array $args  Positional.
+	 * @param array $assoc Flags.
+	 */
+	public function set_status( $args, $assoc ) {
+		$ids = $this->pick( $args, $assoc, 'status', array( Optima_Sync::EARLY, Optima_Sync::READY ) );
+		$this->go( $ids, $assoc, 'status', $ids, 'status change(s)' );
+	}
+
+	/**
+	 * Move the pages the theme retires to the trash (never deleted).
+	 *
+	 * Undo brings them back. Refused for the front page, the posts page, the
+	 * privacy page, any page the theme lists as live, and a page with pages
+	 * under it that the theme does not retire.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [<item>...]
+	 * : Item ids from `status`, e.g. retire/page/services/old-page.
+	 *
+	 * [--all]
+	 * : Every page the theme retires that is still on the site.
+	 *
+	 * [--redirect]
+	 * : Also add each page's 301 to the address the theme names (needs Optima Redirects).
+	 *
+	 * [--dry-run]
+	 * : List what would change, change nothing.
+	 *
+	 * @param array $args  Positional.
+	 * @param array $assoc Flags.
+	 */
+	public function retire( $args, $assoc ) {
+		$ids   = $this->pick( $args, $assoc, 'retire', array( Optima_Sync::RETIRE ) );
+		$extra = array();
+		if ( ! empty( $assoc['redirect'] ) ) {
+			foreach ( $ids as $id ) {
+				$extra[] = 'redirect:' . $id;
+			}
+		}
+		$this->go( $ids, $assoc, 'retire', array_merge( $ids, $extra ), 'page(s) to the trash' );
+	}
+
+	/** The ids a status or retire command acts on, with a line for each. */
+	private function pick( $args, $assoc, $kind, array $states ) {
+		$ids = array();
+		foreach ( Optima_Sync::plan()['rows'] as $row ) {
+			if ( $kind !== $row['kind'] || ! in_array( $row['state'], $states, true ) ) {
+				continue;
+			}
+			if ( empty( $assoc['all'] ) && ! in_array( $row['id'], $args, true ) ) {
+				continue;
+			}
+			if ( ! empty( $row['blocked'] ) ) {
+				WP_CLI::warning( $row['id'] . ': ' . $row['blocked'] );
+				continue;
+			}
+			$what = 'retire' === $kind ? 'trash' . ( ! empty( $assoc['redirect'] ) && ! empty( $row['redirect_ok'] ) ? ' and 301 to ' . $row['redirect'] : '' ) : 'change the status from ' . $row['raw'] . ' to ' . $row['theme'];
+			WP_CLI::log( ( ! empty( $assoc['dry-run'] ) ? 'Would ' : 'Will ' ) . $what . ': ' . $row['id'] );
+			if ( 'retire' === $kind && ! empty( $assoc['redirect'] ) && '' !== $row['redirect'] && empty( $row['redirect_ok'] ) ) {
+				WP_CLI::warning( $row['redirect_note'] );
+			}
+			$ids[] = $row['id'];
+		}
+		return $ids;
+	}
+
+	/** Run a status or retire change and report it. */
+	private function go( array $ids, $assoc, $mode, array $send, $noun ) {
+		if ( ! $ids ) {
+			WP_CLI::success( 'Nothing to change.' );
+			return;
+		}
+		if ( ! empty( $assoc['dry-run'] ) ) {
+			WP_CLI::success( 'Dry run: ' . count( $ids ) . ' ' . $noun . ', nothing changed.' );
+			return;
+		}
+		$result = Optima_Sync::apply( '', $mode, $send, 'cli' );
+		if ( is_wp_error( $result ) ) {
+			WP_CLI::error( $result->get_error_message() );
+		}
+		foreach ( $result['notes'] as $note ) {
+			WP_CLI::warning( $note );
+		}
+		WP_CLI::success( 'Done: ' . $result['written'] . ' ' . $noun . '. Undo with: wp optima sync undo' );
 	}
 
 	/**

@@ -1,8 +1,8 @@
-# Site Sync: approved copy, new pages and forms from the theme
+# Site Sync: approved copy, new pages, forms, page status and retired pages from the theme
 
-Status: **Optima Core 1.6.1.0 (2026-11-18).** Owner of the job `content-sync` (plugin-first rule 32). Code: `optima-core/includes/sync/` (`class-optima-sync.php` the engine, `-admin.php` the screen, `-cli.php` WP-CLI). Tests: `tools/tests/site-sync.php`.
+Status: **Optima Core 1.6.1.0 (2026-11-18; status keeping and the retire list added 2026-11-19).** Owner of the job `content-sync` (plugin-first rule 32). Code: `optima-core/includes/sync/` (`class-optima-sync.php` the engine, `-admin.php` the screen, `-cli.php` WP-CLI). Tests: `tools/tests/site-sync.php`.
 
-Approved words reach WordPress one way: the theme release carries them, and **Optima → Content → Approved copy** (address `admin.php?page=optima&tab=sync`) applies them. Since 1.6.1.0 the same screen also creates the pages a site lacks and adds the theme's Gravity Forms, so a site owner never hand-imports a WordPress import file (WXR) or a form file again (site owner, 2026-11-18: "we should be uploading these things through the app some how").
+Approved words reach WordPress one way: the theme release carries them, and **Optima → Content → Approved copy** (address `admin.php?page=optima&tab=sync`) applies them. Since 1.6.1.0 the same screen also creates the pages a site lacks and adds the theme's Gravity Forms, so a site owner never hand-imports a WordPress import file (WXR) or a form file again (site owner, 2026-11-18: "we should be uploading these things through the app some how"). The same release keeps each page's status the theme names and lists the junk pages the theme retires, so a theme never carries one-off cleanup code (site owner, 2026-11-19, after a theme was asked to set pages to draft and trash junk: "but we should include this as a [plugin] no?").
 
 ## 1. How it decides
 
@@ -16,6 +16,9 @@ The theme ships `optima-sync.json` at its root. Each entry becomes one or more *
 | `conflict` | Needs a decision | Both changed, or never synced and different | Same as edited. Never written on its own |
 | `missing` | Not on the site yet | The page, post, user or form the row names is not there | A page with a `create` block, or a form, can be added when a person ticks it (section 3); anything else is listed |
 | `unavailable` | Waiting on Gravity Forms | A form row while Gravity Forms is not active | Shown, never acted on |
+| `published_early` | Published early | The theme says `draft`, the page is published | Waits for a person: Set back to draft, or Keep it as it is (section 3c) |
+| `ready_to_publish` | Ready to publish | The theme says `publish`, the page is a draft or pending review | Waits for a person: Publish, or Keep it as it is (section 3c) |
+| `retire` | Pages the theme retires | A page on the theme's `retire` list is on the site (not in the trash) | Waits for a person: Move to the trash, or Keep (section 3d). Some are refused and say why |
 
 Never synced: an empty WordPress value, or one listed in the entry's `previous`, is safe (`update`); anything else is a `conflict`.
 
@@ -64,24 +67,56 @@ A manifest `forms` list names Gravity Forms export files in the theme.
 - **Undo.** A form the last run added is switched off and moved to the forms trash (its entries, if any, stay). A form it updated gets back the full form it had before (saved in the undo record). Either only if the form is still what Site Sync wrote.
 - **Entries.** An update keeps the form id. A theme release that renumbers field ids would detach old entries from those fields: keep field ids stable in the repo's export.
 
+### 3c. Page status (status keeping)
+
+A page entry may carry `"status": "draft"` or `"status": "publish"`: the status the site repo says the page should have.
+
+| The theme says | The page on the site | State | Action (unticked) |
+|---|---|---|---|
+| `draft` | Published | `published_early`, "Published early" | **Set the ticked pages back to draft** |
+| `publish` | Draft or pending review | `ready_to_publish`, "Ready to publish" | **Publish the ticked pages** |
+| either | Private or scheduled | `current` | None: set that way on purpose |
+| either | The same | `current` | None |
+| either | Not on the site | Left to the page's `create` block, which takes this status when it names none | |
+
+- **Never automatic.** The automatic run after a theme update, "Sync these now", Build → Updates "Apply" and `wp optima sync run` never change a status. Only a person's tick (or `wp optima sync set-status` with item ids or `--all`) does. (Safest default: publishing or unpublishing is a visible change.)
+- **Checked again right before** each write: if the status changed since the review, the run stops.
+- **Undo** puts back the status each page had, unless it changed since (then it is left alone and named).
+- **Keep it as it is** records the person's choice; the row reads current until the theme or the page's status moves again. The site repo should then be corrected so the next theme agrees.
+- A `create` block's `status` and the entry's `status` must agree; when the block names none, it takes the entry's.
+
+### 3d. Pages the theme retires (retire list)
+
+A manifest top-level `retire` list names pages to take off the site: duplicates, leftovers, pages moved to a new address. Each entry: `path` (the page address, `parent/child` for a child page; required), `reason` (shown on the screen), `redirect` (optional new address), `post_type` (default `page`).
+
+- **Matching.** A page whose address is `path` and that is not in the trash is a match (`retire`). No match is a miss: the row reads current and nothing happens. The path is matched as WordPress stores it, so a page left under a trashed parent is matched as `old-parent__trashed/child`.
+- **Never automatic, never deleted.** Approved copy lists matches under "Pages the theme retires", **unticked**; **Move the ticked pages to the trash** trashes the ticked ones (`wp_trash_post`). Nothing is ever permanently deleted.
+- **Refused, with the reason** (the box cannot be ticked): the front page, the posts page and the privacy policy page; any page the manifest itself lists as live (a `path` equal to a `pages` slug is a manifest error; a page reached through another entry is refused on the screen); and a page with pages under it that the theme does not retire too, because trashing a parent renames it and moves every page under it to a new address (that is how `__trashed` paths are born).
+- **Parents with their pages.** When a parent and its pages are all on the list, they must be ticked together; they go deepest first. Ticking the parent alone is refused and nothing changes.
+- **Checked again right before** each trash: the same page, unchanged since the review, still not protected.
+- **The 301.** When `redirect` is set and Optima Redirects is active, the row offers **Add the 301 to ...** (unticked). It adds a 301 from the page's address to `redirect` (origin `sync`) right after the page goes to the trash. If a redirect from that address already exists it is left as it is and the screen says so. Without Optima Redirects the row says the 301 is not added here: the theme's redirects file carries it, or add it on the Redirects screen once the plugin is on.
+- **Undo** brings each page back from the trash with the status and address it had, and removes the 301 Site Sync added if it still points where it did. A page someone already restored is left alone; a page emptied from the trash since is named.
+- **Keep the ticked pages** records the choice; the row reads current until the page or the entry changes. Correct the site repo so the next theme drops it.
+
 ## 4. The theme contract (`optima-sync.json`)
 
 The file sits at the theme root and every path in it is relative to the theme folder (files outside the theme are never read). `sync_version` must be `1`.
 
 | Key | Entry | Notes |
 |---|---|---|
-| `pages` | `slug`, `post_type` (default `page`), `title`, `source` (file) or `content` (text), `previous` (earlier shipped copies), `create` | `slug` may be a path (`services/injury`) for pages |
+| `pages` | `slug`, `post_type` (default `page`), `title`, `source` (file) or `content` (text), `previous` (earlier shipped copies), `create`, `status` | `slug` may be a path (`services/injury`) for pages. `status` (`draft` or `publish`) is section 3c |
 | `fields` | `slug`, `post_type`, one of `field` (Core page field), `seo` (`title` or `desc`), `meta` (+ optional `key` inside an array), `post_field` (`title`, `content`, `excerpt`); `value`, `source` or `image`; `previous` | |
 | `settings` | `group`, `key`, `value` or `source`, `previous` | Core settings groups |
 | `options` | `option`, optional dotted `key`, `value` or `source`, `previous` | Only `blogname`, `blogdescription`, and keys inside `optima_business` (themes add their own array options with the `optima_sync_option_keys` filter) |
 | `users` | `email`, `field` (`description`), `value` or `source`, `previous` | |
 | `forms` | `file` (Gravity Forms export JSON in the theme), `title` | 1.6.1.0 |
+| `retire` | `path`, `reason`, `redirect`, `post_type` (default `page`) | 1.6.1.0, section 3d |
 
 **`create` block** (1.6.1.0), all keys optional (`"create": true` means a draft with every default):
 
 | Key | Default | Notes |
 |---|---|---|
-| `status` | `draft` | `publish` or `draft`; anything else is refused |
+| `status` | the entry's `status`, else `draft` | `publish` or `draft`; anything else is refused. Must agree with the entry's `status` |
 | `title` | the entry's `title`, else the slug in words | The entry's `title` wins when both are set |
 | `parent` | from the slug path | A parent slug or path (`services`). If the slug is a path, they must agree |
 | `template` | none | A page template file the theme has (`page-templates/practice.php`), or `default` |
@@ -103,7 +138,15 @@ Example:
       "create": { "status": "publish", "template": "page-templates/practice.php", "menu_order": 2, "author": "author@example.com" } },
     { "slug": "workers-compensation/back-injuries", "title": "Back injuries at work",
       "source": "sync/pages/back-injuries.html",
-      "create": { "status": "draft" } }
+      "create": { "status": "draft" } },
+    { "slug": "spanish/compensacion", "status": "draft" },
+    { "slug": "contact", "status": "publish" }
+  ],
+  "retire": [
+    { "path": "industries-x__trashed/truck-drivers",
+      "reason": "Duplicate of /industries/truck-drivers/",
+      "redirect": "/industries/truck-drivers/" },
+    { "path": "sample-page", "reason": "WordPress starter page" }
   ],
   "fields": [
     { "slug": "workers-compensation", "seo": "desc", "value": "One sentence for search results." }
@@ -118,11 +161,17 @@ The site repo's build script (`scripts/build-sync.py` or the kit's equivalent) w
 
 ## 5. Screens and commands
 
-- **Optima → Content → Approved copy** (operators only, rules 9, 10 and 53): counts first, then the updates ready to go, the changes made in WordPress, the pages and forms the theme can add (checkboxes, unticked; "Create the ticked items"; "Restore the ticked pages from the trash" when one is there), pages the theme names but cannot create, forms waiting on Gravity Forms, and the last sync with its undo. A screen with nothing to do says so in one line (rule 52).
+- **Optima → Content → Approved copy** (operators only, rules 9, 10 and 53): counts first, then the updates ready to go, the changes made in WordPress, the pages and forms the theme can add (checkboxes, unticked; "Create the ticked items"; "Restore the ticked pages from the trash" when one is there), pages the theme names but cannot create, forms waiting on Gravity Forms, pages published early ("Set the ticked pages back to draft", "Keep it as it is"), pages ready to publish ("Publish the ticked pages", "Keep it as it is"), pages the theme retires ("Move the ticked pages to the trash" with an unticked "Add the 301" per page, "Keep the ticked pages"), and the last sync with its undo. Every box starts unticked. A screen with nothing to do says so in one line (rule 52).
 - **Build → Updates → Approved copy** shows the counts and applies the safe updates; adding pages and forms happens on Approved copy.
-- **Site health** and the dashboard notice count everything that needs a person, including missing pages and forms and forms waiting on Gravity Forms.
-- **WP-CLI:** `wp optima sync status [--all]`, `wp optima sync run [--dry-run]` (safe rows only), `wp optima sync create [<item>...] [--all] [--restore] [--dry-run]`, `wp optima sync undo`.
+- **Site health** and the dashboard notice count everything that needs a person, including missing pages and forms, forms waiting on Gravity Forms, pages published early or ready to publish, and pages the theme retires.
+- **WP-CLI:** `wp optima sync status [--all]` (lists every row, including published early, ready to publish and retire, with the command for each), `wp optima sync run [--dry-run]` (safe rows only; never a status or a trash), `wp optima sync create [<item>...] [--all] [--restore] [--dry-run]`, `wp optima sync set-status [<item>...] [--all] [--dry-run]`, `wp optima sync retire [<item>...] [--all] [--redirect] [--dry-run]`, `wp optima sync undo`. (`status` already names the list, so the status action is `set-status`.) Each command is one run with one undo record: `undo` reverses the last command only.
 
 ## 6. Upstream
 
-Rule 55 (upstream first): page creation and forms in Site Sync were built here first, at the site owner's direction (2026-11-18). This section is the upstream spec in the upstream suite's shape; it goes to the internal repo's upstream specs and is sent upstream with the next port, so the two suites keep one Site Sync.
+Rule 55 (upstream first): page creation and forms (2026-11-18), and status keeping and the retire list (2026-11-19), were built here first, at the site owner's direction. Sections 3a to 3d and the `status`, `create`, `forms` and `retire` keys in section 4 are the upstream spec in the upstream suite's shape, with no Optima names in the behavior: the manifest file and screen names map one to one (`optima-sync.json`, the Approved copy screen, the `wp optima sync` commands, the Redirects plugin). They go to the internal repo's upstream specs and are sent upstream with the next port, so the two suites keep one Site Sync.
+
+Upstream summary of the 2026-11-19 additions, for the port:
+
+1. **Status keeping.** Page entry key `status` (`draft` or `publish`). New states `published_early` and `ready_to_publish`; a person-only action per direction plus "Keep it as it is" (a kept base of the two status hashes). Private and scheduled pages read current. Never in the automatic run. Journaled; undo restores the earlier status if unchanged since.
+2. **Retire list.** Top-level `retire` entries (`path`, `reason`, `redirect`, `post_type`). New state `retire`; refused for the front, posts and privacy pages, any page the manifest lists as live, and a parent with live pages under it that are not retired too. A person-only "Move to the trash" (never delete), deepest first; an optional per-page 301 through the redirects plugin when it is active. Journaled; undo untrashes with the earlier status and removes the 301 if it still points where it did.
+3. **CLI.** `sync set-status` and `sync retire [--redirect]`, both with item ids or `--all` and `--dry-run`.

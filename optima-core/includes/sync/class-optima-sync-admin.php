@@ -4,9 +4,10 @@
  *
  * The screen is Optima, Content, Approved copy (address tab=sync): counts at the
  * top, then every row that is not already current, with what WordPress holds
- * next to what the theme ships, then the pages and forms the theme can add.
+ * next to what the theme ships, then the pages and forms the theme can add,
+ * page statuses that differ from the theme, and the pages the theme retires.
  * Looking never changes anything; every change is a button, and nothing new
- * is added to the site until a person ticks it.
+ * is added, published, unpublished or trashed until a person ticks it.
  *
  * @package Optima_Core
  */
@@ -100,6 +101,9 @@ final class Optima_Sync_Admin {
 			Optima_Sync::CONFLICT => array( 'Needs a decision', 'warn' ),
 			Optima_Sync::MISSING  => array( 'Not on the site yet', 'warn' ),
 			Optima_Sync::OFF      => array( 'Waiting on Gravity Forms', 'warn' ),
+			Optima_Sync::EARLY    => array( 'Published early', 'warn' ),
+			Optima_Sync::READY    => array( 'Ready to publish', 'warn' ),
+			Optima_Sync::RETIRE   => array( 'Pages the theme retires', 'warn' ),
 		);
 		foreach ( $state as $key => $rows ) {
 			$state[ $key ] = array_values(
@@ -114,7 +118,7 @@ final class Optima_Sync_Admin {
 		echo '<div class="sh-grid sh-grid-3">';
 		foreach ( $counts as $key => $meta ) {
 			$n = count( $state[ $key ] ?? array() );
-			if ( ! $n && in_array( $key, array( Optima_Sync::MISSING, Optima_Sync::CONFLICT, Optima_Sync::OFF ), true ) ) {
+			if ( ! $n && ( Optima_Sync::CONFLICT === $key || in_array( $key, Optima_Sync::PERSON, true ) ) ) {
 				continue;
 			}
 			printf(
@@ -190,7 +194,20 @@ final class Optima_Sync_Admin {
 			echo '</ul></section>';
 		}
 
-		if ( ! $updates && ! $review && ! $blocked && ! $addable && ! $missing && ! $off && ! $plan['errors'] ) {
+		$early  = $state[ Optima_Sync::EARLY ] ?? array();
+		$ready  = $state[ Optima_Sync::READY ] ?? array();
+		$retire = $state[ Optima_Sync::RETIRE ] ?? array();
+		if ( $early ) {
+			self::statuses( $early, $plan['hash'], true );
+		}
+		if ( $ready ) {
+			self::statuses( $ready, $plan['hash'], false );
+		}
+		if ( $retire ) {
+			self::retired( $retire, $plan['hash'] );
+		}
+
+		if ( ! $updates && ! $review && ! $blocked && ! $addable && ! $missing && ! $off && ! $early && ! $ready && ! $retire && ! $plan['errors'] ) {
 			echo '<section class="sh-box"><h2>Everything is in sync</h2><p>Every page matches the copy in this theme. When a theme update changes the copy, the untouched pages update on their own.</p></section>';
 		}
 
@@ -247,6 +264,77 @@ final class Optima_Sync_Admin {
 			echo ' <button class="button" name="choice" value="restore">Restore the ticked pages from the trash</button>';
 		}
 		echo '</p></form></section>';
+	}
+
+	/**
+	 * Pages whose status differs from the theme's. Nothing is ticked to start
+	 * with, and the automatic run never changes a status.
+	 *
+	 * @param bool $early True for "published early" (theme says draft), false for "ready to publish".
+	 */
+	private static function statuses( array $rows, $hash, $early ) {
+		$n = count( $rows );
+		if ( $early ) {
+			echo '<section class="sh-box"><h2>' . esc_html( sprintf( _n( '%d page published early', '%d pages published early', $n, 'optima-core' ), $n ) ) . '</h2>';
+			echo '<p>The theme keeps these as drafts, but they are published on the site. Tick the ones to take down; each goes back to a draft (its copy and address stay), and Undo the last sync publishes it again. If a page should stay live, choose Keep it as it is, and mark it published in the site repo so the next theme agrees.</p>';
+		} else {
+			echo '<section class="sh-box"><h2>' . esc_html( sprintf( _n( '%d page ready to publish', '%d pages ready to publish', $n, 'optima-core' ), $n ) ) . '</h2>';
+			echo '<p>The theme publishes these, but they are drafts on the site. Tick the ones to publish now; Undo the last sync turns them back into drafts. Purge the hosting cache afterwards to see them live.</p>';
+		}
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		echo '<table class="widefat striped"><thead><tr><td class="check-column"></td><th>Page</th><th>Now on the site</th><th>The theme says</th></tr></thead><tbody>';
+		$names = array( 'publish' => 'Published', 'draft' => 'Draft', 'pending' => 'Pending review' );
+		foreach ( $rows as $row ) {
+			printf(
+				'<tr><th class="check-column"><input type="checkbox" name="ids[]" value="%s" aria-label="%s"></th><td><strong>%s</strong><br><a href="%s">Edit the page</a></td><td>%s</td><td>%s</td></tr>',
+				esc_attr( $row['id'] ),
+				esc_attr( Optima_Sync::label( $row ) ),
+				esc_html( get_the_title( (int) $row['post_id'] ) . ' (/' . trim( $row['slug'], '/' ) . '/)' ),
+				esc_url( (string) get_edit_post_link( (int) $row['post_id'], 'raw' ) ),
+				esc_html( $names[ $row['raw'] ] ?? $row['raw'] ),
+				esc_html( $names[ $row['theme'] ] ?? $row['theme'] )
+			);
+		}
+		echo '</tbody></table>';
+		self::hidden( 'status', $hash );
+		echo '<p class="sh-actions"><button class="button button-primary" name="choice" value="status">' . esc_html( $early ? 'Set the ticked pages back to draft' : 'Publish the ticked pages' ) . '</button> <button class="button" name="choice" value="keep">Keep it as it is</button></p>';
+		echo '</form></section>';
+	}
+
+	/** Pages the theme retires that are still on the site. Nothing is ticked to start with. */
+	private static function retired( array $rows, $hash ) {
+		$n = count( $rows );
+		echo '<section class="sh-box"><h2>' . esc_html( sprintf( _n( '%d page the theme retires', '%d pages the theme retires', $n, 'optima-core' ), $n ) ) . '</h2>';
+		echo '<p>The theme lists these as pages to take off the site: duplicates and leftovers. Tick the ones to move to the trash. Nothing is deleted: Undo the last sync brings each back with the status and address it had, and the trash keeps it until someone empties it. Where the theme names a new address, tick Add the 301 to send visitors and search engines there.</p>';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		echo '<table class="widefat striped"><thead><tr><td class="check-column"></td><th>Page</th><th>Why the theme retires it</th><th>Redirect</th></tr></thead><tbody>';
+		foreach ( $rows as $row ) {
+			$redirect = '';
+			if ( '' !== $row['redirect'] && ! empty( $row['redirect_ok'] ) && empty( $row['blocked'] ) ) {
+				$redirect = sprintf(
+					'<label><input type="checkbox" name="redirects[]" value="%s"> Add the 301 to %s</label>',
+					esc_attr( $row['id'] ),
+					esc_html( $row['redirect'] )
+				);
+			} elseif ( '' !== $row['redirect'] ) {
+				$redirect = esc_html( (string) ( $row['redirect_note'] ?? '' ) );
+			}
+			printf(
+				'<tr><th class="check-column"><input type="checkbox" name="ids[]" value="%s"%s aria-label="%s"></th><td><strong>%s</strong><br>%s%s</td><td>%s</td><td>%s</td></tr>',
+				esc_attr( $row['id'] ),
+				empty( $row['blocked'] ) ? '' : ' disabled',
+				esc_attr( Optima_Sync::label( $row ) ),
+				esc_html( (string) ( $row['title'] ?? '' ) ),
+				esc_html( (string) ( $row['old_url'] ?? '/' . $row['slug'] . '/' ) ),
+				empty( $row['blocked'] ) ? '' : '<br><span class="sh-tag">' . esc_html( $row['blocked'] ) . '</span>',
+				esc_html( '' !== $row['reason'] ? $row['reason'] : 'No reason given.' ),
+				$redirect // phpcs:ignore WordPress.Security.EscapeOutput -- built from escaped parts.
+			);
+		}
+		echo '</tbody></table>';
+		self::hidden( 'retire', $hash );
+		echo '<p class="sh-actions"><button class="button button-primary" name="choice" value="trash">Move the ticked pages to the trash</button> <button class="button" name="choice" value="keep">Keep the ticked pages</button></p>';
+		echo '</form></section>';
 	}
 
 	/** One plain line on what adding a row does. */
@@ -358,6 +446,33 @@ final class Optima_Sync_Admin {
 				$text = sprintf( 'Restored %d page(s) from the trash, each with the status it had.', $result['written'] );
 			} else {
 				$text = sprintf( 'Added %d item(s). New drafts stay drafts until you publish them. Purge the hosting cache to see published pages live.', $result['written'] );
+			}
+			if ( ! is_wp_error( $result ) && ! empty( $result['notes'] ) ) {
+				$text .= ' ' . implode( ' ', $result['notes'] );
+			}
+		} elseif ( 'status' === $step || 'retire' === $step ) {
+			$keep = 'keep' === $choice;
+			if ( ! $ids ) {
+				$result = new WP_Error( 'none', 'Tick at least one page first.' );
+			} else {
+				$extra = array();
+				if ( 'retire' === $step && ! $keep ) {
+					foreach ( array_map( 'sanitize_text_field', (array) wp_unslash( $_POST['redirects'] ?? array() ) ) as $rid ) {
+						if ( in_array( $rid, $ids, true ) ) {
+							$extra[] = 'redirect:' . $rid;
+						}
+					}
+				}
+				$result = Optima_Sync::apply( $review, $keep ? 'keep' : $step, array_merge( $ids, $extra ) );
+			}
+			if ( is_wp_error( $result ) ) {
+				$text = $result->get_error_message();
+			} elseif ( $keep ) {
+				$text = 'Kept as it is. Bring the choice back into the site repo so the next theme agrees.';
+			} elseif ( 'status' === $step ) {
+				$text = sprintf( 'Changed the status of %d page(s). Undo the last sync puts it back. Purge the hosting cache to see the change live.', $result['written'] );
+			} else {
+				$text = sprintf( 'Moved %d page(s) to the trash. Nothing was deleted; Undo the last sync brings them back.', $result['written'] );
 			}
 			if ( ! is_wp_error( $result ) && ! empty( $result['notes'] ) ) {
 				$text .= ' ' . implode( ' ', $result['notes'] );

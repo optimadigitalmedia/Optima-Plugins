@@ -113,7 +113,7 @@ This reverses today's rule. Today `catalog.json` uses `not_with_themes` to make 
 |---|---|
 | `seo` (titles, meta, canonical, robots, OG, sitemap rules) | optima-core |
 | `schema` (Organization, WebSite, Person, Article, Breadcrumb) | optima-core |
-| `content-sync` (approved copy into posts) | optima-core (Site Sync) |
+| `content-sync` (approved copy into posts, new pages and forms from the theme, page status the theme names, pages the theme retires) | optima-core (Site Sync) |
 | `ai-search` (llms.txt, AI crawler rules, Q&A blocks, FAQ schema) | optima-aeo |
 | `redirects` | optima-redirects |
 | `accessibility` (statement page, checks) | optima-accessibility |
