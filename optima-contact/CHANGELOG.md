@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.11.14 (2026-11-20)
+
+- Ships visitor-data.json, so Optima Core's privacy draft says the call bar stores nothing and sets no cookies, and lists the button taps it passes to Optima Analytics (never the phone number).
+- Shared admin kit: the four Optima Law screens are filed in the menu (three under Content, form entries under Build).
+
 ## 0.1.11.13 (2026-11-13)
 
 - New "What happens next" block: three numbered steps in the next-steps slot (home, practice, contact and thank-you templates), as a row or a timeline. The theme passes the variant; a theme that passes none gets the one its layout recipe names.

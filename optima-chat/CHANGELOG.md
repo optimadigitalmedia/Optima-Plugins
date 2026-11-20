@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.4.12 (2026-11-20)
+
+- Ships visitor-data.json, so Optima Core's privacy draft lists what the chat keeps: contact details and conversations (90 days by default, deleted with the plugin), the law-firm short form, questions sent to the AI server, the hashed IP limit kept 10 minutes, the analytics events, and the two tab-only browser storage items.
+- Shared admin kit: the four Optima Law screens are filed in the menu (three under Content, form entries under Build).
+
 ## 0.2.4.11 (2026-11-12)
 
 - The chat opens on a disclosure line, shown before the visitor types and saved with every conversation. The wording is a setting; the starting wording is marked for the firm to approve.

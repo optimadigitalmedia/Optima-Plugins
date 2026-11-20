@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.9.11 (2026-11-20)
+
+- Shared admin kit: the four Optima Law screens are filed in the menu (three under Content, form entries under Build).
+
 ## 0.1.9.10 (2026-11-12)
 
 - **Scanner probes never reach the database.** Hidden files and folders (`/.env`, `/.git/`), any file other than an .html page (`/wp-config.php.bak`, `/terraform.tfvars`, `/db.sql`, `/backup.zip`), log-in and admin guesses, and paths like /phpmyadmin, /vendor, /api and /swagger are left out of Missing pages, and so are requests that do not ask for a web page or come as HEAD. Ones already logged are cleared the first time the screen opens. A site with a real page on that list can drop one entry with the `optima_redirects_noise_patterns` filter.

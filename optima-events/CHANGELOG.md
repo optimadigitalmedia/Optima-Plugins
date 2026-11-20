@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.14.3.12 (2026-11-20)
+
+- The ticket QR image no longer calls imagedestroy(), which PHP 8.5 deprecates; the image frees itself.
+- Shared admin kit: the four Optima Law screens are filed in the menu (three under Content, form entries under Build).
+
 ## 0.14.3.11 (2026-11-12)
 
 - Deleting the plugin now also clears its hourly reminder job and cached lookups.

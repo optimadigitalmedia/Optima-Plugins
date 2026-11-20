@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.3.11 (2026-11-20)
+
+- Shared admin kit: the four Optima Law screens are filed in the menu (three under Content, form entries under Build).
+
 ## 0.9.3.10 (2026-11-12)
 
 - **jQuery stays in the head unless a site turns the move on.** Moving jQuery to the footer is now a per-site choice (Image optimizer, Page speed, off by default), because Elementor widgets and third-party embeds call jQuery inside the page and broke when it moved. Gravity Forms stylesheets still load without holding up the first paint.

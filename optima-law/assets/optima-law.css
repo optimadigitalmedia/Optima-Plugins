@@ -1,0 +1,22 @@
+/* Optima Law Firm Tools: the disclaimer lines. They take the theme's font and
+   color (DESIGN.md through the --optima-* variables); nothing is hard-coded. */
+.optima-law-disclaimers {
+	font-size: 0.8125rem;
+	line-height: 1.5;
+	opacity: 0.85;
+}
+
+.optima-law-disclaimers p {
+	margin: 0 0 6px;
+}
+
+.optima-law-disclaimers--footer {
+	max-width: 72ch;
+	margin: 16px auto;
+	padding: 0 16px;
+	text-align: center;
+}
+
+.optima-law-disclaimers--forms {
+	margin-top: 12px;
+}

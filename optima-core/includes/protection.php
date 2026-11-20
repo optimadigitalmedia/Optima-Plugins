@@ -36,11 +36,15 @@
  *    capabilities are taken away too). Filters: `optima_core_hide_users`,
  *    `optima_core_xmlrpc_needed`, `optima_core_browser_headers`.
  *
+ *  - Limit failed logins: 5 failures in 15 minutes from one address or for one
+ *    username lock it out for 15 minutes (Optima_Core_Login_Limit, login-limit.php,
+ *    which lists its filters).
+ *
  * A site that needs one of these on (rule 19: the reason goes in the site's
  * decisions log) turns it off on Optima, Search and AI, Spam protection, or in
  * wp-config.php, which the screen cannot undo:
  *
- *   define( 'OPTIMA_CORE_PROTECTION_OFF', 'xmlrpc_off, file_edit_off' );
+ *   define( 'OPTIMA_CORE_PROTECTION_OFF', 'xmlrpc_off, file_edit_off, login_limit' );
  *
  * or with the `optima_core_protection_on` filter ($on, $key).
  *
@@ -75,6 +79,7 @@ final class Optima_Core_Protection {
 			'xmlrpc_off'      => 'Turn off XML-RPC',
 			'browser_headers' => 'Send basic browser protections',
 			'file_edit_off'   => 'Turn off the code editor',
+			'login_limit'     => 'Limit failed logins',
 		);
 	}
 
@@ -552,6 +557,7 @@ final class Optima_Core_Protection {
 			'xmlrpc_off'      => 'XML-RPC is an old way to post from other apps that bots use to guess passwords. It stays on with Jetpack.',
 			'browser_headers' => 'Tells browsers to use a secure connection and not let other sites frame your pages. Hides the WordPress version.',
 			'file_edit_off'   => 'Hides the theme and plugin code editors in WordPress, so a stolen login can\'t change site code.',
+			'login_limit'     => 'After 5 failed logins in 15 minutes, that address or username waits 15 minutes before it can try again. The login screen never says whether a username exists.',
 		);
 		// What needs doing first (rule 52): any switch of the baseline that is off.
 		$forced = self::forced_off();

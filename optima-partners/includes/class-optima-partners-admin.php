@@ -267,7 +267,7 @@ final class Optima_Partners_Admin {
 						<?php endforeach; ?>
 					</tbody>
 				</table>
-				<p class="sh-note"><?php esc_html_e( 'A click is counted when someone follows a partner\'s logo or name to their website. Search engines and link checkers are left out. No visitor details are kept.', 'optima-partners' ); ?></p>
+				<p class="sh-note"><?php esc_html_e( 'A click is counted when someone follows a partner\'s logo or name to their website. Each visitor counts once a day per partner, and search engines and link checkers are left out. No visitor details are kept.', 'optima-partners' ); ?></p>
 			</section>
 		<?php endif; ?>
 		<?php

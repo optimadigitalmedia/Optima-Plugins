@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.12.12 (2026-11-20)
+
+- The Accessibility link is on by default and prints in the theme's footer spot through optima_slot( 'footer' ) (rule 12). A theme without that slot still gets it once at the very end of the page.
+- The link stays out when a menu already links to the statement page or the page printed [optima_accessibility_link], so a page never shows two.
+- The Accessibility screen's checkbox still turns it off. A site that saved settings before this release reads as on, because off was the old default rather than a choice; turn it off again there if it should stay off.
+- Shared admin kit: the four Optima Law screens are filed in the menu (three under Content, form entries under Build).
+
 ## 0.1.12.11 (2026-11-12)
 
 - Updates install only from the Optima Plugins release downloads (https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/). A release listed at any other address is skipped, and an update of an Optima plugin from any other address is refused with an error.

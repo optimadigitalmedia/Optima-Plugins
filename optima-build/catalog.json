@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updated": "2026-10-22",
-  "about": "The feature list the Site Build hub (optima-build) shows on every site. Fetched from this repo's main branch; optima-build/catalog.json is the offline copy. Keep the two identical. Tiers: core, growth, portfolio, addon. client_specific features only appear on sites that already have them installed. not_with_themes lists theme folders that already do the job; the hub will not turn the feature on there. jobs lists what each feature owns under the plugin-first rule (docs/plugin-first.md): when the feature is on, optima_owns( job ) is true and the theme skips its own version. not_with_themes stays until each listed theme is converted to plugin-first.",
+  "updated": "2026-11-20",
+  "about": "The feature list the Site Build hub (optima-build) shows on every site. Fetched from this repo's version-list branch for the site's release channel (catalog-test.json on test, catalog.json on stable), so a catalog change passes the test site first; optima-build/catalog.json is the offline copy. Keep the two identical. Tiers: core, growth, portfolio, addon. client_specific features only appear on sites that already have them installed. not_with_themes lists theme folders that already do the job; the hub will not turn the feature on there. jobs lists what each feature owns under the plugin-first rule (docs/plugin-first.md): when the feature is on, optima_owns( job ) is true and the theme skips its own version. not_with_themes stays until each listed theme is converted to plugin-first.",
   "features": [
     {
       "slug": "optima-core",
@@ -11,14 +11,14 @@
       "law": false,
       "requires": [],
       "not_with_themes": [
-        "optima-digital",
         "optima-recon"
       ],
       "not_with_note": "Not used on this site. The theme already handles business info and SEO, and running both doubles the tags.",
       "jobs": [
         "seo",
         "schema",
-        "content-sync"
+        "content-sync",
+        "offices"
       ]
     },
     {
@@ -28,9 +28,6 @@
       "tier": "core",
       "law": false,
       "requires": [],
-      "not_with_themes": [
-        "optima-digital"
-      ],
       "not_with_note": "The theme already runs AI search: llms.txt, the AI crawler rules in robots.txt, and question-and-answer blocks with FAQ schema on every page. Running both replaces the theme’s guide with a generic one.",
       "jobs": [
         "ai-search"
@@ -42,7 +39,10 @@
       "summary": "Every photo you upload is resized and compressed so the site stays fast. The original is kept as a backup.",
       "tier": "core",
       "law": false,
-      "requires": []
+      "requires": [],
+      "jobs": [
+        "images"
+      ]
     },
     {
       "slug": "optima-forms-guard",
@@ -133,6 +133,17 @@
       ]
     },
     {
+      "slug": "optima-law",
+      "name": "Law firm tools",
+      "summary": "The firm's disclaimer lines set once and approved word for word, approval before posts and bios go live, a list of pages due for an attorney's review, and (when turned on) form entries deleted after 90 days.",
+      "tier": "core",
+      "law": true,
+      "requires": [],
+      "jobs": [
+        "law"
+      ]
+    },
+    {
       "slug": "optima-chat",
       "name": "Chat assistant",
       "summary": "A chat in the corner of your site that answers common questions, books calls and takes change requests. Every other question lands in your inbox with the visitor's email, and AI answers start once it's connected.",
@@ -150,9 +161,6 @@
       "tier": "addon",
       "law": false,
       "requires": [],
-      "not_with_themes": [
-        "optima-digital"
-      ],
       "not_with_note": "Not used on this site. The theme already makes the cards and the links page.",
       "jobs": [
         "cards"

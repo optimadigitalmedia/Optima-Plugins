@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.4.12 (2026-11-20)
+
+- Ships visitor-data.json, so Optima Core's privacy draft lists the site check records (90 days by default, deleted with the plugin), the address sent to Google PageSpeed Insights, and the hashed IP and email limits.
+- Shared admin kit: the four Optima Law screens are filed in the menu (three under Content, form entries under Build).
+
 ## 0.2.4.11 (2026-11-12)
 
 - The speed test no longer holds a visitor's request for up to 90 seconds: it waits at most 20, then finishes in a scheduled job while the page checks back every few seconds. After two and a half minutes with no answer, speed is left out of the score so the report still goes out.

@@ -238,22 +238,78 @@ final class Optima_Partners {
 
 	/* ---------- clicks ---------- */
 
+	/** Each month's count lives in its own meta key, so one SQL statement can add to it. */
+	const CLICK_MONTH = '_optima_partner_clicks_';
+
+	/** Months of counts kept for the partner report. */
+	const CLICK_MONTHS = 24;
+
+	/**
+	 * Count one click: at most once a day per visitor per partner (a salted
+	 * hash of the IP address and browser, kept one day, so no visitor details
+	 * are stored), added in a single UPDATE so two clicks at the same moment
+	 * both count.
+	 */
 	public static function count_click( int $id ): void {
-		$c   = get_post_meta( $id, self::CLICKS, true );
-		$c   = is_array( $c ) ? $c : array();
-		$key = wp_date( 'Y-m' );
-		$c[ $key ] = (int) ( $c[ $key ] ?? 0 ) + 1;
-		// Two years of months is plenty for a partner report.
-		krsort( $c );
-		update_post_meta( $id, self::CLICKS, array_slice( $c, 0, 24, true ) );
+		if ( ! self::first_click_today( $id ) ) {
+			return;
+		}
+		global $wpdb;
+		$key = self::CLICK_MONTH . wp_date( 'Y-m' );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- an atomic increment; the meta API reads then writes.
+		$done = $wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->postmeta} SET meta_value = meta_value + 1 WHERE post_id = %d AND meta_key = %s", $id, $key ) );
+		if ( ! $done && ! add_post_meta( $id, $key, 1, true ) ) {
+			// Another click made this month's row a moment ago: add to it.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- as above.
+			$wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->postmeta} SET meta_value = meta_value + 1 WHERE post_id = %d AND meta_key = %s", $id, $key ) );
+		} elseif ( ! $done ) {
+			self::prune_clicks( $id ); // A new month started: drop the oldest.
+		}
+		wp_cache_delete( $id, 'post_meta' );
 	}
 
-	/** @return array<string,int> 'YYYY-MM' => clicks, newest first */
+	/** True the first time today this visitor follows this partner's link. */
+	private static function first_click_today( int $id ): bool {
+		$ip    = isset( $_SERVER['REMOTE_ADDR'] ) ? (string) $_SERVER['REMOTE_ADDR'] : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- hashed, never stored.
+		$agent = isset( $_SERVER['HTTP_USER_AGENT'] ) ? (string) $_SERVER['HTTP_USER_AGENT'] : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- hashed, never stored.
+		$key   = 'optima_partner_seen_' . substr( hash_hmac( 'sha256', $id . '|' . wp_date( 'Y-m-d' ) . '|' . $ip . '|' . $agent, wp_salt( 'nonce' ) ), 0, 24 );
+		if ( get_transient( $key ) ) {
+			return false;
+		}
+		set_transient( $key, 1, DAY_IN_SECONDS );
+		return true;
+	}
+
+	/** Keep the newest CLICK_MONTHS months of counts. */
+	private static function prune_clicks( int $id ): void {
+		$keys = array();
+		foreach ( array_keys( (array) get_post_meta( $id ) ) as $key ) {
+			if ( 0 === strpos( (string) $key, self::CLICK_MONTH ) ) {
+				$keys[] = (string) $key;
+			}
+		}
+		rsort( $keys ); // 'YYYY-MM' sorts by date.
+		foreach ( array_slice( $keys, self::CLICK_MONTHS ) as $key ) {
+			delete_post_meta( $id, $key );
+		}
+	}
+
+	/**
+	 * @return array<string,int> 'YYYY-MM' => clicks, newest first. Counts from
+	 * before this release (one array in _optima_partner_clicks) are added in.
+	 */
 	public static function clicks( int $id ): array {
 		$c = get_post_meta( $id, self::CLICKS, true );
 		$c = is_array( $c ) ? array_map( 'intval', $c ) : array();
+		foreach ( (array) get_post_meta( $id ) as $key => $values ) {
+			$key = (string) $key;
+			if ( 0 === strpos( $key, self::CLICK_MONTH ) ) {
+				$month       = substr( $key, strlen( self::CLICK_MONTH ) );
+				$c[ $month ] = (int) ( $c[ $month ] ?? 0 ) + (int) ( $values[0] ?? 0 );
+			}
+		}
 		krsort( $c );
-		return $c;
+		return array_slice( $c, 0, self::CLICK_MONTHS, true );
 	}
 
 	public static function clean_date( string $d ): string {

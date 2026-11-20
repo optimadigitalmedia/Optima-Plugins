@@ -3,6 +3,13 @@
  * The statement: settings, the [optima_accessibility_statement] shortcode, the
  * statement page itself and the footer link.
  *
+ * The footer link is on by default (inventory INV-2611-09). It prints in the
+ * theme's footer spot, optima_slot( 'footer' ) (rule 12). A theme without that
+ * slot gets it at the very end of the page from wp_footer instead, once. It is
+ * skipped when a menu already links to the statement page or the page already
+ * printed [optima_accessibility_link], and the Accessibility screen can turn
+ * it off.
+ *
  * No overlay widgets, ever. This plugin adds no toolbar, no script that
  * rewrites the page, and nothing that claims to make a site compliant.
  *
@@ -27,7 +34,11 @@ final class Optima_Accessibility {
 		add_action( 'init', array( __CLASS__, 'register' ) );
 		add_action( 'admin_init', array( __CLASS__, 'fill_description' ) );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'footer_style' ) );
+		// Plugin first (rule 12): the theme's footer slot; themes without one still get it from wp_footer.
+		add_action( 'optima_slot_footer', array( __CLASS__, 'footer_link' ) );
 		add_action( 'wp_footer', array( __CLASS__, 'footer_link' ), 50 );
+		add_action( 'wp_update_nav_menu', array( __CLASS__, 'forget_menu_check' ) );
+		add_action( 'wp_delete_nav_menu', array( __CLASS__, 'forget_menu_check' ) );
 	}
 
 	/** The footer link's few lines of style, only when that link is on. */
@@ -53,13 +64,20 @@ final class Optima_Accessibility {
 			'last_reviewed' => '',
 			'page_id'       => 0,
 			'own_page'      => 0,
-			'footer_link'   => 0,
+			// On by default: every page links to the statement. The Accessibility screen can turn it off.
+			'footer_link'   => 1,
 		);
 	}
 
 	/** @return array<string,mixed> */
 	public static function settings(): array {
-		return wp_parse_args( (array) get_option( self::OPTION, array() ), self::defaults() );
+		$saved = (array) get_option( self::OPTION, array() );
+		// Before the link was on by default every save stored footer_link 0. Only an
+		// off chosen on the footer form (footer_link_chosen) keeps the link off.
+		if ( empty( $saved['footer_link_chosen'] ) ) {
+			unset( $saved['footer_link'] );
+		}
+		return wp_parse_args( $saved, self::defaults() );
 	}
 
 	/** True when optima-core's business info is available. */
@@ -355,8 +373,55 @@ final class Optima_Accessibility {
 		$html = self::link_html();
 		if ( '' !== $html ) {
 			self::mark_link_seen();
+			self::$printed = true; // The automatic footer link then stays out, so the page never shows two.
 		}
 		return $html;
+	}
+
+	/** @var bool The link is on this page already (the footer slot, wp_footer or the shortcode). */
+	private static $printed = false;
+
+	const MENU_CHECK = 'optima_accessibility_in_menu';
+
+	/** True when a menu item already links to the statement page. Cached until a menu changes. */
+	public static function in_menu(): bool {
+		$page = self::page();
+		if ( ! $page ) {
+			return false;
+		}
+		$cached = get_transient( self::MENU_CHECK );
+		if ( is_array( $cached ) && (int) ( $cached['page'] ?? 0 ) === (int) $page->ID ) {
+			return ! empty( $cached['in'] );
+		}
+		$items = get_posts(
+			array(
+				'post_type'        => 'nav_menu_item',
+				'post_status'      => 'publish',
+				'posts_per_page'   => 1,
+				'fields'           => 'ids',
+				'no_found_rows'    => true,
+				'suppress_filters' => true,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_query_meta_query -- cached until a menu changes.
+				'meta_query'       => array(
+					array(
+						'key'   => '_menu_item_object_id',
+						'value' => (string) $page->ID,
+					),
+					array(
+						'key'   => '_menu_item_type',
+						'value' => 'post_type',
+					),
+				),
+			)
+		);
+		$in = ! empty( $items );
+		set_transient( self::MENU_CHECK, array( 'page' => (int) $page->ID, 'in' => $in ? 1 : 0 ), DAY_IN_SECONDS );
+		return $in;
+	}
+
+	/** A menu changed: check again on the next page view. */
+	public static function forget_menu_check(): void {
+		delete_transient( self::MENU_CHECK );
 	}
 
 	const LINK_SEEN = 'optima_accessibility_link_seen';
@@ -376,15 +441,25 @@ final class Optima_Accessibility {
 		}
 	}
 
-	/** Optional small link printed at the very end of every page. */
+	/**
+	 * The small Accessibility link, once per page: in the theme's footer slot,
+	 * or from wp_footer on a theme that has no footer slot (the slot runs first,
+	 * so wp_footer then finds it printed). Off when the screen turned it off,
+	 * and skipped when a menu or the shortcode already links to the statement.
+	 */
 	public static function footer_link(): void {
-		if ( empty( self::settings()['footer_link'] ) || is_admin() ) {
+		if ( self::$printed || empty( self::settings()['footer_link'] ) || is_admin() ) {
 			return;
 		}
 		$link = self::link_html();
 		if ( '' === $link ) {
 			return;
 		}
+		self::$printed = true;
+		if ( self::in_menu() ) {
+			return;
+		}
+		self::mark_link_seen();
 		echo '<p class="optima-a11y-footer">' . $link . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts in link_html().
 	}
 }

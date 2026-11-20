@@ -681,6 +681,42 @@ final class Optima_Hub_Health {
 	 * @return array<int, array{label:string, value:string, state:string, note:string}>
 	 *         state is good | warn | bad.
 	 */
+	/**
+	 * The failed-login limit (rule 19: login attempts limited), set by Optima
+	 * Core's protection switch `login_limit`.
+	 *
+	 * @return array{label:string, value:string, state:string, note:string, link?:string, link_text?:string}
+	 */
+	public static function login_limit(): array {
+		$label = __( 'Failed-login limit', 'optima-build' );
+		$link  = array(
+			'link'      => admin_url( 'admin.php?page=optima&tab=protect' ),
+			'link_text' => __( 'Spam protection', 'optima-build' ),
+		);
+		if ( ! class_exists( 'Optima_Core_Protection' ) || ! class_exists( 'Optima_Core_Login_Limit' ) ) {
+			return array(
+				'label' => $label,
+				'value' => __( 'Off', 'optima-build' ),
+				'state' => 'warn',
+				'note'  => __( 'Optima Core limits failed logins, and this site does not run a version that does. Update Optima Core.', 'optima-build' ),
+			);
+		}
+		if ( Optima_Core_Protection::on( 'login_limit' ) ) {
+			return array(
+				'label' => $label,
+				'value' => __( 'On', 'optima-build' ),
+				'state' => 'good',
+				'note'  => __( 'After 5 failed logins in 15 minutes, that address or username waits 15 minutes.', 'optima-build' ),
+			);
+		}
+		return array(
+			'label' => $label,
+			'value' => __( 'Off', 'optima-build' ),
+			'state' => 'warn',
+			'note'  => __( 'Password guessing is not slowed down. Turn it back on unless the site\'s decisions log says why it is off.', 'optima-build' ),
+		) + $link;
+	}
+
 	public static function checks(): array {
 		global $wp_version;
 		$out = array();
@@ -727,6 +763,7 @@ final class Optima_Hub_Health {
 			'note'  => $https ? __( 'The site loads over HTTPS.', 'optima-build' ) : __( 'The site address is not HTTPS.', 'optima-build' ),
 		);
 		$out[] = self::search_engines();
+		$out[] = self::login_limit();
 
 		if ( class_exists( 'Optima_Hub_Mail' ) ) {
 			$out[] = Optima_Hub_Mail::check();

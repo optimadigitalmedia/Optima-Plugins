@@ -1,0 +1,6 @@
+{
+  "plugin": "optima-law",
+  "items": [],
+  "cookies": [],
+  "notes": "Optima Law Firm Tools collects nothing from visitors and sets no cookies. When an operator turns on deleting old form entries (off by default), it deletes Gravity Forms entries older than the chosen limit; Optima Core's privacy policy draft then lists that limit on the Website forms row (optima_law_entry_days()). Its nightly log keeps only how many entries were deleted, never names or messages."
+}

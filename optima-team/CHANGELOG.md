@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.11.5 (2026-11-20)
+
+- Shared admin kit: the four Optima Law screens are filed in the menu (three under Content, form entries under Build).
+
 ## 0.1.11.4 (2026-11-13)
 
 - Board certification on each profile: a Certifications list (what the person is certified in, the certifying body, the year and a link to check it), read from the setup file like the other credentials. It shows on the bio as "Board certified in X by Y" and goes into the Person schema as hasCredential with credentialCategory certification and recognizedBy the body.

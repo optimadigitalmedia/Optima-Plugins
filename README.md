@@ -9,26 +9,27 @@ a theme never orphans content.
 
 | Plugin | Version |
 |---|---|
-| `optima-accessibility` | 0.1.12.11 |
-| `optima-aeo` | 0.2.4.11 |
-| `optima-analytics` | 0.1.15.10 |
-| `optima-build` | 0.7.11.4 |
-| `optima-cards` | 1.0.21.11 |
-| `optima-chat` | 0.2.4.11 |
-| `optima-contact` | 0.1.11.13 |
-| `optima-core` | 1.15.0.0 |
+| `optima-accessibility` | 0.1.12.12 |
+| `optima-aeo` | 0.2.4.12 |
+| `optima-analytics` | 0.1.15.11 |
+| `optima-build` | 0.7.11.5 |
+| `optima-cards` | 1.0.21.12 |
+| `optima-chat` | 0.2.4.12 |
+| `optima-contact` | 0.1.11.14 |
+| `optima-core` | 1.15.0.1 |
 | `optima-crm` | 0.1.1.6 |
-| `optima-events` | 0.14.3.11 |
-| `optima-forms-guard` | 0.3.7.0 |
-| `optima-hours` | 0.1.8.13 |
-| `optima-members` | 0.3.3.11 |
-| `optima-optimize` | 0.9.3.10 |
-| `optima-partners` | 0.1.2.11 |
-| `optima-redirects` | 0.1.9.10 |
-| `optima-results` | 0.1.10.4 |
-| `optima-reviews` | 0.5.5.13 |
-| `optima-sitecheck` | 0.2.4.11 |
-| `optima-team` | 0.1.11.4 |
+| `optima-events` | 0.14.3.12 |
+| `optima-forms-guard` | 0.3.7.1 |
+| `optima-hours` | 0.1.8.14 |
+| `optima-law` | 0.4.5.0 |
+| `optima-members` | 0.3.3.12 |
+| `optima-optimize` | 0.9.3.11 |
+| `optima-partners` | 0.1.2.12 |
+| `optima-redirects` | 0.1.9.11 |
+| `optima-results` | 0.1.10.5 |
+| `optima-reviews` | 0.5.5.14 |
+| `optima-sitecheck` | 0.2.4.12 |
+| `optima-team` | 0.1.11.5 |
 
 ## Install
 

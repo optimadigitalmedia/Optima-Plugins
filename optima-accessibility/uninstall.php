@@ -25,4 +25,5 @@ delete_option( 'optima_accessibility' );
 delete_option( 'optima_accessibility_results' );
 delete_option( 'optima_accessibility_launch' );
 delete_option( 'optima_accessibility_link_seen' );
+delete_transient( 'optima_accessibility_in_menu' );
 wp_clear_scheduled_hook( 'optima_accessibility_weekly' );

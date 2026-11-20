@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.15.0.1 (2026-11-20)
+
+# optima-core: changelog bullets (INV-2611-01, 02, 07, 10)
+- Staging guard (INV-2611-01): a staging copy now also refuses calls that would create real records. That covers intake and CRM systems (Lawmatics, Clio, HubSpot, LeadConnector), automation hooks (n8n cloud, Zapier, Make, Slack), call tracking, the attribution receiver on any Cloud Functions or Cloud Run address, and every Gravity Forms webhook feed, whatever address it points at. A test entry on staging never becomes a real lead.
+- Staging guard: the new `optima_core_staging_allow_hosts` filter lets a site re-open a host it needs on staging. In both host lists, an entry covers its subdomains and "*" stands for one or more parts of the address ("hook.*.make.com", "*.run.app").
+- Staging guard: each refused address is written to the PHP error log at most once an hour, and the staging notice now names intake, automation and webhook services.
+- Failed-login limit (INV-2611-02, rule 19): after 5 failed logins in 15 minutes, that address or that username waits 15 minutes, even with the right password. A good login clears the count. The login screen shows one plain sentence for every failed login, so it never says whether a username exists. Counts are stored under a salted hash, never the address or the name.
+- The failed-login limit is the seventh switch on Search and AI, Spam protection, on by default. Turn it off there or with `login_limit` in OPTIMA_CORE_PROTECTION_OFF. Filters change the number of tries, the time window and the lockout, and a site behind Cloudflare can choose to trust its visitor address header.
+- Offices (INV-2611-07): while Optima Hours owns the hours job, each office's schema takes the Optima Hours schedule (opening and holiday hours) instead of the office's own walk-in rows, so the hours have one owner. Without Optima Hours, offices print their own hours as before.
+- Change log (INV-2611-10): deactivating Optima Core now clears the weekly email's scheduled event.
+- Shared admin kit: the four Optima Law screens are filed in the menu (three under Content, form entries under Build).
+
 ## 1.15.0.0 (2026-11-19)
 
 Optima release of upstream 1.15.0 (from 1.6.0), ported selectively. Every Optima revision from 1.6.0.1 to 1.6.0.16 is kept: the law-site blueprint, offices, breadcrumbs, primary practice, the content-changed date, no self-review schema, the sitemap and noindex rules, the setup-description health fix, JSON_HEX_TAG, editable pages, private pages and the email guard. Where upstream and Optima changed the same code, Optima's later rule wins.

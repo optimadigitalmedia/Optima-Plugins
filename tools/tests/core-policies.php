@@ -6,7 +6,7 @@
 define( 'ABSPATH', __DIR__ . '/' );
 $root = dirname( __DIR__, 2 );
 define( 'WP_PLUGIN_DIR', $root );
-$GLOBALS['opts'] = array( 'active_plugins' => array( 'optima-core/optima-core.php', 'optima-analytics/optima-analytics.php', 'other-plugin/other.php' ) );
+$GLOBALS['opts'] = array( 'active_plugins' => array( 'optima-core/optima-core.php', 'optima-partners/optima-partners.php', 'other-plugin/other.php' ) );
 function get_option( $k, $d = false ) { return $GLOBALS['opts'][ $k ] ?? $d; }
 function add_action() {}
 function esc_html( $s ) { return htmlspecialchars( (string) $s, ENT_QUOTES ); }
@@ -28,11 +28,11 @@ $P = 'Optima_Core_Policies';
 
 $src = $P::sources();
 ok( isset( $src['optima-core'] ) && ! empty( $src['optima-core']['items'] ), 'Optima Core\'s visitor data list is read' );
-ok( ! empty( $src['optima-analytics']['unlisted'] ), 'an Optima plugin that is on with no list is marked' );
+ok( ! empty( $src['optima-partners']['unlisted'] ), 'an Optima plugin that is on with no list is marked' );
 ok( ! isset( $src['other-plugin'] ), 'plugins outside the suite are not read' );
 $privacy = $P::privacy( $src );
 ok( false !== strpos( $privacy, 'Smith Law, PLLC runs this website' ), 'the draft names the legal entity from Details' );
-ok( false !== strpos( $privacy, '[Confirm: Optima Analytics is on this website.' ), 'the draft asks about the plugin with no list instead of claiming nothing' );
+ok( false !== strpos( $privacy, '[Confirm: Optima Partners is on this website.' ), 'the draft asks about the plugin with no list instead of claiming nothing' );
 ok( false !== strpos( $privacy, 'Google Maps' ), 'the map\'s Google load is listed' );
 ok( false !== strpos( $P::terms(), 'governed by the laws of FL' ), 'the terms name the state from Details' );
 
@@ -44,7 +44,7 @@ $s2 = $P::apply( $state, 'privacy', 'approve', 'Approved by the firm\'s named ap
 ok( 'approved' === $s2['privacy']['status'] && 100 === $s2['privacy']['approved'] && 0 === $s2['privacy']['page'], 'approval is recorded, and no page is made by it' );
 ok( ! $P::out_of_date( 'privacy', $s2['privacy'], $src ), 'just approved: up to date' );
 $more = $src;
-unset( $more['optima-analytics'] );
+unset( $more['optima-partners'] );
 ok( $P::out_of_date( 'privacy', $s2['privacy'], $more ), 'a feature turned off after approval marks the policy as changed' );
 ok( 1 === $P::waiting( $s2, $src ), 'one document (terms) still waits for the firm' );
 $code = (string) file_get_contents( $root . '/optima-core/includes/policies.php' );

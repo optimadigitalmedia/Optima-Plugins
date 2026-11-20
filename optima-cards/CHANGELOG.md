@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.21.12 (2026-11-20)
+
+- Shared admin kit: the four Optima Law screens are filed in the menu (three under Content, form entries under Build).
+
 ## 1.0.21.11 (2026-11-12)
 
 - Added an uninstall cleanup. Deleting the plugin always removes the address stamp and the cached release lookup. The card and link settings (people, links, wording) stay unless a full wipe was asked for first (purge_on_uninstall in the optima_cards_settings setting, or OPTIMA_PURGE_ON_UNINSTALL set to true in wp-config.php). Business facts on Your business and photos in the media library are never touched.

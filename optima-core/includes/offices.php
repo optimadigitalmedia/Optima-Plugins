@@ -20,7 +20,8 @@
  *  - Schema: on each office's own page, one node of the business type (a law
  *    firm prints LegalService) with @id <office page URL>#office, its address,
  *    telephone, geo (only with 5 or more decimals), hasMap (Google Maps with the
- *    Place ID), openingHoursSpecification (the walk-in hours), parentOrganization
+ *    Place ID), openingHoursSpecification (the walk-in hours; while Optima Hours
+ *    owns the hours job, its confirmed schedule instead, see hours_props()), parentOrganization
  *    (the firm, #business) and a ContactPoint for intake (hoursAvailable only from
  *    the phone hours, availableLanguage only from the site's languages). The firm
  *    node lists every office that has a page through `subOrganization`, the
@@ -504,15 +505,39 @@ final class Optima_Core_Offices {
 		if ( '' !== $office['gbp_url'] ) {
 			$node['sameAs'] = array( $office['gbp_url'] );
 		}
-		$hours = self::specs( $office['hours'] );
-		if ( $hours ) {
-			$node['openingHoursSpecification'] = $hours;
+		foreach ( self::hours_props( $office ) as $key => $value ) {
+			$node[ $key ] = $value;
 		}
 		$point = self::contact_point( $office, $phone );
 		if ( $point ) {
 			$node['contactPoint'] = $point;
 		}
 		return (array) apply_filters( 'optima_core_office_node', $node, $office );
+	}
+
+	/** True when Optima Hours owns the hours job (optima_owns( 'hours' ), from Optima Build) and its schema reader is loaded. */
+	public static function hours_owned() {
+		return function_exists( 'optima_owns' ) && optima_owns( 'hours' )
+			&& class_exists( 'Optima_Hours_Schema' ) && method_exists( 'Optima_Hours_Schema', 'properties' );
+	}
+
+	/**
+	 * The office node's opening hours. One owner: while Optima Hours owns the
+	 * hours job, the node carries Optima Hours' confirmed schedule (opening and
+	 * holiday hours, nothing until they are confirmed) and the office's own
+	 * walk-in rows are not printed. Without Optima Hours, the office's own rows.
+	 *
+	 * @return array<string,array> Schema properties to set on the node.
+	 */
+	public static function hours_props( array $office ) {
+		if ( self::hours_owned() ) {
+			return array_intersect_key(
+				(array) Optima_Hours_Schema::properties(),
+				array_flip( array( 'openingHoursSpecification', 'specialOpeningHoursSpecification' ) )
+			);
+		}
+		$hours = self::specs( $office['hours'] );
+		return $hours ? array( 'openingHoursSpecification' => $hours ) : array();
 	}
 
 	/** The intake ContactPoint: hoursAvailable only from phone hours, availableLanguage only from the site's languages. */

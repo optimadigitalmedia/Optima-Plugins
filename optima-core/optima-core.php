@@ -3,7 +3,7 @@
  * Plugin Name:       Optima Core
  * Plugin URI:        https://optimadigitalmedia.com
  * Description:       The Optima engine for a client site: business identity, content model (post types, fields, Block Bindings), the JSON-LD schema graph, and the in-house SEO head tags and sitemap tuning. One plugin, one Optima dashboard. The Yoast replacement, built to survive any future redesign.
- * Version:           1.15.0.0
+ * Version:           1.15.0.1
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Author:            Optima Digital
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OPTIMA_CORE_VERSION', '1.15.0.0' );
+define( 'OPTIMA_CORE_VERSION', '1.15.0.1' );
 define( 'OPTIMA_CORE_DIR', plugin_dir_path( __FILE__ ) );
 define( 'OPTIMA_CORE_FILE', __FILE__ );
 
@@ -62,6 +62,9 @@ require_once OPTIMA_CORE_DIR . 'includes/editable-pages.php';
 require_once OPTIMA_CORE_DIR . 'includes/operators.php';
 require_once OPTIMA_CORE_DIR . 'includes/protection.php';
 Optima_Core_Protection::init();
+/* Failed logins: 5 in 15 minutes lock that address or username out for 15 minutes (switch login_limit). */
+require_once OPTIMA_CORE_DIR . 'includes/login-limit.php';
+Optima_Core_Login_Limit::init();
 /* Staging copies email only operators and the admin email, and call no outside services. */
 require_once OPTIMA_CORE_DIR . 'includes/staging-guard.php';
 Optima_Core_Staging::init();
@@ -180,5 +183,6 @@ register_activation_hook( __FILE__, function () {
 } );
 register_deactivation_hook( __FILE__, function () {
 	Optima_SEO_Sitemap::unschedule();
+	wp_clear_scheduled_hook( Optima_Changelog::CRON ); // The Change log weekly email.
 	flush_rewrite_rules();
 } );

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.11.5 (2026-11-20)
+
+# optima-build: changelog bullets (INV-2611-02)
+- Site health shows a new row, Failed-login limit, saying whether Optima Core's limit on failed logins is on. When it is off, the row links to Spam protection; when Optima Core is too old to have it, the row says to update Optima Core.
+- Optima Law joins Build: its waiting items show in the Inbox and it owns the `law` job.
+- Catalog: refreshed, read from the release channel, Optima Law added, the Optima theme no longer blocks Core, AI Search or Cards.
+- Shared admin kit: the four Optima Law screens are filed in the menu (three under Content, form entries under Build).
+
 ## 0.7.11.4 (2026-11-20)
 
 - Change requests and the hidden-site alert go to the site's operator administrators (or the site's admin email when it has none) instead of an address written into the plugin. `OPTIMA_HUB_REQUEST_EMAIL` and the two filters still set a different recipient.

@@ -239,7 +239,7 @@ if(d.readyState==='complete'){idle();}else{w.addEventListener('load',idle);}
 		<button type="button" class="optima-consent-yes" data-optima-consent="granted"><?php echo esc_html( $yes ); ?></button>
 	</div>
 </div>
-<style id="optima-consent-css"><?php echo self::css( self::accent() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static CSS, the color is a validated hex. ?></style>
+<style id="optima-consent-css"><?php echo self::css(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static CSS. ?></style>
 <script id="optima-consent-js"><?php echo self::js(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static JS. ?></script>
 		<?php
 	}
@@ -251,42 +251,25 @@ if(d.readyState==='complete'){idle();}else{w.addEventListener('load',idle);}
 	}
 
 	/**
-	 * The button color: the site's brand color from Optima Build (the Email
-	 * screen's pick or the detected one), else the optima_brand_accent filter,
-	 * else Optima's darker azure.
+	 * The notice dresses only from the --optima-* variables Optima Build prints
+	 * from the theme's DESIGN.md (rule 7): surface and ink for the panel, the
+	 * accent and accent-ink for the button, the theme's radii. It names every
+	 * value itself, so a theme that defines --surface but not --text can no
+	 * longer leave light text on a white panel. Without Optima Build the
+	 * fallbacks are the browser's own neutral system colors (Canvas and
+	 * CanvasText), which always read against each other. A page that sets
+	 * data-theme="dark" gets the night colors.
 	 */
-	private static function accent(): string {
-		$hex = class_exists( 'Optima_Hub_Mail' ) && method_exists( 'Optima_Hub_Mail', 'brand_color' )
-			? Optima_Hub_Mail::brand_color()
-			: (string) apply_filters( 'optima_brand_accent', '' );
-		return preg_match( '/^#[0-9a-fA-F]{6}$/', $hex ) ? $hex : '#0F63AB';
-	}
-
-	/** White text on the brand color when it reads at 4.5:1 (WCAG AA), else near-black. */
-	private static function ink( string $hex ): string {
-		$lum = 0.0;
-		foreach ( array( 0.2126, 0.7152, 0.0722 ) as $i => $w ) {
-			$c    = hexdec( substr( ltrim( $hex, '#' ), $i * 2, 2 ) ) / 255;
-			$lum += $w * ( $c <= 0.03928 ? $c / 12.92 : ( ( $c + 0.055 ) / 1.055 ) ** 2.4 );
-		}
-		return 1.05 / ( $lum + 0.05 ) >= 4.5 ? '#FFFFFF' : '#141A24';
-	}
-
-	/**
-	 * The notice keeps its own colors instead of borrowing the theme's: a site
-	 * that defines --surface but not --text (a client site) got a white panel with
-	 * light gray text and an invisible "No thanks". Light by default, dark when
-	 * the page sets data-theme="dark", and the button in the site's color.
-	 */
-	private static function css( string $accent ): string {
-		return '.optima-consent{--oc-bg:#FFFFFF;--oc-text:#141A24;--oc-muted:#4D5768;--oc-line:rgba(0,0,0,.16);--oc-accent:' . $accent . ';--oc-on:' . self::ink( $accent ) . ';'
-			. 'position:fixed;left:16px;right:16px;bottom:16px;z-index:9999;max-width:420px;padding:12px 14px;border-radius:18px;'
+	private static function css(): string {
+		return '.optima-consent{--oc-bg:var(--optima-surface,Canvas);--oc-text:var(--optima-ink,CanvasText);--oc-muted:var(--optima-ink-2,CanvasText);'
+			. '--oc-line:var(--optima-line,GrayText);--oc-accent:var(--optima-accent,CanvasText);--oc-on:var(--optima-accent-ink,Canvas);'
+			. 'position:fixed;left:16px;right:16px;bottom:16px;z-index:9999;max-width:420px;padding:12px 14px;border-radius:var(--optima-radius-lg,1rem);'
 			. 'background:var(--oc-bg);color:var(--oc-text);border:1px solid var(--oc-line);'
-			. 'box-shadow:0 18px 50px -12px rgba(0,0,0,.35);font-size:14px;line-height:1.45;font-family:inherit}'
-			. ':root[data-theme="dark"] .optima-consent{--oc-bg:#1B2150;--oc-text:#F6F8FB;--oc-muted:#B7C0D6;--oc-line:rgba(255,255,255,.16)}'
+			. 'box-shadow:0 18px 50px -12px color-mix(in srgb,var(--oc-text) 35%,transparent);font-size:14px;line-height:1.45;font-family:var(--optima-font-body,inherit)}'
+			. ':root[data-theme="dark"] .optima-consent{--oc-bg:var(--optima-night,CanvasText);--oc-text:var(--optima-canvas,Canvas);--oc-muted:var(--optima-night-ink-2,Canvas);--oc-line:var(--optima-night-ink-2,GrayText)}'
 			. '.optima-consent[hidden]{display:none}.optima-consent p{margin:0 0 10px;color:var(--oc-muted);text-wrap:pretty}'
 			. '.optima-consent a{color:var(--oc-text);text-decoration:underline}.optima-consent-actions{display:flex;gap:8px;justify-content:flex-end}'
-			. '.optima-consent button{font:inherit;font-weight:500;min-height:44px;padding:0 18px;border-radius:980px;cursor:pointer;border:1px solid var(--oc-line);background:transparent;color:var(--oc-text)}'
+			. '.optima-consent button{font:inherit;font-weight:var(--optima-button-weight,500);min-height:44px;padding:0 18px;border-radius:var(--optima-button-radius,999px);cursor:pointer;border:1px solid var(--oc-line);background:transparent;color:var(--oc-text)}'
 			. '.optima-consent .optima-consent-yes{background:var(--oc-accent);border-color:var(--oc-accent);color:var(--oc-on)}'
 			. '.optima-consent button:focus-visible{outline:2px solid var(--oc-accent);outline-offset:2px}'
 			. '@media (min-width:600px){.optima-consent{right:auto;left:24px;bottom:24px;padding:16px 18px;font-size:15px}}';
@@ -296,12 +279,15 @@ if(d.readyState==='complete'){idle();}else{w.addEventListener('load',idle);}
 		return <<<'JS'
 (function(){var c=window.optimaConsentConfig||{};var box=document.getElementById('optima-consent');
 function has(){return new RegExp('(?:^|; )'+c.cookie+'=(granted|denied)').test(document.cookie);}
+/* Focus moves into the notice only when the visitor opens it (Privacy choices), never on page load (WCAG 2.2), and goes back to the link that opened it. */
+var opener=null;function hide(){if(!box)return;var back=box.contains(document.activeElement)?opener:null;box.hidden=true;opener=null;if(back&&back.focus)back.focus({preventScroll:true});}
 function set(v){document.cookie=c.cookie+'='+v+'; Max-Age=15552000; Path=/; SameSite=Lax'+(location.protocol==='https:'?'; Secure':'');
 var ad=c.ads?v:'denied';gtag('consent','update',{analytics_storage:v,ad_storage:ad,ad_user_data:ad,ad_personalization:ad});
-window.dataLayer.push({event:'optima_consent_update',consent:v});if(box)box.hidden=true;}
-function show(){if(box){box.hidden=false;var b=box.querySelector('.optima-consent-yes');if(b)b.focus({preventScroll:true});}}
+window.dataLayer.push({event:'optima_consent_update',consent:v});hide();}
+function show(from){if(box){opener=from||null;box.hidden=false;var b=box.querySelector('.optima-consent-yes');if(b)b.focus({preventScroll:true});}}
 if(box){box.addEventListener('click',function(e){var b=e.target.closest('[data-optima-consent]');if(b)set(b.getAttribute('data-optima-consent'));});
-box.addEventListener('keydown',function(e){if(e.key==='Escape')box.hidden=true;});}
+box.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});}
+/* First visit: shown without taking focus; it sits in the page order for keyboard users. */
 if(!has()&&navigator.globalPrivacyControl!==true&&box)box.hidden=false;
 /* Rule 50 names. Old names go out too only when the site turns legacy events on. */
 var ALIAS={team_call:['call_click','team_card'],team_email:['email_click','team_card']};
@@ -309,7 +295,7 @@ function push(name,params){if(c.tag==='gtm'){var o={event:name};for(var k in par
 window.optimaTrack=function(name,params,legacy){params=params||{};if(name)push(name,params);if(legacy&&c.legacy)push(legacy,params);};
 function how(h){var m=/^(tel|sms|mailto):/i.exec(h||'');return m?m[1].toLowerCase():'link';}
 [].forEach.call(document.querySelectorAll('[data-optima-view]'),function(v){window.optimaTrack(v.getAttribute('data-optima-view'),{link_label:v.getAttribute('data-optima-label')||document.title});});
-document.addEventListener('click',function(e){var p=e.target.closest('[data-optima-privacy],a[href="#privacy-choices"]');if(p){e.preventDefault();show();return;}
+document.addEventListener('click',function(e){var p=e.target.closest('[data-optima-privacy],a[href="#privacy-choices"]');if(p){e.preventDefault();show(p);return;}
 var t=e.target.closest('[data-optima-track],[data-optima-legacy]');if(!t)return;
 var name=t.getAttribute('data-optima-track')||'',old=t.getAttribute('data-optima-legacy')||'',loc=t.getAttribute('data-optima-location')||'';
 if(ALIAS[name]){old=old||name;loc=loc||ALIAS[name][1];name=ALIAS[name][0];}
