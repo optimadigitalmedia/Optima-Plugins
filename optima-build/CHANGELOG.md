@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.11.4 (2026-11-20)
+
+- Email can send through a sending service instead of Google: Resend, Postmark, Amazon SES, Brevo or any SMTP relay. Pick it under Send through, paste a sending key (no Google app password), and send from any address on the domain verified with the service. The service signs the mail for the site's own domain, so it passes SPF, DKIM and DMARC.
+- The key is stored encrypted like the app password, or set in wp-config.php with OPTIMA_MAIL_SERVICE and OPTIMA_MAIL_PASSWORD.
+- Sites already sending through Google keep doing so with no change. Switching service clears the saved password or key and the last test, so a Google app password is never sent to a service.
+- Site health, the test email and error messages name the route in use, and explain the common service errors (wrong key, unverified domain).
+- Setup steps for the service and the Cloudflare DNS records: docs/email-sending.md. New test: tools/tests/mail-services.php.
+
 ## 0.7.11.3 (2026-11-13)
 
 - Ten new template slots for the law-site page layer: breadcrumb, state-law, practice-results, practice-reviews, practice-attorneys, related-guides, next-steps, office-card, bio-glance and bio-results. Each prints only what its plugin attaches. When a theme passes no variant, optima_slot() fills it from the layout recipe's blocks.

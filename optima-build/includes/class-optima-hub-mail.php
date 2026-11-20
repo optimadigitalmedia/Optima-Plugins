@@ -1,7 +1,9 @@
 <?php
 /**
  * Optima Mail: the site's email (form notices, password resets, Optima checks)
- * goes out through a real Google mailbox instead of the host's mail server.
+ * goes out through a real mail server instead of the host's: a Google mailbox,
+ * or a sending service (Resend, Postmark, Amazon SES, Brevo or any SMTP relay)
+ * that signs the mail for the site's own domain.
  *
  * Managed hosts like WP Engine send from their own servers, which fail the
  * sender domain's SPF, so the mail lands in junk or vanishes. Here the site
@@ -10,9 +12,15 @@
  * Whatever "From" a form set (a client's own address, say) becomes the
  * Reply-To, so replies still reach the right person.
  *
- * One screen: address, app password, sender name, Send test. The password is
- * stored encrypted with the site's own salts, never shown again, and can live
- * in wp-config.php instead:  define( 'OPTIMA_MAIL_PASSWORD', 'abcd efgh ijkl mnop' );
+ * A sending service needs no Google app password. It sends from any address on
+ * a domain verified with the service (SPF and DKIM records in the domain's
+ * DNS), signs every message as that domain, and lets DMARC pass.
+ *
+ * One screen: how to send, address, password or key, sender name, Send test.
+ * The password or key is stored encrypted with the site's own salts, never
+ * shown again, and can live in wp-config.php instead:
+ *   define( 'OPTIMA_MAIL_PASSWORD', 'the app password or the service key' );
+ *   define( 'OPTIMA_MAIL_SERVICE', 'resend' ); // optional: google, resend, postmark, ses, brevo, custom
  *
  * @package Optima_Build
  */
@@ -30,6 +38,20 @@ final class Optima_Hub_Mail {
 	const HOST   = 'smtp.gmail.com';
 	const PORT   = 587;
 
+	/**
+	 * How the site can send. host and user are the defaults a sending service
+	 * documents; user '' means "the key is the user name too" (Postmark).
+	 * custom and ses take a host typed on the screen.
+	 */
+	const SERVICES = array(
+		'google'   => array( 'label' => 'Google (Gmail or Workspace)', 'host' => 'smtp.gmail.com', 'user' => null ),
+		'resend'   => array( 'label' => 'Resend', 'host' => 'smtp.resend.com', 'user' => 'resend' ),
+		'postmark' => array( 'label' => 'Postmark', 'host' => 'smtp.postmarkapp.com', 'user' => '' ),
+		'ses'      => array( 'label' => 'Amazon SES', 'host' => '', 'user' => null ),
+		'brevo'    => array( 'label' => 'Brevo', 'host' => 'smtp-relay.brevo.com', 'user' => null ),
+		'custom'   => array( 'label' => 'Other SMTP relay', 'host' => '', 'user' => null ),
+	);
+
 	/** @var string The last wp_mail error during a test send. */
 	private static $error = '';
 
@@ -43,16 +65,60 @@ final class Optima_Hub_Mail {
 		add_filter( 'gform_pre_send_email', array( __CLASS__, 'brand_form' ), 20, 4 );
 	}
 
-	/** @return array{email:string, name:string, password:string, accent:string, last:array} */
+	/** @return array{service:string, host:string, port:int, user:string, email:string, name:string, password:string, accent:string, last:array} */
 	private static function settings(): array {
 		$s = get_option( self::OPTION, array() );
 		$s = is_array( $s ) ? $s : array();
+		$service = (string) ( $s['service'] ?? 'google' );
+		if ( defined( 'OPTIMA_MAIL_SERVICE' ) && isset( self::SERVICES[ (string) OPTIMA_MAIL_SERVICE ] ) ) {
+			$service = (string) OPTIMA_MAIL_SERVICE;
+		}
 		return array(
+			// Sites set up before sending services keep sending through Google.
+			'service'  => isset( self::SERVICES[ $service ] ) ? $service : 'google',
+			'host'     => (string) ( $s['host'] ?? '' ),
+			'port'     => (int) ( $s['port'] ?? 0 ),
+			'user'     => (string) ( $s['user'] ?? '' ),
 			'email'    => (string) ( $s['email'] ?? '' ),
 			'name'     => (string) ( $s['name'] ?? '' ),
 			'password' => (string) ( $s['password'] ?? '' ),
 			'accent'   => (string) ( $s['accent'] ?? '' ),
 			'last'     => is_array( $s['last'] ?? null ) ? $s['last'] : array(),
+		);
+	}
+
+	/** Through Google, or through a sending service. */
+	public static function is_google(): bool {
+		return 'google' === self::settings()['service'];
+	}
+
+	/** The name of what the site sends through, for the screen and Site health. */
+	public static function service_label(): string {
+		return self::SERVICES[ self::settings()['service'] ]['label'];
+	}
+
+	/**
+	 * Where and as whom the site signs in: host, port, user name.
+	 *
+	 * @return array{host:string, port:int, user:string}
+	 */
+	private static function server(): array {
+		$s    = self::settings();
+		$def  = self::SERVICES[ $s['service'] ];
+		$host = '' !== $s['host'] && in_array( $s['service'], array( 'ses', 'custom' ), true ) ? $s['host'] : (string) $def['host'];
+		if ( 'google' === $s['service'] ) {
+			$user = $s['email'];
+		} elseif ( null === $def['user'] ) {
+			$user = $s['user']; // Typed on the screen (SES, Brevo, a custom relay).
+		} elseif ( '' === $def['user'] ) {
+			$user = self::password(); // Postmark: the server token is the user name too.
+		} else {
+			$user = (string) $def['user'];
+		}
+		return array(
+			'host' => $host,
+			'port' => $s['port'] > 0 ? $s['port'] : self::PORT,
+			'user' => $user,
 		);
 	}
 
@@ -63,33 +129,36 @@ final class Optima_Hub_Mail {
 		return self::decrypt( self::settings()['password'] );
 	}
 
-	/** Set up: an address and a password are both saved. */
+	/** Set up: an address, a password or key, and (for a relay) a server. */
 	public static function ready(): bool {
-		return is_email( self::settings()['email'] ) && '' !== self::password();
+		$server = self::server();
+		return is_email( self::settings()['email'] ) && '' !== self::password() && '' !== $server['host'] && '' !== $server['user'];
 	}
 
 	/* ---------------------------------------------------------------- */
 
-	/** Route every wp_mail through Google once the screen is filled in. */
+	/** Route every wp_mail through Google or the sending service once the screen is filled in. */
 	public static function mailer( $phpmailer ): void {
 		if ( ! self::ready() ) {
 			return;
 		}
-		$s    = self::settings();
-		$from = $phpmailer->From;
-		$name = $phpmailer->FromName;
+		$s      = self::settings();
+		$server = self::server();
+		$from   = $phpmailer->From;
+		$name   = $phpmailer->FromName;
 
 		$phpmailer->isSMTP();
-		$phpmailer->Host       = (string) apply_filters( 'optima_mail_host', self::HOST );
-		$phpmailer->Port       = (int) apply_filters( 'optima_mail_port', self::PORT );
-		$phpmailer->SMTPSecure = 'tls';
+		$phpmailer->Host       = (string) apply_filters( 'optima_mail_host', $server['host'] );
+		$phpmailer->Port       = (int) apply_filters( 'optima_mail_port', $server['port'] );
+		$phpmailer->SMTPSecure = 465 === (int) $phpmailer->Port ? 'ssl' : 'tls';
 		$phpmailer->SMTPAuth   = true;
-		$phpmailer->Username   = $s['email'];
+		$phpmailer->Username   = $server['user'];
 		$phpmailer->Password   = self::password();
 
-		// Google only sends as the signed-in address. A different From the
-		// email asked for (a form's "send as the business owner") becomes the
-		// Reply-To, unless the email already set one.
+		// The site always sends as the saved address (Google only allows the
+		// signed-in address; a service only allows its verified domain). A
+		// different From the email asked for (a form's "send as the business
+		// owner") becomes the Reply-To, unless the email already set one.
 		if ( $from && strtolower( $from ) !== strtolower( $s['email'] ) && is_email( $from ) && ! $phpmailer->getReplyToAddresses() && ! self::is_default_from( $from ) ) {
 			$phpmailer->addReplyTo( $from, $name );
 		}
@@ -133,7 +202,7 @@ final class Optima_Hub_Mail {
 				'label'     => __( 'Site email', 'optima-build' ),
 				'value'     => __( 'Host mail', 'optima-build' ),
 				'state'     => 'warn',
-				'note'      => __( 'Form emails go out through the host, which often lands them in junk. Set up Email to send through Google.', 'optima-build' ),
+				'note'      => __( 'Form emails go out through the host, which often lands them in junk. Set up Email to send through a sending service or Google.', 'optima-build' ),
 				'link'      => self::url(),
 				'link_text' => __( 'Set up Email', 'optima-build' ),
 			);
@@ -142,7 +211,8 @@ final class Optima_Hub_Mail {
 		$bad  = isset( $last['ok'] ) && ! $last['ok'];
 		return array(
 			'label'     => __( 'Site email', 'optima-build' ),
-			'value'     => $bad ? __( 'Last test failed', 'optima-build' ) : __( 'Through Google', 'optima-build' ),
+			/* translators: %s: Google, or the sending service's name */
+			'value'     => $bad ? __( 'Last test failed', 'optima-build' ) : sprintf( __( 'Through %s', 'optima-build' ), self::is_google() ? 'Google' : self::service_label() ),
 			'state'     => $bad ? 'bad' : ( empty( $last ) ? 'warn' : 'good' ),
 			/* translators: %s: email address */
 			'note'      => empty( $last ) ? sprintf( __( 'Sends as %s. Send a test to confirm it arrives.', 'optima-build' ), $s['email'] ) : sprintf( __( 'Sends as %s.', 'optima-build' ), $s['email'] ),
@@ -161,6 +231,7 @@ final class Optima_Hub_Mail {
 		$s     = self::settings();
 		$email = sanitize_email( wp_unslash( (string) ( $_POST['email'] ?? '' ) ) );
 		$pass  = preg_replace( '/\s+/', '', wp_unslash( (string) ( $_POST['password'] ?? '' ) ) );
+		$service = sanitize_key( wp_unslash( (string) ( $_POST['service'] ?? $s['service'] ) ) );
 		$clear = ! empty( $_POST['clear'] );
 
 		if ( $clear ) {
@@ -172,6 +243,20 @@ final class Optima_Hub_Mail {
 			self::notice( __( 'That email address does not look right.', 'optima-build' ), 'error' );
 			self::back();
 		}
+		if ( isset( self::SERVICES[ $service ] ) && $service !== $s['service'] ) {
+			$s['service']  = $service;
+			$s['last']     = array(); // A new route needs a new test.
+			$s['password'] = '';      // A Google app password is not a service key (and back).
+			$s['host']     = '';
+		}
+		if ( isset( $_POST['host'] ) ) {
+			$s['host'] = strtolower( preg_replace( '/[^a-zA-Z0-9.-]/', '', wp_unslash( (string) $_POST['host'] ) ) );
+		}
+		$port      = (int) ( $_POST['port'] ?? 0 );
+		$s['port'] = in_array( $port, array( 465, 587, 2525 ), true ) ? $port : 0;
+		if ( isset( $_POST['user'] ) ) {
+			$s['user'] = sanitize_text_field( wp_unslash( (string) $_POST['user'] ) );
+		}
 		$s['email'] = $email;
 		$s['name']  = sanitize_text_field( wp_unslash( (string) ( $_POST['name'] ?? '' ) ) );
 		$accent      = sanitize_hex_color( wp_unslash( (string) ( $_POST['accent'] ?? '' ) ) );
@@ -182,7 +267,7 @@ final class Optima_Hub_Mail {
 			$s['last']     = array();
 		}
 		update_option( self::OPTION, $s, false );
-		self::notice( self::ready() ? __( 'Saved. Send a test to make sure it arrives.', 'optima-build' ) : __( 'Saved. Add the app password to switch it on.', 'optima-build' ), 'success' );
+		self::notice( self::ready() ? __( 'Saved. Send a test to make sure it arrives.', 'optima-build' ) : __( 'Saved. Add the password or key (and the server, for a relay) to switch it on.', 'optima-build' ), 'success' );
 		self::back();
 	}
 
@@ -217,7 +302,8 @@ final class Optima_Hub_Mail {
 			/* translators: %s: email address */
 			self::notice( sprintf( __( 'Sent to %s. Check that inbox (and junk, the first time).', 'optima-build' ), $to ), 'success' );
 		} else {
-			self::notice( __( 'Google did not accept it: ', 'optima-build' ) . self::explain( self::$error ), 'error' );
+			/* translators: %s: Google, or the sending service's name */
+			self::notice( sprintf( __( '%s did not accept it: ', 'optima-build' ), self::is_google() ? 'Google' : self::service_label() ) . self::explain( self::$error ), 'error' );
 		}
 		self::back();
 	}
@@ -231,8 +317,8 @@ final class Optima_Hub_Mail {
 		$s    = self::settings();
 		$url  = home_url( '/' );
 		$host = (string) wp_parse_url( $url, PHP_URL_HOST );
-		/* translators: 1: site address, 2: sending address */
-		$text = sprintf( __( 'This came from %1$s through Google, sent as %2$s. Form messages, booking notes and password resets will arrive the same way, in the inbox instead of junk.', 'optima-build' ), $host, $s['email'] );
+		/* translators: 1: site address, 2: sending address, 3: Google or the sending service */
+		$text = sprintf( __( 'This came from %1$s through %3$s, sent as %2$s. Form messages, booking notes and password resets will arrive the same way, in the inbox instead of junk.', 'optima-build' ), $host, $s['email'], self::is_google() ? 'Google' : self::service_label() );
 		return self::card(
 			$site,
 			__( 'Your website can send email.', 'optima-build' ),
@@ -459,13 +545,19 @@ foreach ( array_values( $buttons ) as $i => $b ) {
 		return '#0F63AB';
 	}
 
-	/** Turn Google's error text into the fix. */
+	/** Turn the mail server's error text into the fix. */
 	private static function explain( string $error ): string {
+		$google = self::is_google();
 		if ( preg_match( '/authenticat|password|535|534|Username and Password/i', $error ) ) {
-			return __( 'the address or app password is wrong. Make a new app password for this address and paste it in.', 'optima-build' );
+			return $google
+				? __( 'the address or app password is wrong. Make a new app password for this address and paste it in.', 'optima-build' )
+				: __( 'the key (or user name) is wrong. Make a new sending key in the service and paste it in.', 'optima-build' );
+		}
+		if ( ! $google && preg_match( '/not verified|domain|sender|550|553|554/i', $error ) ) {
+			return __( 'the service would not send as this address. Use an address on the domain you verified with the service, and check its DNS records show as verified.', 'optima-build' );
 		}
 		if ( preg_match( '/connect|timed out|could not/i', $error ) ) {
-			return __( 'the site could not reach Google\'s mail server. Ask the host whether port 587 is open.', 'optima-build' );
+			return __( 'the site could not reach the mail server. Ask the host whether port 587 (or 465) is open.', 'optima-build' );
 		}
 		return '' !== $error ? $error : __( 'no reason given.', 'optima-build' );
 	}
@@ -498,7 +590,9 @@ foreach ( array_values( $buttons ) as $i => $b ) {
 		$s     = self::settings();
 		$ready = self::ready();
 		$in_config = defined( 'OPTIMA_MAIL_PASSWORD' ) && '' !== (string) OPTIMA_MAIL_PASSWORD;
-		Optima_Admin_UI::open( __( 'Email', 'optima-build' ), __( 'Send the site\'s email (form notices, password resets) through Google, so it reaches the inbox instead of junk.', 'optima-build' ) );
+		$google    = self::is_google();
+		$server    = self::server();
+		Optima_Admin_UI::open( __( 'Email', 'optima-build' ), __( 'Send the site\'s email (form notices, password resets) through a sending service or Google, so it reaches the inbox instead of junk.', 'optima-build' ) );
 
 		$key    = 'optima_mail_notice_' . get_current_user_id();
 		$notice = get_transient( $key );
@@ -529,7 +623,7 @@ foreach ( array_values( $buttons ) as $i => $b ) {
 		<div class="sh-grid sh-grid-2">
 			<section class="sh-box sh-check is-<?php echo esc_attr( $ready ? ( isset( $last['ok'] ) && ! $last['ok'] ? 'bad' : 'good' ) : 'warn' ); ?>">
 				<p class="sh-label"><?php esc_html_e( 'Status', 'optima-build' ); ?></p>
-				<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php echo esc_html( $ready ? __( 'Sending through Google', 'optima-build' ) : __( 'Not set up: the host sends', 'optima-build' ) ); ?></p>
+				<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php /* translators: %s: Google or the sending service */ echo esc_html( $ready ? sprintf( __( 'Sending through %s', 'optima-build' ), $google ? 'Google' : self::service_label() ) : __( 'Not set up: the host sends', 'optima-build' ) ); ?></p>
 				<p class="sh-note">
 					<?php
 					if ( ! empty( $last['at'] ) ) {
@@ -543,11 +637,19 @@ foreach ( array_values( $buttons ) as $i => $b ) {
 			</section>
 			<section class="sh-box">
 				<p class="sh-label"><?php esc_html_e( 'Set it up once', 'optima-build' ); ?></p>
+				<?php if ( $google ) : ?>
 				<ol class="sm-steps">
 					<li><?php esc_html_e( 'Sign in to Google as the address the site should send from.', 'optima-build' ); ?></li>
-					<li><?php echo wp_kses( __( 'Open <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">myaccount.google.com/apppasswords</a>, name it after this site, and copy the 16 letters.', 'optima-build' ), array( 'a' => array( 'href' => true, 'target' => true, 'rel' => true ) ) ); ?></li>
+					<li><?php echo wp_kses( __( 'Open <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">myaccount.google.com/apppasswords</a>, name it after this site, and copy the 16-letter password.', 'optima-build' ), array( 'a' => array( 'href' => array(), 'target' => array(), 'rel' => array() ) ) ); ?></li>
 					<li><?php esc_html_e( 'Paste them below, Save, then Send test.', 'optima-build' ); ?></li>
 				</ol>
+				<?php else : ?>
+				<ol class="sm-steps">
+					<li><?php esc_html_e( 'In the sending service, add the site\'s domain (or a sending subdomain) and add the DNS records it lists. Wait until it shows as verified.', 'optima-build' ); ?></li>
+					<li><?php esc_html_e( 'Make a key with sending access only, for this domain only. It is shown once.', 'optima-build' ); ?></li>
+					<li><?php esc_html_e( 'Paste the key below with a send-from address on that domain, Save, then Send test.', 'optima-build' ); ?></li>
+				</ol>
+				<?php endif; ?>
 			</section>
 		</div>
 
@@ -556,11 +658,38 @@ foreach ( array_values( $buttons ) as $i => $b ) {
 				<input type="hidden" name="action" value="<?php echo esc_attr( self::SAVE ); ?>">
 				<?php wp_nonce_field( self::SAVE ); ?>
 				<div class="sm-row">
-					<label><?php esc_html_e( 'Send from (Gmail or Google Workspace)', 'optima-build' ); ?>
-						<input type="email" name="email" value="<?php echo esc_attr( $s['email'] ); ?>" placeholder="name@gmail.com" autocomplete="off">
+					<label><?php esc_html_e( 'Send through', 'optima-build' ); ?>
+						<select name="service" <?php disabled( defined( 'OPTIMA_MAIL_SERVICE' ) ); ?>>
+							<?php foreach ( self::SERVICES as $id => $svc ) : ?>
+								<option value="<?php echo esc_attr( $id ); ?>" <?php selected( $s['service'], $id ); ?>><?php echo esc_html( $svc['label'] ); ?></option>
+							<?php endforeach; ?>
+						</select>
+						<span class="sh-note"><?php esc_html_e( 'Changed it? Save once to see that service\'s fields.', 'optima-build' ); ?></span>
 					</label>
-					<label><?php esc_html_e( 'App password', 'optima-build' ); ?>
-						<input type="password" name="password" value="" autocomplete="new-password" placeholder="<?php echo esc_attr( $in_config ? __( 'Set in wp-config.php', 'optima-build' ) : ( '' !== $s['password'] ? __( 'Saved. Paste a new one to replace it.', 'optima-build' ) : 'abcd efgh ijkl mnop' ) ); ?>" <?php disabled( $in_config ); ?>>
+					<?php if ( in_array( $s['service'], array( 'ses', 'custom' ), true ) ) : ?>
+						<label><?php esc_html_e( 'Mail server', 'optima-build' ); ?>
+							<input type="text" name="host" value="<?php echo esc_attr( $s['host'] ); ?>" placeholder="email-smtp.us-east-1.amazonaws.com" autocomplete="off" spellcheck="false">
+						</label>
+					<?php endif; ?>
+					<?php if ( ! $google && null === self::SERVICES[ $s['service'] ]['user'] ) : ?>
+						<label><?php esc_html_e( 'User name', 'optima-build' ); ?>
+							<input type="text" name="user" value="<?php echo esc_attr( $s['user'] ); ?>" autocomplete="off" spellcheck="false">
+						</label>
+					<?php endif; ?>
+					<?php if ( ! $google ) : ?>
+						<label><?php esc_html_e( 'Port', 'optima-build' ); ?>
+							<select name="port">
+								<?php foreach ( array( 587, 465, 2525 ) as $pt ) : ?>
+									<option value="<?php echo esc_attr( (string) $pt ); ?>" <?php selected( (int) $server['port'], $pt ); ?>><?php echo esc_html( (string) $pt ); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</label>
+					<?php endif; ?>
+					<label><?php echo esc_html( $google ? __( 'Send from (Gmail or Google Workspace)', 'optima-build' ) : __( 'Send from (an address on the verified domain)', 'optima-build' ) ); ?>
+						<input type="email" name="email" value="<?php echo esc_attr( $s['email'] ); ?>" placeholder="<?php echo esc_attr( $google ? 'name@gmail.com' : 'hello@' . (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) ); ?>" autocomplete="off">
+					</label>
+					<label><?php echo esc_html( $google ? __( 'App password', 'optima-build' ) : __( 'Sending key', 'optima-build' ) ); ?>
+						<input type="password" name="password" value="" autocomplete="new-password" placeholder="<?php echo esc_attr( $in_config ? __( 'Set in wp-config.php', 'optima-build' ) : ( '' !== $s['password'] ? __( 'Saved. Paste a new one to replace it.', 'optima-build' ) : ( $google ? 'abcd efgh ijkl mnop' : '' ) ) ); ?>" <?php disabled( $in_config ); ?>>
 					</label>
 					<label><?php esc_html_e( 'Sender name', 'optima-build' ); ?>
 						<input type="text" name="name" value="<?php echo esc_attr( $s['name'] ); ?>" placeholder="<?php echo esc_attr( wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES ) ); ?>">
@@ -609,7 +738,7 @@ foreach ( array_values( $buttons ) as $i => $b ) {
 				<button type="submit" class="button button-primary"><?php esc_html_e( 'Send test', 'optima-build' ); ?></button>
 			</form>
 			<?php if ( ! empty( $last['error'] ) ) : ?>
-				<p class="sh-note" style="margin-top:10px"><?php echo esc_html( __( 'Google said: ', 'optima-build' ) . $last['error'] ); ?></p>
+				<p class="sh-note" style="margin-top:10px"><?php /* translators: %s: Google or the sending service */ echo esc_html( sprintf( __( '%s said: ', 'optima-build' ), $google ? 'Google' : self::service_label() ) . $last['error'] ); ?></p>
 			<?php endif; ?>
 		</section>
 		<?php
