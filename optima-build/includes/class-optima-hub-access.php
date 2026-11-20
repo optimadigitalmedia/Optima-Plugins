@@ -54,6 +54,32 @@ final class Optima_Hub_Access {
 	}
 
 	/**
+	 * Email addresses of the operators who are administrators on this site,
+	 * falling back to the site's admin email. Used where Build needs to tell
+	 * the web team something (change requests, a hidden live site), so no
+	 * person's address is written into the plugin.
+	 *
+	 * @return string[]
+	 */
+	public static function operator_emails(): array {
+		$out = array();
+		foreach ( get_users( array( 'role' => 'administrator', 'fields' => array( 'ID' ) ) ) as $row ) {
+			$user = get_userdata( (int) $row->ID );
+			if ( $user && self::is_operator( $user ) && is_email( $user->user_email ) ) {
+				$out[] = strtolower( (string) $user->user_email );
+			}
+		}
+		$out = array_values( array_unique( $out ) );
+		if ( ! $out ) {
+			$admin = (string) get_option( 'admin_email' );
+			if ( is_email( $admin ) ) {
+				$out[] = $admin;
+			}
+		}
+		return $out;
+	}
+
+	/**
 	 * True for an operator: a listed address who can also manage plugins, or a
 	 * user on a listed @domain who can manage the site's settings.
 	 */

@@ -46,7 +46,7 @@ final class Optima_Hub_Watch {
 
 	/** Who hears about it. Partner sites set OPTIMA_HUB_REQUEST_EMAIL so nothing goes to a Optima address. */
 	public static function recipient(): string {
-		$to = defined( 'OPTIMA_HUB_REQUEST_EMAIL' ) ? (string) OPTIMA_HUB_REQUEST_EMAIL : 'sean@optimadigitalmedia.com';
+		$to = defined( 'OPTIMA_HUB_REQUEST_EMAIL' ) ? (string) OPTIMA_HUB_REQUEST_EMAIL : implode( ',', Optima_Hub_Access::operator_emails() );
 		return (string) apply_filters( 'optima_build_alert_email', $to );
 	}
 
