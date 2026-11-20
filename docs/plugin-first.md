@@ -126,6 +126,11 @@ This reverses today's rule. Today `catalog.json` uses `not_with_themes` to make 
 | `analytics` (Tag Manager, consent, click events) | optima-analytics |
 | `forms-guard` | optima-forms-guard |
 | `chat` | optima-chat |
+| `offices` (one LegalService node per office page, directions card; hours come from `hours` when optima-hours owns it) | optima-core |
+| `images` (upload compression, WebP/AVIF delivery, jQuery placement; paused under NitroPack) | optima-optimize |
+| `consent` (consent mode, cookie notice, Global Privacy Control) | optima-analytics |
+| `law` (state disclaimers, approval before publishing, review-due list, form-entry deletion) | optima-law |
+| `attribution` (form attribution to Recon) | outside this suite: the GF Attribution plugin, listed in each site's `approved_plugins` (rule 51) |
 | `account-privacy` | optima-build (on every site: author pages, the public users list and the users sitemap closed to visitors) |
 
 **Every theme wraps its own version of a job:**
