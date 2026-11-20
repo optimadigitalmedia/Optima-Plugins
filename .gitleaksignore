@@ -1,0 +1,7 @@
+# Known false positives. Each line is a gitleaks fingerprint (commit:file:rule:line).
+# Add one only for a test fixture that is not a real secret, with the reason above it.
+
+# Made-up Slack webhook address in the staging-guard test (refused-host fixture), commit 27396e9.
+# The file now uses a short placeholder that does not match the rule.
+27396e99811c90831717239960ca462e9dc089e5:tools/tests/core-staging-guard.php:slack-incoming-webhook:114
+27396e99811c90831717239960ca462e9dc089e5:tools/tests/core-staging-guard.php:slack-incoming-webhook:133
