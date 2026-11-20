@@ -4,8 +4,13 @@
  *
  * Conservative on purpose, like Optima Core and Optima Reviews: case results
  * are content the firm approved, so they and their practice areas stay
- * unless the site defines OPTIMA_PURGE_ON_UNINSTALL as true in wp-config.php
- * first. The setting always goes.
+ * unless a full wipe was asked for first: OPTIMA_PURGE_ON_UNINSTALL defined as
+ * true in wp-config.php, or the "purge_on_uninstall" key in the optima_results
+ * setting. The setting stays too without a full wipe: it holds the
+ * disclaimer wording the firm approved and its approval record (who, when and
+ * for which wording), which is the firm's bar-compliance record and must not
+ * disappear because the plugin was deleted. The cached release lookup always
+ * goes.
  *
  * @package Optima_Results
  */
@@ -14,13 +19,18 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 	exit;
 }
 
-delete_option( 'optima_results' );
 delete_transient( 'optima_updater_optima-results' );
 delete_transient( 'optima_updater_optima-results__test' );
 
-if ( ! defined( 'OPTIMA_PURGE_ON_UNINSTALL' ) || ! OPTIMA_PURGE_ON_UNINSTALL ) {
-	return;
+$optima_results_settings = get_option( 'optima_results', array() );
+$optima_results_purge    = ( is_array( $optima_results_settings ) && ! empty( $optima_results_settings['purge_on_uninstall'] ) )
+	|| ( defined( 'OPTIMA_PURGE_ON_UNINSTALL' ) && OPTIMA_PURGE_ON_UNINSTALL );
+
+if ( ! $optima_results_purge ) {
+	return; // Default: the results, the approved disclaimer and its approval come back as they were.
 }
+
+delete_option( 'optima_results' );
 
 $optima_results_ids = get_posts(
 	array(

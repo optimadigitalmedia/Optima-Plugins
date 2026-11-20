@@ -8,9 +8,24 @@ $GLOBALS['t_opt']   = array( 'admin_email' => 'Office@Example-Firm.test' );
 $GLOBALS['t_env']   = 'production';
 $GLOBALS['t_home']  = 'https://example-firm.test';
 $GLOBALS['t_extra'] = array();
+$GLOBALS['t_allow'] = array();
+$GLOBALS['t_trans'] = array();
+$GLOBALS['t_logged'] = array();
+define( 'HOUR_IN_SECONDS', 3600 );
+ini_set( 'error_log', '/dev/null' );
+function get_transient( $k ) { return $GLOBALS['t_trans'][ $k ] ?? false; }
+function set_transient( $k, $v, $e = 0 ) { $GLOBALS['t_trans'][ $k ] = $v; $GLOBALS['t_logged'][] = $k; return true; }
 function get_option( $k, $d = false ) { return array_key_exists( $k, $GLOBALS['t_opt'] ) ? $GLOBALS['t_opt'][ $k ] : $d; }
 function update_option( $k, $v, $a = null ) { $GLOBALS['t_opt'][ $k ] = $v; return true; }
-function apply_filters( $tag, $value ) { return 'optima_core_staging_mail_to' === $tag ? array_merge( (array) $value, $GLOBALS['t_extra'] ) : $value; }
+function apply_filters( $tag, $value, ...$rest ) {
+	if ( 'optima_core_staging_mail_to' === $tag ) {
+		return array_merge( (array) $value, $GLOBALS['t_extra'] );
+	}
+	if ( 'optima_core_staging_allow_hosts' === $tag ) {
+		return array_merge( (array) $value, $GLOBALS['t_allow'] );
+	}
+	return $value;
+}
 function add_filter() {}
 function add_action() {}
 function wp_get_environment_type() { return $GLOBALS['t_env']; }
@@ -85,6 +100,56 @@ ok( $G::stop_calls( false, array(), 'https://hooks.zapier.com/hooks/catch/1/x' )
 ok( $G::stop_calls( false, array(), 'https://us21.api.mailchimp.com/3.0/lists' ) instanceof WP_Error, 'a newsletter call on a subdomain is refused' );
 ok( false === $G::stop_calls( false, array(), 'https://api.github.com/repos/x' ), 'other calls (updates) go through' );
 ok( false === $G::stop_calls( false, array(), 'https://notstripe.com/api.stripe.com' ), 'a host that only contains a blocked name goes through' );
+
+// 5b. Calls that would create real records (INV-2611-01).
+$refused = static function ( $url, $args = array() ) use ( $G ) {
+	return $G::stop_calls( false, $args, $url ) instanceof WP_Error;
+};
+ok( $refused( 'https://example.app.n8n.cloud/webhook/abc' ) && $refused( 'https://n8n.cloud/x' ), 'n8n cloud and its subdomains are refused' );
+ok( $refused( 'https://hook.us1.make.com/abc' ) && $refused( 'https://hook.eu2.make.com/abc' ), 'Make webhooks in any region are refused' );
+ok( ! $refused( 'https://www.make.com/en' ), 'the Make website itself goes through' );
+ok( $refused( 'https://api.lawmatics.com/v1/contacts' ), 'the Lawmatics intake API is refused' );
+ok( $refused( 'https://app.clio.com/api/v4/contacts' ) && $refused( 'https://eu.app.clio.com/api/v4' ), 'Clio and its regional hosts are refused' );
+ok( $refused( 'https://api.calltrackingmetrics.com/api/v1/accounts' ), 'call tracking is refused' );
+ok( $refused( 'https://hooks.slack.com/services/T/B/x' ), 'Slack webhooks are refused' );
+ok( $refused( 'https://api.hubspot.com/crm/v3/objects/contacts' ), 'the HubSpot API is refused' );
+ok( $refused( 'https://services.leadconnectorhq.com/contacts/' ), 'LeadConnector is refused' );
+ok( $refused( 'https://us-central1-example.cloudfunctions.net/receiver' ), 'a Cloud Functions receiver is refused' );
+ok( $refused( 'https://receiver-abc123-ue.a.run.app/collect' ), 'a Cloud Run receiver is refused' );
+ok( ! $refused( 'https://run.app.example-firm.test/x' ) && ! $refused( 'https://cloudfunctions.net.example.test/' ), 'a host that only starts with a receiver suffix goes through' );
+ok( ! $refused( 'https://api.wordpress.org/plugins/update-check/1.1/' ) && ! $refused( 'https://api.github.com/repos/x' ), 'updates still go through' );
+ok( ! $refused( 'https://www.google.com/recaptcha/api/siteverify' ), 'captcha checks still go through' );
+
+// 5c. Gravity Forms webhook feeds: refused whatever the host.
+$marked = $G::mark_webhook( array( 'method' => 'POST' ) );
+ok( true === $marked[ $G::WEBHOOK_ARG ] && 'POST' === $marked['method'], 'a webhook feed request is marked and its args kept' );
+ok( $refused( 'https://intake.example-crm.test/new-lead', $marked ), 'a webhook feed to an unlisted host is refused' );
+ok( ! $refused( 'https://intake.example-crm.test/new-lead', array( 'method' => 'POST' ) ), 'the same host without the webhook mark goes through' );
+ok( 'keep' === $G::stop_calls( 'keep', $marked, 'https://intake.example-crm.test/' ), 'another plugin\'s answer is left alone' );
+
+// 5d. The allow-list re-opens hosts.
+$GLOBALS['t_allow'] = array( '*.run.app', 'hooks.slack.com', 'intake.example-crm.test' );
+ok( ! $refused( 'https://receiver-abc123-ue.a.run.app/collect' ), 'an allowed pattern re-opens a blocked receiver' );
+ok( ! $refused( 'https://hooks.slack.com/services/T/B/x' ), 'an allowed host re-opens a blocked host' );
+ok( ! $refused( 'https://intake.example-crm.test/new-lead', $marked ), 'an allowed host re-opens a webhook feed' );
+ok( $refused( 'https://us-central1-example.cloudfunctions.net/receiver' ) && $refused( 'https://api.stripe.com/v1/charges' ), 'hosts not on the allow-list stay refused' );
+$GLOBALS['t_allow'] = array();
+
+// 5e. Log each refused host once an hour.
+$GLOBALS['t_trans']  = array();
+$GLOBALS['t_logged'] = array();
+$refused( 'https://hooks.slack.com/a' );
+$refused( 'https://hooks.slack.com/b' );
+$refused( 'https://api.lawmatics.com/c' );
+ok( 2 === count( $GLOBALS['t_logged'] ), 'each refused host is logged once while its hour runs' );
+$GLOBALS['t_trans'] = array();
+$refused( 'https://hooks.slack.com/d' );
+ok( 3 === count( $GLOBALS['t_logged'] ), 'after the hour the host is logged again' );
+
+// 5f. Host matching.
+ok( $G::host_matches( 'HOOK.US1.MAKE.COM', 'hook.*.make.com' ), 'matching ignores letter case' );
+ok( ! $G::host_matches( 'hook.make.com', 'hook.*.make.com' ), 'the star stands for at least one label' );
+ok( ! $G::host_matches( 'evilclio.com', 'clio.com' ), 'a host that only ends in the same letters goes through' );
 
 // 6. With Optima Build running, its operator check is the source.
 if ( true ) {

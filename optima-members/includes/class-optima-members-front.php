@@ -94,8 +94,8 @@ final class Optima_Members_Front {
 	private static function notice(): string {
 		$msg   = isset( $_GET['membership'] ) ? sanitize_key( wp_unslash( $_GET['membership'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display only.
 		$texts = array(
-			'applied'  => __( 'Thank you. Your application is in. We will write to you by email once it has been read.', 'optima-members' ),
-			'exists'   => __( 'That email already has an account here. Sign in first, then send the application.', 'optima-members' ),
+			// The same words whether or not the email already has an account, so the form never tells a stranger who is registered.
+			'applied'  => __( 'Thank you. We have your application. We will write to you by email about what happens next.', 'optima-members' ),
 			'missing'  => __( 'A few required answers are missing. Please check the form and send it again.', 'optima-members' ),
 			'tooquick' => __( 'That was very fast. Please check your answers and send the form again.', 'optima-members' ),
 		);
@@ -513,7 +513,9 @@ final class Optima_Members_Front {
 		$new     = false;
 		if ( ! $user_id ) {
 			if ( email_exists( $email ) ) {
-				self::back( 'exists' );
+				// Same answer as a new application; only the account's owner learns why, by email.
+				self::existing_account_notice( $email );
+				self::back( 'applied' );
 			}
 			$login   = sanitize_user( strtok( $email, '@' ), true );
 			$login   = '' === $login || username_exists( $login ) ? $login . wp_rand( 100, 999 ) : $login;
@@ -562,6 +564,28 @@ final class Optima_Members_Front {
 		/* translators: %s: applicant name. */
 		wp_mail( Optima_Members::notify_email(), sprintf( __( 'New membership application: %s', 'optima-members' ), trim( $first . ' ' . $last ) ), __( "A new membership application is waiting. Read it and decide here:\n", 'optima-members' ) . Optima_Members_Admin::url() );
 		self::back( 'applied' );
+	}
+
+	/**
+	 * An application arrived signed out with an email that already has an
+	 * account. The page says what it says for any application; the account's
+	 * owner gets the next step by email, at most once an hour per address.
+	 */
+	private static function existing_account_notice( string $email ): void {
+		$key = 'optima_members_exists_' . substr( hash_hmac( 'sha256', strtolower( $email ), wp_salt( 'nonce' ) ), 0, 20 );
+		if ( get_transient( $key ) ) {
+			return;
+		}
+		set_transient( $key, 1, HOUR_IN_SECONDS );
+		$site = wp_specialchars_decode( (string) get_bloginfo( 'name' ), ENT_QUOTES );
+		$url  = add_query_arg( 'membership', 'signin', Optima_Members::page_url() ) . '#sm-portal';
+		wp_mail(
+			$email,
+			/* translators: %s: site name. */
+			sprintf( __( 'Your membership application for %s', 'optima-members' ), $site ),
+			__( "We received a membership application with this email address, which already has an account here. Please sign in, then send the application again:\n", 'optima-members' ) . $url
+				. "\n\n" . __( 'If you did not send it, you can ignore this email.', 'optima-members' )
+		);
 	}
 
 	/* ---------- members stay on the site ---------- */

@@ -1,0 +1,14 @@
+{
+  "plugin": "optima-contact",
+  "items": [
+    {
+      "what": "Taps on the Call, Text, Book a time, Let's talk and Get directions buttons: which button was tapped and where on the page, never who tapped it. Call and Text never send the phone number; Book a time and Get directions send the link address.",
+      "where": "Passed to Optima Analytics on the page",
+      "kept": "Not kept by this website",
+      "shared": "Google Analytics (Google), through Optima Analytics",
+      "when": "only when Optima Analytics is on"
+    }
+  ],
+  "cookies": [],
+  "notes": "The call bar stores nothing and sets no cookies. Call and Text open the visitor's own phone app; Get directions opens Google Maps in a new tab, where Google's own privacy policy applies."
+}

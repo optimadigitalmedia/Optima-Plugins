@@ -62,6 +62,9 @@ require_once OPTIMA_CORE_DIR . 'includes/editable-pages.php';
 require_once OPTIMA_CORE_DIR . 'includes/operators.php';
 require_once OPTIMA_CORE_DIR . 'includes/protection.php';
 Optima_Core_Protection::init();
+/* Failed logins: 5 in 15 minutes lock that address or username out for 15 minutes (switch login_limit). */
+require_once OPTIMA_CORE_DIR . 'includes/login-limit.php';
+Optima_Core_Login_Limit::init();
 /* Staging copies email only operators and the admin email, and call no outside services. */
 require_once OPTIMA_CORE_DIR . 'includes/staging-guard.php';
 Optima_Core_Staging::init();
@@ -180,5 +183,6 @@ register_activation_hook( __FILE__, function () {
 } );
 register_deactivation_hook( __FILE__, function () {
 	Optima_SEO_Sitemap::unschedule();
+	wp_clear_scheduled_hook( Optima_Changelog::CRON ); // The Change log weekly email.
 	flush_rewrite_rules();
 } );

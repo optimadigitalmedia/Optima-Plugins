@@ -11,8 +11,18 @@
  *   addresses or @domains can be added with `optima_core_staging_mail_to`.
  * - calls to outside services that send or charge (newsletter, email
  *   marketing, texting, payments, Zapier) are refused, so a test sign-up never
- *   joins the real list and a test payment never charges a card. The list can
- *   be changed with `optima_core_staging_blocked_hosts`.
+ *   joins the real list and a test payment never charges a card.
+ * - calls that would create real records are refused too: intake and CRM
+ *   systems, automation hooks (n8n, Zapier, Make, Slack), call tracking, the
+ *   attribution receiver (any *.cloudfunctions.net or *.run.app host), and every
+ *   Gravity Forms webhook feed, whatever host it points at. A test entry never
+ *   becomes a real lead.
+ *   The list can be changed with `optima_core_staging_blocked_hosts`; a host on
+ *   `optima_core_staging_allow_hosts` always goes through (it re-opens a
+ *   blocked host and a webhook feed's host). In both lists an entry matches the
+ *   host and its subdomains ("clio.com" covers app.clio.com), and "*" stands for
+ *   one or more labels ("hook.*.make.com", "*.run.app").
+ *   Each refused host is written to the PHP error log at most once an hour.
  * - a notice at the top of every dashboard screen says so.
  *
  * A copy counts as staging when WordPress says so (WP_ENVIRONMENT_TYPE staging,
@@ -40,12 +50,19 @@ final class Optima_Core_Staging {
 	/** Outside services that send messages or take money. Matched against the end of the host. */
 	const BLOCKED = array( 'api.beehiiv.com', 'api.mailchimp.com', 'list-manage.com', 'api.sendgrid.com', 'api.mailgun.net', 'api.postmarkapp.com', 'api.twilio.com', 'api.stripe.com', 'api-m.paypal.com', 'api.paypal.com', 'hooks.zapier.com', 'api.hubapi.com', 'api.convertkit.com', 'a.klaviyo.com' );
 
+	/** Outside services that create real records: intake and CRM, automation, call tracking, the attribution receiver. */
+	const RECORDS = array( 'n8n.cloud', 'hook.*.make.com', 'api.lawmatics.com', 'clio.com', 'api.calltrackingmetrics.com', 'hooks.slack.com', 'api.hubspot.com', 'leadconnectorhq.com', '*.cloudfunctions.net', '*.run.app' );
+
+	/** Request-args key set on Gravity Forms webhook feed requests (gform_webhooks_request_args). */
+	const WEBHOOK_ARG = 'optima_gform_webhook';
+
 	public static function init() {
 		if ( ! self::active() ) {
 			return;
 		}
 		add_filter( 'wp_mail', array( __CLASS__, 'mail_args' ), 999 );
 		add_filter( 'pre_wp_mail', array( __CLASS__, 'stop_empty_mail' ), 999, 2 );
+		add_filter( 'gform_webhooks_request_args', array( __CLASS__, 'mark_webhook' ), 999 );
 		add_filter( 'pre_http_request', array( __CLASS__, 'stop_calls' ), 999, 3 );
 		add_action( 'admin_notices', array( __CLASS__, 'notice' ) );
 	}
@@ -144,20 +161,66 @@ final class Optima_Core_Staging {
 		return array_filter( array_map( 'trim', array_map( 'strval', (array) $to ) ) ) ? null : false;
 	}
 
-	/** Refuse calls to services that send messages or take money. */
+	/** Gravity Forms webhook feeds pass their request args here just before wp_remote_request(): mark them. */
+	public static function mark_webhook( $args ) {
+		$args                      = is_array( $args ) ? $args : array();
+		$args[ self::WEBHOOK_ARG ] = true;
+		return $args;
+	}
+
+	/** True when a host matches one list entry: the host or a subdomain of it, "*" standing for one or more labels. */
+	public static function host_matches( string $host, string $entry ): bool {
+		$host  = strtolower( trim( $host, ". \t" ) );
+		$entry = strtolower( trim( $entry, ". \t" ) );
+		if ( '' === $host || '' === $entry ) {
+			return false;
+		}
+		if ( false === strpos( $entry, '*' ) ) {
+			return $host === $entry || substr( $host, -strlen( '.' . $entry ) ) === '.' . $entry;
+		}
+		$label = '[a-z0-9-]+(?:\.[a-z0-9-]+)*';
+		$regex = '/^(?:' . $label . '\.)?' . str_replace( '\*', $label, preg_quote( $entry, '/' ) ) . '$/';
+		if ( 0 === strpos( $entry, '*' ) ) {
+			$regex = '/^' . str_replace( '\*', $label, preg_quote( $entry, '/' ) ) . '$/';
+		}
+		return 1 === preg_match( $regex, $host );
+	}
+
+	private static function on_list( string $host, $list ): bool {
+		foreach ( (array) $list as $entry ) {
+			if ( self::host_matches( $host, (string) $entry ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** Refuse calls to services that send messages, take money or create real records. */
 	public static function stop_calls( $pre, $args, $url ) {
 		if ( false !== $pre ) {
 			return $pre;
 		}
 		$host = strtolower( (string) wp_parse_url( (string) $url, PHP_URL_HOST ) );
-		foreach ( (array) apply_filters( 'optima_core_staging_blocked_hosts', self::BLOCKED ) as $blocked ) {
-			$blocked = strtolower( (string) $blocked );
-			if ( '' !== $host && '' !== $blocked && ( $host === $blocked || substr( $host, -strlen( '.' . $blocked ) ) === '.' . $blocked ) ) {
-				self::count( 'calls' );
-				return new WP_Error( 'optima_staging', 'This is a staging copy, so outside services that send messages or take payments are switched off.' );
-			}
+		if ( '' === $host || self::on_list( $host, apply_filters( 'optima_core_staging_allow_hosts', array() ) ) ) {
+			return $pre;
+		}
+		$webhook = is_array( $args ) && ! empty( $args[ self::WEBHOOK_ARG ] );
+		if ( $webhook || self::on_list( $host, apply_filters( 'optima_core_staging_blocked_hosts', array_merge( self::BLOCKED, self::RECORDS ) ) ) ) {
+			self::count( 'calls' );
+			self::log_refusal( $host, $webhook );
+			return new WP_Error( 'optima_staging', 'This is a staging copy, so outside services that send messages, take payments or create real records are switched off.' );
 		}
 		return $pre;
+	}
+
+	/** One error-log line per refused host per hour, so a busy form cannot flood the log. */
+	private static function log_refusal( string $host, bool $webhook ) {
+		$key = 'optima_core_staging_log_' . md5( $host );
+		if ( false !== get_transient( $key ) ) {
+			return;
+		}
+		set_transient( $key, 1, HOUR_IN_SECONDS );
+		error_log( sprintf( 'Optima Core staging guard: refused a call to %s%s. This is a staging copy.', $host, $webhook ? ' (a Gravity Forms webhook feed)' : '' ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 	}
 
 	/** How much the guard held back: { mail, calls, last }. */
@@ -177,6 +240,6 @@ final class Optima_Core_Staging {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
-		echo '<div class="notice notice-info"><p><strong>' . esc_html__( 'Staging copy.', 'optima-core' ) . '</strong> ' . esc_html__( 'Emails go only to your web team and the site\'s admin email, and newsletter, texting and payment services are off, so no real client is reached.', 'optima-core' ) . '</p></div>';
+		echo '<div class="notice notice-info"><p><strong>' . esc_html__( 'Staging copy.', 'optima-core' ) . '</strong> ' . esc_html__( 'Emails go only to your web team and the site\'s admin email, and newsletter, texting, payment, intake, automation and webhook services are off, so no real client is reached and no real record is made.', 'optima-core' ) . '</p></div>';
 	}
 }

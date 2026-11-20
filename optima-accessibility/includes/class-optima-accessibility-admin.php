@@ -169,6 +169,7 @@ final class Optima_Accessibility_Admin {
 		self::guard( 'footer' );
 		$s                = Optima_Accessibility::settings();
 		$s['footer_link'] = empty( $_POST['footer_link'] ) ? 0 : 1; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified in guard().
+		$s['footer_link_chosen'] = 1; // A choice made here, so settings() keeps it (the link is on by default).
 		update_option( Optima_Accessibility::OPTION, $s );
 		self::refresh_statement_result();
 		self::back( 'footer', 'sa-footer' );
@@ -616,8 +617,8 @@ final class Optima_Accessibility_Admin {
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 					<input type="hidden" name="action" value="optima_a11y_footer">
 					<?php wp_nonce_field( 'optima_a11y_footer' ); ?>
-					<p><label for="sa-footer-link"><input id="sa-footer-link" type="checkbox" name="footer_link" value="1" <?php checked( $s['footer_link'] ); ?>> <?php esc_html_e( 'Add a small link at the very bottom of every page', 'optima-accessibility' ); ?></label></p>
-					<p class="description"><?php esc_html_e( 'For themes with no menu or widget in the footer. It sits below the theme footer.', 'optima-accessibility' ); ?></p>
+					<p><label for="sa-footer-link"><input id="sa-footer-link" type="checkbox" name="footer_link" value="1" <?php checked( $s['footer_link'] ); ?>> <?php esc_html_e( 'Show a small Accessibility link in the footer of every page (on by default)', 'optima-accessibility' ); ?></label></p>
+					<p class="description"><?php esc_html_e( 'It prints in the theme\'s footer spot, or at the very bottom of the page on a theme without one. It stays out when a menu or the shortcode already links to the statement. Untick to turn it off.', 'optima-accessibility' ); ?></p>
 					<p><button type="submit" class="button"><?php esc_html_e( 'Save', 'optima-accessibility' ); ?></button></p>
 				</form>
 			</section>

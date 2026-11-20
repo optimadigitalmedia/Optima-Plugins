@@ -1,0 +1,44 @@
+{
+  "plugin": "optima-chat",
+  "items": [
+    {
+      "what": "Name, email, phone, the chat conversation (up to the last 30 messages), the page the chat was on, what kind of message it is, and the notice the chat showed at the start",
+      "where": "This website's database, as private Chat question posts",
+      "kept": "90 days, then a daily job deletes it. The Chat screen can set 30, 60, 180 or 365 days, or keep conversations only with a written reason. Deleting the plugin deletes them all. The site's privacy tools export and delete a person's conversations by the email they gave; one left with only a phone number is deleted by hand.",
+      "shared": "Emailed to the address set on the Chat screen (the site admin email by default), plus a short text alert to the alert address if one is set",
+      "when": "only when the visitor leaves their name and a phone number or email in the chat. On a law firm's site the chat asks for a name and phone number only, and keeps a short description (up to 500 characters) and the page address without its query string; it keeps no email and no conversation."
+    },
+    {
+      "what": "Questions typed in the chat, the earlier messages in the chat (up to 30), the page address and the website address",
+      "where": "Sent from this website to the AI server. This website does not store them unless the visitor later leaves contact details.",
+      "kept": "Not kept by this website",
+      "shared": "The AI server set on the Chat screen",
+      "when": "only when an AI server is connected. On a law firm's site, only after the web team turns AI answers on."
+    },
+    {
+      "what": "A scrambled (hashed) copy of the visitor's IP address with a count, used to limit how many messages one visitor can send",
+      "where": "A temporary record in this website's database",
+      "kept": "10 minutes after the visitor's last chat message"
+    },
+    {
+      "what": "Chat opens, button taps and sent messages (the button words or message type, never names or messages)",
+      "where": "Passed to Optima Analytics on the page",
+      "kept": "Not kept by this website",
+      "shared": "Google Analytics (Google), through Optima Analytics",
+      "when": "only when Optima Analytics is on"
+    }
+  ],
+  "cookies": [
+    {
+      "name": "optimaChat (browser storage)",
+      "why": "Keeps the chat so far (up to 40 messages) so it stays in place when the visitor moves to another page",
+      "lasts": "Until the browser tab is closed"
+    },
+    {
+      "name": "optimaChatStarted (browser storage)",
+      "why": "Remembers that the visitor already opened the chat in this tab, so the start is counted once",
+      "lasts": "Until the browser tab is closed"
+    }
+  ],
+  "notes": "Nothing is collected while the chat is switched off on the Chat screen. The chat sends no cookies with its messages, and the two browser storage items stay in the visitor's own browser."
+}

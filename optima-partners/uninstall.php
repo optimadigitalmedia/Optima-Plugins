@@ -38,4 +38,7 @@ foreach ( $optima_partners_ids as $optima_partners_id ) {
 // Any partner meta left behind (for example on revisions).
 delete_metadata( 'post', 0, '_optima_partner', '', true );
 delete_metadata( 'post', 0, '_optima_partner_clicks', '', true );
+// One click count per month (_optima_partner_clicks_YYYY-MM).
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- as above.
+$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->postmeta} WHERE meta_key LIKE %s", $wpdb->esc_like( '_optima_partner_clicks_' ) . '%' ) );
 delete_option( 'optima_partners' );

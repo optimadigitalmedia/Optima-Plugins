@@ -38,7 +38,7 @@ function ok( $cond, $msg ) {
 $P = 'Optima_Core_Protection';
 
 // 1. Every switch is on by default, so an update turns the new ones on.
-foreach ( array( 'hide_users', 'browser_headers', 'file_edit_off', 'email_guard', 'close_comments' ) as $key ) {
+foreach ( array( 'hide_users', 'browser_headers', 'file_edit_off', 'email_guard', 'close_comments', 'login_limit' ) as $key ) {
 	ok( $P::on( $key ), "$key is on by default" );
 }
 ok( array( 'xmlrpc_off', 'nonsense' ) === $P::forced_off(), 'OPTIMA_CORE_PROTECTION_OFF is read as a lower-case list' );
@@ -79,7 +79,7 @@ ok( in_array( 'wp_head:wp_generator', $GLOBALS['t_removed'], true ), 'the WordPr
 
 // 6. Saving: every switch stored as 1 or 0.
 $saved = $P::sanitize( array( 'hide_users' => '1' ) );
-ok( 6 === count( $saved ) && '1' === $saved['hide_users'] && '0' === $saved['file_edit_off'], 'an unchecked switch saves as off' );
+ok( 7 === count( $saved ) && '1' === $saved['hide_users'] && '0' === $saved['file_edit_off'], 'an unchecked switch saves as off' );
 
 echo $fail ? "$fail failed\n" : "All passed\n";
 exit( $fail ? 1 : 0 );

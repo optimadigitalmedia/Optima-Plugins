@@ -1,0 +1,6 @@
+{
+  "plugin": "optima-forms-guard",
+  "items": [],
+  "cookies": [],
+  "notes": "Optima Forms Guard keeps no information about visitors and makes no calls to other services. It checks Gravity Forms submissions for spam with hidden fields on the form and keeps only a monthly count of blocked ones (the last 13 months, with nothing about who sent them). A blocked submission is refused before it is saved. A message it marks as spam because of its links or wording stays in that form's Spam folder as Gravity Forms' own data, and a file sent to a hidden upload field is dropped before it is saved."
+}

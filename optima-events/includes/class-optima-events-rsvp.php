@@ -361,7 +361,7 @@ final class Optima_Events_RSVP {
 		}
 		$file = trailingslashit( get_temp_dir() ) . 'ticket-' . wp_generate_password( 8, false, false ) . '.png';
 		imagepng( $im, $file );
-		imagedestroy( $im );
+		unset( $im ); // A GdImage frees itself; imagedestroy() is deprecated in PHP 8.5.
 		return file_exists( $file ) ? $file : '';
 	}
 

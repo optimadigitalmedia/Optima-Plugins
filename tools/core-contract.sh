@@ -51,6 +51,10 @@ optima-core/includes/schema/class-optima-schema.php | public static function pla
 optima-build/includes/class-optima-hub-access.php | public static function operators(): array | optima-core (staging mail guard and Change log read the Build operator list)
 optima-build/includes/class-optima-hub-access.php | const DEFAULT_OPERATOR_DOMAIN_HASHES | optima-core (staging mail guard: the partner domain, as a hash)
 optima-build/includes/class-optima-hub-access.php | public static function is_operator( | optima-core (Change log: edits by operators are not logged)
+optima-core/includes/offices.php | public static function language_nodes() | optima-hours (availableLanguage on the intake ContactPoint)
+optima-hours/includes/class-optima-hours-schema.php | public static function properties(): array | optima-core offices (office nodes take the Optima Hours schedule while it owns the hours job)
+optima-core/includes/protection.php | 'login_limit' | optima-build (Site health row: Failed-login limit)
+optima-core/includes/login-limit.php | final class Optima_Core_Login_Limit | optima-build (Site health row: Failed-login limit)
 CONTRACT
 
 exit "$fail"
