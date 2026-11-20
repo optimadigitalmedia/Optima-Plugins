@@ -148,6 +148,10 @@ final class Optima_SEO_Sitemap {
 		$args['meta_query'] = $meta_query;
 		// And any page the theme's seo.pages robots rules noindex (path, pattern, ":posts").
 		$skip = self::setup_noindex_posts( (string) $post_type );
+		// And thank-you pages (a form's confirmation page), which are noindex (upstream 1.8.0).
+		if ( 'page' === $post_type && class_exists( 'Optima_SEO_Head' ) ) {
+			$skip = array_merge( $skip, Optima_SEO_Head::thanks_pages() );
+		}
 		if ( $skip ) {
 			$args['post__not_in'] = array_values( array_unique( array_merge( array_map( 'intval', (array) ( $args['post__not_in'] ?? array() ) ), $skip ) ) );
 		}

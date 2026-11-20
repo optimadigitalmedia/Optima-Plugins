@@ -1,7 +1,8 @@
 <?php
 /**
  * The "Optima SEO" editor box: SEO title, meta description, canonical override,
- * and a noindex toggle, with a live Google-style snippet preview. No ACF, no
+ * a noindex toggle and other language versions (Optima_SEO_Hreflang), with a
+ * live Google-style snippet preview. No ACF, no
  * third-party. This is the one piece of Yoast's UI worth keeping.
  *
  * @package Optima_SEO
@@ -106,6 +107,12 @@ final class Optima_SEO_Box {
 			<p style="margin:0;">
 				<label><input type="checkbox" name="optima_seo[noindex]" value="1" <?php checked( $noindex, '1' ); ?> /> Hide this page from search engines (noindex)</label>
 			</p>
+
+			<?php
+			if ( class_exists( 'Optima_SEO_Hreflang' ) ) {
+				Optima_SEO_Hreflang::render_fields( $post );
+			}
+			?>
 		</div>
 		<script>
 		( function () {
@@ -152,6 +159,10 @@ final class Optima_SEO_Box {
 		self::set( $post_id, OPTIMA_SEO_META_DESC, isset( $in['desc'] ) ? sanitize_textarea_field( $in['desc'] ) : '' );
 		self::set( $post_id, OPTIMA_SEO_META_CANONICAL, isset( $in['canonical'] ) ? esc_url_raw( $in['canonical'] ) : '' );
 		self::set( $post_id, OPTIMA_SEO_META_NOINDEX, empty( $in['noindex'] ) ? '' : '1' );
+
+		if ( class_exists( 'Optima_SEO_Hreflang' ) ) {
+			Optima_SEO_Hreflang::save_from_form( (int) $post_id, $in );
+		}
 	}
 
 	private static function set( $post_id, $key, $value ) {

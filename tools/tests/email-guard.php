@@ -105,7 +105,9 @@ ok( false !== strpos( $out, 'var a="' . $email . '";</script>' ) && false === st
 
 // 10. Settings default on, sanitize stores 1/0.
 ok( Optima_Core_Protection::on( 'email_guard' ) && Optima_Core_Protection::on( 'close_comments' ), 'both switches on by default' );
-ok( array( 'email_guard' => '0', 'close_comments' => '1' ) === Optima_Core_Protection::sanitize( array( 'close_comments' => '1' ) ), 'an unchecked box saves as off' );
+$saved = array_fill_keys( array_keys( Optima_Core_Protection::fields() ), '0' );
+$saved['close_comments'] = '1';
+ok( $saved === Optima_Core_Protection::sanitize( array( 'close_comments' => '1' ) ), 'an unchecked box saves as off, for every switch' );
 $GLOBALS['t_opt']['optima_core_protection'] = array( 'email_guard' => '0', 'close_comments' => '0' );
 ok( ! Optima_Core_Protection::on( 'email_guard' ), 'saved off reads off' );
 Optima_Core_Protection::maybe_close_comments();

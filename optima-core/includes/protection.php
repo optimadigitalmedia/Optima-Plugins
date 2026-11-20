@@ -1,6 +1,7 @@
 <?php
 /**
- * Spam protection for client sites, both on unless switched off:
+ * Spam protection and the security baseline for client sites (plugin-first
+ * rule 19), every switch on unless switched off:
  *
  *  - Email guard. Contact emails print in plain text (mailto links, visible
  *    text, the JSON-LD `email`), and scrapers harvest them. One output buffer,
@@ -28,6 +29,21 @@
  *    exactly what WordPress did before.
  *    Filter: `optima_core_close_comments` (bool).
  *
+ *  - Hide login names, XML-RPC off, basic browser protections (nosniff,
+ *    SAMEORIGIN framing, a referrer policy, HSTS on HTTPS; a header the host or
+ *    Cloudflare already sends is kept), and the code editor off (also on WP
+ *    Engine, whose wp-config.php sets DISALLOW_FILE_EDIT to false: the edit
+ *    capabilities are taken away too). Filters: `optima_core_hide_users`,
+ *    `optima_core_xmlrpc_needed`, `optima_core_browser_headers`.
+ *
+ * A site that needs one of these on (rule 19: the reason goes in the site's
+ * decisions log) turns it off on Optima, Search and AI, Spam protection, or in
+ * wp-config.php, which the screen cannot undo:
+ *
+ *   define( 'OPTIMA_CORE_PROTECTION_OFF', 'xmlrpc_off, file_edit_off' );
+ *
+ * or with the `optima_core_protection_on` filter ($on, $key).
+ *
  * @package Optima_Core
  */
 
@@ -53,12 +69,16 @@ final class Optima_Core_Protection {
 	/** @return array<string,string> setting key => label */
 	public static function fields() {
 		return array(
-			'email_guard'    => 'Hide email addresses from spam bots',
-			'close_comments' => 'Close comments and pingbacks',
+			'email_guard'     => 'Hide email addresses from spam bots',
+			'close_comments'  => 'Close comments and pingbacks',
+			'hide_users'      => 'Hide login names from visitors',
+			'xmlrpc_off'      => 'Turn off XML-RPC',
+			'browser_headers' => 'Send basic browser protections',
+			'file_edit_off'   => 'Turn off the code editor',
 		);
 	}
 
-	/** @return array<string,string> Each switch is "1" (on) or "0" (off). Both default on. */
+	/** @return array<string,string> Each switch is "1" (on) or "0" (off). All default on. */
 	public static function get() {
 		$defaults = array_fill_keys( array_keys( self::fields() ), '1' );
 		$saved    = get_option( self::OPTION, array() );
@@ -67,13 +87,53 @@ final class Optima_Core_Protection {
 
 	public static function on( $key ) {
 		$all = self::get();
-		return isset( $all[ $key ] ) && '1' === (string) $all[ $key ];
+		$on  = isset( $all[ $key ] ) && '1' === (string) $all[ $key ] && ! in_array( (string) $key, self::forced_off(), true );
+		return (bool) apply_filters( 'optima_core_protection_on', $on, (string) $key );
+	}
+
+	/** Switches wp-config.php turns off (OPTIMA_CORE_PROTECTION_OFF, a comma list of keys). */
+	public static function forced_off(): array {
+		if ( ! defined( 'OPTIMA_CORE_PROTECTION_OFF' ) ) {
+			return array();
+		}
+		return array_values( array_filter( array_map( 'trim', explode( ',', strtolower( (string) OPTIMA_CORE_PROTECTION_OFF ) ) ) ) );
 	}
 
 	public static function init() {
 		add_action( 'admin_init', array( __CLASS__, 'register_settings' ) );
 		add_action( 'template_redirect', array( __CLASS__, 'maybe_guard' ), 9999 );
 		add_action( 'init', array( __CLASS__, 'maybe_close_comments' ), 20 );
+		add_action( 'init', array( __CLASS__, 'maybe_harden' ), 20 );
+		add_action( 'plugins_loaded', array( __CLASS__, 'maybe_lock_editor' ), 0 );
+	}
+
+	/**
+	 * Plugin-first rule 19: no editing theme or plugin code from wp-admin. Same as
+	 * DISALLOW_FILE_EDIT in wp-config.php, set from here so nobody has to edit that file.
+	 * Some hosts (WP Engine) put DISALLOW_FILE_EDIT false in wp-config.php, and a constant
+	 * can't be changed once set, so the switch also takes the editing capabilities away.
+	 */
+	public static function maybe_lock_editor() {
+		if ( ! self::on( 'file_edit_off' ) ) {
+			return;
+		}
+		if ( ! defined( 'DISALLOW_FILE_EDIT' ) ) {
+			define( 'DISALLOW_FILE_EDIT', true );
+		}
+		add_filter( 'map_meta_cap', array( __CLASS__, 'deny_editor' ), 10, 2 );
+	}
+
+	/** True when the switch keeps the code editors off. */
+	public static function editor_locked() {
+		return self::on( 'file_edit_off' );
+	}
+
+	/**
+	 * @param string[] $caps Capabilities the check needs.
+	 * @param string   $cap  The capability asked for.
+	 */
+	public static function deny_editor( $caps, $cap ) {
+		return in_array( $cap, array( 'edit_themes', 'edit_plugins', 'edit_files' ), true ) ? array( 'do_not_allow' ) : $caps;
 	}
 
 	public static function register_settings() {
@@ -419,14 +479,95 @@ final class Optima_Core_Protection {
 		return $methods;
 	}
 
+	/* ---------- Hardening ---------- */
+
+	/**
+	 * The security baseline (plugin-first rule 19). Visitors who are not signed in cannot list login names, XML-RPC
+	 * is off unless Jetpack needs it, and every page sends the basic browser protections. Signed-in
+	 * editors and the block editor are unaffected. Optima Build's account privacy also closes the
+	 * users routes, and a theme that still does any of this is harmless: the same filters run twice
+	 * with the same result.
+	 */
+	public static function maybe_harden() {
+		if ( self::on( 'hide_users' ) && (bool) apply_filters( 'optima_core_hide_users', true ) ) {
+			add_filter( 'rest_endpoints', array( __CLASS__, 'hide_user_routes' ) );
+		}
+		if ( self::on( 'xmlrpc_off' ) && ! self::xmlrpc_needed() ) {
+			add_filter( 'xmlrpc_enabled', '__return_false' );
+			add_filter( 'xmlrpc_methods', '__return_empty_array' );
+			add_filter( 'wp_headers', array( __CLASS__, 'drop_pingback_header' ), 20 );
+		}
+		if ( self::on( 'browser_headers' ) ) {
+			add_filter( 'wp_headers', array( __CLASS__, 'browser_headers' ) );
+			remove_action( 'wp_head', 'wp_generator' );
+			add_filter( 'the_generator', '__return_empty_string' );
+		}
+	}
+
+	/** Jetpack and the WordPress mobile apps talk to the site over XML-RPC. */
+	public static function xmlrpc_needed() {
+		return (bool) apply_filters( 'optima_core_xmlrpc_needed', class_exists( 'Jetpack' ) || defined( 'JETPACK__VERSION' ) );
+	}
+
+	/** The /wp/v2/users routes list every author's login name. Hidden from visitors only. */
+	public static function hide_user_routes( $endpoints ) {
+		if ( ! is_array( $endpoints ) || ( function_exists( 'is_user_logged_in' ) && is_user_logged_in() ) ) {
+			return $endpoints;
+		}
+		foreach ( array_keys( $endpoints ) as $route ) {
+			if ( 0 === strpos( (string) $route, '/wp/v2/users' ) ) {
+				unset( $endpoints[ $route ] );
+			}
+		}
+		return $endpoints;
+	}
+
+	/** Headers already set by the host (WP Engine, Cloudflare) are left as they are. */
+	public static function browser_headers( $headers ) {
+		$headers = is_array( $headers ) ? $headers : array();
+		$add     = array(
+			'X-Content-Type-Options' => 'nosniff',
+			'X-Frame-Options'        => 'SAMEORIGIN',
+			'Referrer-Policy'        => 'strict-origin-when-cross-origin',
+		);
+		if ( function_exists( 'is_ssl' ) && is_ssl() ) {
+			$add['Strict-Transport-Security'] = 'max-age=31536000';
+		}
+		foreach ( (array) apply_filters( 'optima_core_browser_headers', $add ) as $name => $value ) {
+			if ( ! isset( $headers[ $name ] ) ) {
+				$headers[ $name ] = $value;
+			}
+		}
+		return $headers;
+	}
+
 	/* ---------- Settings tab ---------- */
 
 	public static function render_tab() {
 		$values = self::get();
 		$notes  = array(
-			'email_guard'    => 'Email addresses on your pages are coded so people see and click them as usual, while the bots that collect addresses for spam miss them. Search engines still read the email in your business details.',
-			'close_comments' => 'Turns off new comments and pingbacks on every page and post, which mostly bring spam. Comments already saved stay in WordPress.',
+			'email_guard'     => 'Email addresses on your pages are coded so spam bots miss them. People still see and click them.',
+			'close_comments'  => 'Turns off new comments and pingbacks, which mostly bring spam. Saved comments stay.',
+			'hide_users'      => 'Visitors cannot look up login names, which are half of a password guess.',
+			'xmlrpc_off'      => 'XML-RPC is an old way to post from other apps that bots use to guess passwords. It stays on with Jetpack.',
+			'browser_headers' => 'Tells browsers to use a secure connection and not let other sites frame your pages. Hides the WordPress version.',
+			'file_edit_off'   => 'Hides the theme and plugin code editors in WordPress, so a stolen login can\'t change site code.',
 		);
+		// What needs doing first (rule 52): any switch of the baseline that is off.
+		$forced = self::forced_off();
+		$off    = array();
+		foreach ( self::fields() as $key => $label ) {
+			if ( ! self::on( $key ) ) {
+				$off[] = $label;
+			}
+		}
+		echo '<section class="sh-box"><div class="sh-status' . ( $off ? ' is-warn' : '' ) . '"><span class="sh-dot" aria-hidden="true"></span><p class="sh-value">'
+			. esc_html( $off ? sprintf( _n( '%d switch is off: %s.', '%d switches are off: %s.', count( $off ), 'optima-core' ), count( $off ), implode( ', ', $off ) ) : __( 'Every switch is on.', 'optima-core' ) )
+			. '</p></div>';
+		if ( $off ) {
+			echo '<p class="sh-note">' . esc_html__( 'The security baseline has every switch on. A site that needs one off records why in its decisions log.', 'optima-core' ) . '</p>';
+		}
+		echo '</section>';
 		echo '<form method="post" action="options.php">';
 		settings_fields( 'optima_protection_group' );
 		echo '<table class="form-table" role="presentation"><tbody>';
@@ -434,13 +575,19 @@ final class Optima_Core_Protection {
 			$id   = 'optima-protect-' . $key;
 			$name = self::OPTION . '[' . $key . ']';
 			echo '<tr><th scope="row">' . esc_html( $label ) . '</th><td>';
-			printf(
-				'<label for="%1$s"><input type="checkbox" id="%1$s" name="%2$s" value="1"%3$s /> %4$s</label>',
-				esc_attr( $id ),
-				esc_attr( $name ),
-				checked( '1', $values[ $key ], false ),
-				esc_html__( 'On', 'optima-core' )
-			);
+			if ( in_array( $key, $forced, true ) ) {
+				// wp-config.php turns it off; keep the saved value so removing the line restores it.
+				printf( '<input type="hidden" name="%s" value="%s" />', esc_attr( $name ), esc_attr( $values[ $key ] ) );
+				echo '<p>' . esc_html__( 'Off in wp-config.php (OPTIMA_CORE_PROTECTION_OFF).', 'optima-core' ) . '</p>';
+			} else {
+				printf(
+					'<label for="%1$s"><input type="checkbox" id="%1$s" name="%2$s" value="1"%3$s /> %4$s</label>',
+					esc_attr( $id ),
+					esc_attr( $name ),
+					checked( '1', $values[ $key ], false ),
+					esc_html__( 'On', 'optima-core' )
+				);
+			}
 			echo '<p class="description">' . esc_html( $notes[ $key ] ) . '</p>';
 			echo '</td></tr>';
 		}

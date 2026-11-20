@@ -126,7 +126,7 @@ final class Optima_Schema {
 			'@id'           => $url . '#webpage',
 			'url'           => $url,
 			// A password-protected page never names itself in public markup.
-			'name'          => $private ? Optima_SEO_Head::private_title() : wp_strip_all_tags( get_the_title( $id ) ),
+			'name'          => $private ? Optima_SEO_Head::private_title() : self::title( $id ),
 			'isPartOf'      => array( '@id' => home_url( '/#website' ) ),
 			'about'         => array( '@id' => home_url( '/#business' ) ),
 			'datePublished' => get_the_date( 'c', $id ),
@@ -136,7 +136,7 @@ final class Optima_Schema {
 			$node['breadcrumb'] = array( '@id' => $graph['breadcrumb']['@id'] );
 		}
 		if ( ! $private && has_excerpt( $id ) ) {
-			$node['description'] = wp_strip_all_tags( get_the_excerpt( $id ) );
+			$node['description'] = self::plain( get_the_excerpt( $id ) );
 		}
 		$graph['webpage'] = $node;
 		return $graph;
@@ -193,7 +193,7 @@ final class Optima_Schema {
 		$node = array(
 			'@type' => $type,
 			'@id'   => home_url( '/#business' ),
-			'name'  => ( '' !== $b['name'] ) ? $b['name'] : get_bloginfo( 'name' ),
+			'name'  => ( '' !== $b['name'] ) ? self::plain( $b['name'] ) : self::plain( get_bloginfo( 'name' ) ),
 			'url'   => home_url( '/' ),
 		);
 
@@ -258,7 +258,7 @@ final class Optima_Schema {
 			'@type'     => 'WebSite',
 			'@id'       => home_url( '/#website' ),
 			'url'       => home_url( '/' ),
-			'name'      => get_bloginfo( 'name' ),
+			'name'      => self::plain( get_bloginfo( 'name' ) ),
 			'publisher' => array( '@id' => home_url( '/#business' ) ),
 		);
 		$alt = self::alternate_name();
@@ -319,13 +319,13 @@ final class Optima_Schema {
 
 		$main = array();
 		foreach ( $query->posts as $post ) {
-			$answer = trim( wp_strip_all_tags( apply_filters( 'the_content', $post->post_content ) ) );
+			$answer = self::plain( apply_filters( 'the_content', $post->post_content ) );
 			if ( '' === $answer ) {
 				continue;
 			}
 			$main[] = array(
 				'@type'          => 'Question',
-				'name'           => get_the_title( $post ),
+				'name'           => self::title( $post ),
 				'acceptedAnswer' => array(
 					'@type' => 'Answer',
 					'text'  => $answer,
@@ -355,7 +355,7 @@ final class Optima_Schema {
 			'@type'            => 'BlogPosting',
 			'@id'              => get_permalink( $id ) . '#article',
 			'mainEntityOfPage' => get_permalink( $id ),
-			'headline'         => get_the_title( $id ),
+			'headline'         => self::title( $id ),
 			'datePublished'    => get_the_date( 'c', $id ),
 			'dateModified'     => Optima_Core_Content_Changed::formatted( $id, 'c' ),
 			'author'           => array(
@@ -372,7 +372,7 @@ final class Optima_Schema {
 			}
 		}
 		if ( has_excerpt( $id ) ) {
-			$node['description'] = wp_strip_all_tags( get_the_excerpt( $id ) );
+			$node['description'] = self::plain( get_the_excerpt( $id ) );
 		}
 
 		return $node;
@@ -395,6 +395,29 @@ final class Optima_Schema {
 			}
 		}
 		return home_url( '/' );
+	}
+
+	/**
+	 * Plain text for a JSON-LD value (upstream 1.10.5, 1.14.0). WordPress display
+	 * filters turn quotes into HTML entities (wptexturize makes ' into &#8217;),
+	 * the site title is stored escaped (&amp;, &#039;), and JSON keeps them as
+	 * typed, so Google would read "Smith &amp; Jones". Decodes first and strips
+	 * tags after, so an encoded tag cannot come back as markup.
+	 *
+	 * @param mixed $text
+	 */
+	public static function plain( $text ) {
+		return trim( wp_strip_all_tags( html_entity_decode( (string) $text, ENT_QUOTES | ENT_HTML5, 'UTF-8' ) ) );
+	}
+
+	/**
+	 * A post's title as the editor typed it: no display filters (curly quotes,
+	 * "Private:" prefixes), entities decoded.
+	 *
+	 * @param int|WP_Post $post
+	 */
+	public static function title( $post ) {
+		return self::plain( get_post_field( 'post_title', $post ) );
 	}
 
 	/**

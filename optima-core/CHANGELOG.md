@@ -1,5 +1,43 @@
 # Changelog
 
+## 1.15.0.0 (2026-11-19)
+
+Optima release of upstream 1.15.0 (from 1.6.0), ported selectively. Every Optima revision from 1.6.0.1 to 1.6.0.16 is kept: the law-site blueprint, offices, breadcrumbs, primary practice, the content-changed date, no self-review schema, the sitemap and noindex rules, the setup-description health fix, JSON_HEX_TAG, editable pages, private pages and the email guard. Where upstream and Optima changed the same code, Optima's later rule wins.
+
+**Security (plugin-first rule 19)**
+
+- Four new switches on Optima, Search and AI, Spam protection, all on by default, so they turn on with this update: login names hidden from visitors (the REST users list), XML-RPC off (unless Jetpack needs it), basic browser protections (`nosniff`, `SAMEORIGIN` framing, a referrer policy, HSTS on HTTPS, WordPress version hidden; a header the host or Cloudflare already sends is kept), and the code editor off. The code editor switch also takes away the edit-code permissions, so it works on WP Engine, whose wp-config.php sets DISALLOW_FILE_EDIT to false. The screen opens with any switch that is off.
+- A site that needs one off records why in its decisions log, then turns it off on the screen, or in wp-config.php with `define( 'OPTIMA_CORE_PROTECTION_OFF', 'xmlrpc_off' );` (comma list), or with the `optima_core_protection_on` filter.
+- **Staging never reaches real people.** On a staging copy (WordPress set to staging, development or local, or a host staging address), email goes only to operators (the addresses Optima Build's operator check recognizes, with the web-team partner domain kept as a hash) and the site's admin email; everyone else is dropped from To, Cc and Bcc. Calls to newsletter, email-marketing, texting, payment and Zapier services are refused. A notice on every dashboard screen says so. `OPTIMA_STAGING` in wp-config.php overrides the detection either way; filters `optima_core_staging_guard`, `optima_core_staging_mail_to`, `optima_core_staging_blocked_hosts`.
+
+**Fixes**
+
+- Drop-down (select) fields no longer save blank: the meta check now gets each field's choices. Values match ignoring case and space and are stored as the declared key. Values already saved blank stay blank until set again.
+- Fields reach the REST API and the block editor: every type with fields supports custom fields (WordPress's raw Custom Fields box is removed again).
+- Schema names are plain text: an apostrophe or `&` in a page title, FAQ question, post headline, excerpt, the site name or the business name no longer reaches Google as `&#8217;` or `&amp;`. Breadcrumb names in the schema too.
+- Page 2 and on of a list names itself as canonical (`/page/2/`), not page 1. Not-found and search pages print no canonical and no `og:url` instead of the home page. The SEO box and the theme's `seo.pages` canonical still win.
+- The blog list reads the posts page's SEO title (with ", page 2" past the first page), description, excerpt or text, instead of the tagline.
+- Saving the SEO screen no longer wipes keys it does not show (`purge_on_uninstall`).
+
+**Speed**
+
+- The map (new, below) loads Google only on a tap.
+- After a theme or Optima plugin update, Core purges WP Engine's caches (and WP Rocket's where it runs). Cloudflare still needs a hand purge. Filter `optima_core_purge_after_update`; action `optima_core_caches_purged`.
+
+**New**
+
+- **Change log** (Optima, Build, Change log; operators only): who changed what and when, for every edit by someone who is not an operator (pages, posts, templates, SEO fields, menus, photos, key settings, plugins, themes, users and roles, never passwords, the Customizer, Gravity Forms), so the edit can be folded into the site repo. Copy the report, then mark entries as in the repo; marked entries move to a kept archive. Operators, cron, WP-CLI, auto-updates and Approved copy are not logged. The weekly email is **off until an operator turns it on**, and goes to the address set there, else the site's admin email. Stored in its own table, `{prefix}optima_change_log`.
+- **Approved copy carries lists and noindex.** A `meta` or `field` entry can hold a list (for example `_optima_aeo_faqs` rows of `{q, a}` for AI search), compared as canonical JSON and shown one line per entry. A page entry's `"noindex": true` ticks Hide from search; `false` clears a tick the sync set. Prerequisite carried with them: upstream's page creation (`"create": true`, posts arrive as drafts), the `file`, `seo_title`, `description` and `identity` aliases, and undo of what a run created.
+- **Search Console and Bing verification** fields on Optima, Search and AI, SEO; paste the tag or the code. Printed on the front page.
+- **Thank-you pages stay out of search:** Gravity Forms confirmation pages (a page, or a redirect on this site) and pages at thank-you or thanks get noindex and leave the sitemap. The front page and posts page never do. Filter `optima_core_thanks_pages`.
+- **Language versions (hreflang)** in the SEO box: set a page's language and link the same page in another language. Links save both ways; the head gets `hreflang` and `x-default` tags; a page in another language gets that `<html lang>`. Drafts, noindexed, password-protected and thank-you pages are left out. Stands down for WPML, Polylang, TranslatePress and Weglot. Nothing changes until a page is linked.
+- **Privacy and terms** (Optima, Content, Privacy and terms): a privacy policy and terms of service drafted from Details and what each Optima plugin that is on lists in its `visitor-data.json`, plus Gravity Forms. A plugin that is on with no list gets a [Confirm] line. Copy the email for the firm, mark it approved (who and when), then Make the draft page: always a draft, marked for the firm's approval, never published from here, never overwriting a page. The screen says when the site changed since approval.
+- **`[optima_map]`**: a "Show the map" button over whatever the theme wraps (or a plain panel); the tap loads Google's map in place. The place is the address on Details, or an office with `office="<id>"`. Styled from `--optima-*` variables; the tap sends `directions_click` (location `map`).
+
+**Skipped from upstream:** the design-token reader and its scales (Optima's DESIGN.md block is printed by Optima Build), upstream's menu filing and admin kit relabels (1.6.2 to 1.6.6, 1.9.0, 1.13.1, 1.13.3), its job-owner check (Optima keeps `optima_owns()` in Build), the release-address move, plans and branding, the updater and admin kit copies, upstream's breadcrumbs (Optima's own breadcrumbs from 1.6.0.16 stay the only ones), the heading word ties (a design rule, off by default upstream), the list of searches that found nothing (Optima has no such list, so there was nothing to keep from loading), the notices address and Business info screen changes (Details is Optima's own).
+
+Tests: `tools/tests/core-staging-guard.php`, `core-security-headers.php`, `core-schema-plain-text.php`, `core-select-meta.php`, `core-seo-gaps.php`, `core-hreflang.php`, `core-map.php`, `core-policies.php`, `sync-array-meta-unit.php` (no WordPress needed).
+
 ## 1.6.0.16 (2026-11-13)
 
 - **Offices (Your business, Offices).** A list of the firm's offices, typed once here: name, page address, street and suite, city, state, ZIP, phone, Google Place ID, latitude and longitude, Business Profile address, walk-in hours, phone hours, time zone, photo, parking, finding the door, nearby courthouses and practice slugs. Optima Build fills it from `offices` in the theme's optima-setup.json (by office id, blanks only, never removing one). Stored in `optima_core_offices`. A site with no offices is unchanged.

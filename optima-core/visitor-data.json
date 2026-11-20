@@ -1,0 +1,20 @@
+{
+  "plugin": "optima-core",
+  "items": [
+    {
+      "what": "Google loads its map of the business and may set its own cookies and record the visitor's IP address, as Google does on google.com",
+      "where": "Google (Google Maps)",
+      "kept": "Under Google's own privacy policy",
+      "when": "only after a visitor taps \"Show the map\" on a page that has the map",
+      "shared": "Google Maps, when a visitor opens the map"
+    },
+    {
+      "what": "The visitor's browser loads a map picture of an office from Google, which sees the visitor's IP address",
+      "where": "Google (Google Maps)",
+      "kept": "Under Google's own privacy policy",
+      "when": "only on office cards that show a map picture, which needs a map key set on Your business, Offices"
+    }
+  ],
+  "cookies": [],
+  "notes": "Optima Core sets no cookies. Its email guard only changes how email addresses are written into the page, and it stores nothing. The map ([optima_map]) loads nothing from Google until a visitor taps it."
+}

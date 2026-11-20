@@ -145,7 +145,8 @@ final class Optima_Core_Breadcrumbs {
 			$list[] = array(
 				'@type'    => 'ListItem',
 				'position' => $i + 1,
-				'name'     => $item['name'],
+				// Plain text in the schema: no &#8217; or &amp; (upstream 1.10.5).
+				'name'     => class_exists( 'Optima_Schema' ) ? Optima_Schema::plain( $item['name'] ) : $item['name'],
 				'item'     => $item['url'],
 			);
 		}

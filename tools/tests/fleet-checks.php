@@ -40,6 +40,8 @@ function get_plugins() { return $GLOBALS['t']['plugins']; }
 function is_plugin_active( $f ) { return in_array( $f, $GLOBALS['t']['active'], true ); }
 function untrailingslashit( $s ) { return rtrim( $s, '/\\' ); }
 function wp_specialchars_decode( $s, $q = 0 ) { return htmlspecialchars_decode( $s, ENT_QUOTES ); }
+if ( ! function_exists( 'is_email' ) ) { function is_email( $e ) { return (bool) filter_var( $e, FILTER_VALIDATE_EMAIL ); } }
+function get_users( $args = array() ) { return $GLOBALS['t']['users'] ?? array(); }
 function wp_mail( $to, $subject, $body ) { $GLOBALS['t']['mail'][] = array( $to, $subject, $body ); return true; }
 function current_user_can( $c ) { return true; }
 require dirname( __DIR__, 2 ) . '/optima-build/includes/class-optima-hub-access.php';
@@ -205,7 +207,7 @@ ok( false === Optima_Hub_Watch::check() && ! $GLOBALS['t']['mail'], 'live and vi
 $GLOBALS['t']['options']['blog_public'] = '0';
 ok( true === Optima_Hub_Watch::check(), 'live and hidden: email sent' );
 $m = $GLOBALS['t']['mail'][0] ?? array( '', '', '' );
-ok( 'sean@optimadigitalmedia.com' === $m[0] && 'Example Firm is hidden from Google' === $m[1], 'to team@, subject names the site' );
+ok( 'owner@example-firm.com' === $m[0] && 'Example Firm is hidden from Google' === $m[1], 'no operator admin on the site: goes to the admin email, subject names the site' );
 ok( false === Optima_Hub_Watch::check() && 1 === count( $GLOBALS['t']['mail'] ), 'a second check the same day sends nothing' );
 $GLOBALS['t']['options']['optima_hub_hidden_alert_sent'] = time() - 6 * DAY_IN_SECONDS;
 ok( false === Optima_Hub_Watch::check(), 'six days later: still quiet' );

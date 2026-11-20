@@ -6,8 +6,11 @@
  *  - Dashboard: a plain-language health check ("is my site healthy and getting
  *    found?"), the heart of the plugin.
  *  - Business: the NAP + identity form (Optima_Core_Business).
- *  - SEO: site-wide SEO defaults (Optima_Core_SEO_Settings). Per-page SEO stays
- *    in the Optima SEO box on each page.
+ *  - SEO: site-wide SEO defaults (Optima_Core_SEO_Settings), with the Search
+ *    Console and Bing verification codes. Per-page SEO stays in the Optima SEO
+ *    box on each page.
+ *  - Privacy and terms (tab "policies", under Content): Optima_Core_Policies.
+ *  - Change log (tab "changes", under Build, operators only): Optima_Changelog_Admin.
  *
  * @package Optima_Core
  */
@@ -21,6 +24,32 @@ final class Optima_Core_Admin {
 	public static function init() {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
+		add_filter( 'optima_admin_nav_group', array( __CLASS__, 'nav_group' ), 10, 3 );
+	}
+
+	/**
+	 * Core's own tabs that are not the firm's facts. The kit files every other
+	 * optima&tab=* screen under Your business; these two go where they belong
+	 * (rule 10): Privacy and terms under Content, the Change log under Build.
+	 *
+	 * @param string $group Group the kit chose.
+	 * @param string $slug  Sidebar slug.
+	 * @param string $label Sidebar label.
+	 */
+	public static function nav_group( $group, $slug = '', $label = '' ) {
+		$slug = strtolower( (string) $slug );
+		if ( 'optima&tab=changes' === $slug ) {
+			return 'build';
+		}
+		if ( 'optima&tab=policies' === $slug ) {
+			return 'content';
+		}
+		return $group;
+	}
+
+	/** The Change log is for operators only. */
+	private static function changelog() {
+		return class_exists( 'Optima_Changelog_Admin' ) && Optima_Changelog_Admin::allowed();
 	}
 
 	/** The menu these screens sit in: a theme's Build menu when there is one, else Optima's own. */
@@ -78,6 +107,12 @@ final class Optima_Core_Admin {
 		add_submenu_page( $parent, 'SEO', 'SEO', 'manage_options', 'optima&tab=seo', array( __CLASS__, 'render' ) );
 		add_submenu_page( $parent, 'Approved copy', 'Approved copy', 'manage_options', 'optima&tab=sync', array( __CLASS__, 'render' ) );
 		add_submenu_page( $parent, 'Spam protection', 'Spam protection', 'manage_options', 'optima&tab=protect', array( __CLASS__, 'render' ) );
+		if ( class_exists( 'Optima_Core_Policies' ) ) {
+			add_submenu_page( $parent, 'Privacy and terms', 'Privacy and terms', 'manage_options', 'optima&tab=policies', array( __CLASS__, 'render' ) );
+		}
+		if ( self::changelog() ) {
+			add_submenu_page( $parent, 'Change log', 'Change log', 'manage_options', 'optima&tab=changes', array( __CLASS__, 'render' ) );
+		}
 		foreach ( self::groups() as $slug => $group ) {
 			add_submenu_page( $parent, $group['label'], $group['label'], 'manage_options', 'optima&tab=' . $slug, array( __CLASS__, 'render' ) );
 		}
@@ -95,6 +130,12 @@ final class Optima_Core_Admin {
 			: array( 'dashboard' => 'Search health', 'business' => 'Details', 'offices' => 'Offices', 'seo' => 'SEO' );
 		$tabs['sync']    = 'Approved copy';
 		$tabs['protect'] = 'Spam protection';
+		if ( class_exists( 'Optima_Core_Policies' ) ) {
+			$tabs['policies'] = 'Privacy and terms';
+		}
+		if ( self::changelog() ) {
+			$tabs['changes'] = 'Change log';
+		}
 		foreach ( self::groups() as $slug => $group ) {
 			$tabs[ $slug ] = $group['label'];
 		}
@@ -118,7 +159,9 @@ final class Optima_Core_Admin {
 			'business'  => 'The business name, phone, address and profiles, typed once here. Every other screen shows them read-only with a link back. Keep them identical to the Google Business Profile.',
 			'offices'   => 'Every office, typed once here: address, phone, Place ID, walk-in hours and phone hours. Each office page gets its own entry in the schema and the office cards show them. With no offices, the site uses the one address on Details.',
 			'sync'      => 'Keeps each page in step with the copy the theme ships. Pages nobody has edited update on their own after a theme update; anything changed in WordPress waits for you.',
-			'protect'   => 'What keeps spam away from the business: the form guard and two switches. Both switches are on unless you turn them off.',
+			'protect'   => 'What keeps spam and break-in attempts away: the form guard and the security switches. Every switch is on unless you turn it off.',
+			'policies'  => 'A privacy policy and terms drafted from what this website collects, for the firm to approve. Nothing is published from here.',
+			'changes'   => 'Every change made on the site by someone who is not an operator: who, when and what. Fold each one into the site repo, then mark it so the next theme update keeps it.',
 			'seo'       => 'How the site shows in search results: the checks first, then the site-wide settings. Each page sets its own title and description in its SEO box; the sitemap is built at /wp-sitemap.xml.',
 		);
 		self::styles();
@@ -136,6 +179,10 @@ final class Optima_Core_Admin {
 		} elseif ( 'protect' === $tab ) {
 			self::forms_guard_status();
 			Optima_Core_Protection::render_tab();
+		} elseif ( 'policies' === $tab ) {
+			Optima_Core_Policies::render_tab();
+		} elseif ( 'changes' === $tab ) {
+			Optima_Changelog_Admin::render();
 		} elseif ( array_key_exists( $tab, self::groups() ) ) {
 			Optima_Core_Settings_Groups::render_tab( $tab );
 		} else {
@@ -436,6 +483,11 @@ final class Optima_Core_Admin {
 			echo '<tr><th scope="row"><label for="' . esc_attr( $id ) . '">' . esc_html( 'default_image' === $key ? 'Default share image' : $label ) . '</label></th><td>';
 			if ( 'home_description' === $key ) {
 				printf( '<textarea id="%s" name="%s" rows="3" class="large-text">%s</textarea>', esc_attr( $id ), esc_attr( $name ), esc_textarea( $values[ $key ] ) );
+			} elseif ( in_array( $key, array( 'google_verify', 'bing_verify' ), true ) ) {
+				printf( '<input type="text" id="%s" name="%s" value="%s" class="regular-text" autocomplete="off" spellcheck="false" />', esc_attr( $id ), esc_attr( $name ), esc_attr( $values[ $key ] ) );
+				echo '<p class="description">' . esc_html( 'google_verify' === $key
+					? 'Optional. In Search Console, pick URL prefix, then HTML tag, and paste the tag or its code here. Leave empty when DNS verifies the domain.'
+					: 'Optional. In Bing Webmaster Tools, pick HTML Meta Tag and paste it here. Leave empty when the site was imported from Search Console.' ) . '</p>';
 			} elseif ( 'alternate_name' === $key ) {
 				printf( '<textarea id="%s" name="%s" rows="2" class="large-text">%s</textarea>', esc_attr( $id ), esc_attr( $name ), esc_textarea( $values[ $key ] ) );
 				echo '<p class="description">Optional. One per line, such as the name the business trades under or a short name people type. Search engines read it as another name for this site. Leave empty when the business has one name.</p>';

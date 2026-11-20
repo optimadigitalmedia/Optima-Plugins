@@ -94,6 +94,7 @@ final class Optima_Sync_Admin {
 		$counts = array(
 			Optima_Sync::CURRENT  => array( 'Up to date', 'good' ),
 			Optima_Sync::UPDATE   => array( 'Ready to update', 'good' ),
+			Optima_Sync::CREATE   => array( 'Will be created', 'good' ),
 			Optima_Sync::EDITED   => array( 'Edited in WordPress', 'warn' ),
 			Optima_Sync::CONFLICT => array( 'Needs a decision', 'warn' ),
 			Optima_Sync::MISSING  => array( 'Page not found', 'bad' ),
@@ -101,7 +102,7 @@ final class Optima_Sync_Admin {
 		echo '<div class="sh-grid sh-grid-3">';
 		foreach ( $counts as $key => $meta ) {
 			$n = count( $state[ $key ] ?? array() );
-			if ( ! $n && in_array( $key, array( Optima_Sync::MISSING, Optima_Sync::CONFLICT ), true ) ) {
+			if ( ! $n && in_array( $key, array( Optima_Sync::MISSING, Optima_Sync::CONFLICT, Optima_Sync::CREATE ), true ) ) {
 				continue;
 			}
 			printf(
@@ -117,7 +118,8 @@ final class Optima_Sync_Admin {
 			echo '<div class="notice notice-error inline"><p>' . esc_html( $error ) . '</p></div>';
 		}
 
-		$updates = $state[ Optima_Sync::UPDATE ] ?? array();
+		// Pages the manifest says to create are safe writes too (upstream 1.6.5).
+		$updates = array_merge( $state[ Optima_Sync::UPDATE ] ?? array(), $state[ Optima_Sync::CREATE ] ?? array() );
 		if ( $updates ) {
 			echo '<section class="sh-box"><h2>' . esc_html( sprintf( _n( '%d update from the theme', '%d updates from the theme', count( $updates ), 'optima-core' ), count( $updates ) ) ) . '</h2>';
 			echo '<p>Nobody has edited these in WordPress since the last sync, so the theme copy can go straight in. Each page keeps a revision, and you can undo the whole sync below.</p>';
@@ -139,7 +141,7 @@ final class Optima_Sync_Admin {
 
 		$missing = $state[ Optima_Sync::MISSING ] ?? array();
 		if ( $missing ) {
-			echo '<section class="sh-box"><h2>Pages the theme names but the site does not have</h2><p>Create them, or run the theme\'s setup, then come back.</p><ul class="sh-list">';
+			echo '<section class="sh-box"><h2>Pages the theme names but the site does not have</h2><p>Create them, or run the theme\'s setup, then come back. A page marked <code>"create": true</code> in the theme\'s optima-sync.json is created by the next sync.</p><ul class="sh-list">';
 			foreach ( $missing as $row ) {
 				echo '<li>' . esc_html( Optima_Sync::label( $row ) ) . '</li>';
 			}
@@ -178,13 +180,36 @@ final class Optima_Sync_Admin {
 			printf(
 				'<td><strong>%s</strong>%s</td><td>%s</td><td>%s</td>',
 				esc_html( Optima_Sync::label( $row ) ),
-				Optima_Sync::CONFLICT === $row['state'] ? '<br><span class="sh-tag">' . esc_html( empty( $row['synced'] ) ? 'Never synced, and different' : 'Changed in both' ) . '</span>' : '',
-				esc_html( self::preview( $row, $row['raw'] ?? '' ) ),
-				esc_html( self::preview( $row, $row['theme'] ) )
+				Optima_Sync::CONFLICT === $row['state'] ? '<br><span class="sh-tag">' . esc_html( empty( $row['synced'] ) ? 'Never synced, and different' : 'Changed in both' ) . '</span>' : ( Optima_Sync::CREATE === $row['state'] ? '<br><span class="sh-tag">' . esc_html( 'New: ' . ( 'draft' === ( $row['new']['status'] ?? '' ) ? 'arrives as a draft' : 'will be published' ) ) . '</span>' : '' ),
+				self::cell( $row, $row['raw'] ?? '' ), // phpcs:ignore WordPress.Security.EscapeOutput -- escaped in cell().
+				self::cell( $row, $row['theme'] ) // phpcs:ignore WordPress.Security.EscapeOutput -- escaped in cell().
 			);
 			echo '</tr>';
 		}
 		echo '</tbody></table>';
+	}
+
+	/** One table cell, escaped. A list (FAQ rows) shows one line per entry instead of raw JSON (upstream 1.12.0). */
+	private static function cell( array $row, $text ) {
+		if ( empty( $row['array'] ) ) {
+			return esc_html( self::preview( $row, $text ) );
+		}
+		$data = json_decode( (string) $text, true );
+		if ( ! is_array( $data ) ) {
+			return esc_html( self::preview( $row, $text ) );
+		}
+		$lines = array();
+		foreach ( array_is_list( $data ) ? $data : array( $data ) as $entry ) {
+			$parts = array();
+			foreach ( is_array( $entry ) ? $entry : array( $entry ) as $key => $value ) {
+				$value   = is_array( $value ) ? Optima_Sync::json( $value ) : (string) $value;
+				$parts[] = is_string( $key ) && ! in_array( $key, array( 'q', 'a' ), true ) ? $key . ': ' . $value : $value;
+			}
+			$line    = trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( implode( ' / ', $parts ) ) ) );
+			$lines[] = '<li>' . esc_html( mb_strlen( $line ) > 160 ? mb_substr( $line, 0, 160 ) . '...' : $line ) . '</li>';
+		}
+		/* translators: %d: entries in a list field */
+		return '<p>' . esc_html( sprintf( _n( '%d entry', '%d entries', count( $lines ), 'optima-core' ), count( $lines ) ) ) . '</p><ol class="sh-list">' . implode( '', $lines ) . '</ol>';
 	}
 
 	private static function preview( array $row, $text ) {

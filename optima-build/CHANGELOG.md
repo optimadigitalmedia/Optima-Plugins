@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.11.4 (2026-11-20)
+
+- Change requests and the hidden-site alert go to the site's operator administrators (or the site's admin email when it has none) instead of an address written into the plugin. `OPTIMA_HUB_REQUEST_EMAIL` and the two filters still set a different recipient.
+
 ## 0.7.11.3 (2026-11-13)
 
 - Ten new template slots for the law-site page layer: breadcrumb, state-law, practice-results, practice-reviews, practice-attorneys, related-guides, next-steps, office-card, bio-glance and bio-results. Each prints only what its plugin attaches. When a theme passes no variant, optima_slot() fills it from the layout recipe's blocks.

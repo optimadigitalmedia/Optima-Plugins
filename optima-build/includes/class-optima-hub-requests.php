@@ -4,7 +4,8 @@
  * keeps a list on the site, so the client can see each request and where it
  * stands (Received, In progress, Done).
  *
- * The email goes to sean@optimadigitalmedia.com unless the site sets its own:
+ * The email goes to the site's operator administrators (or the site's admin
+ * email when it has none) unless the site sets its own:
  *   define( 'OPTIMA_HUB_REQUEST_EMAIL', 'someone@example.com' );
  * Partner-side sites must set this, so nothing routes to a Optima address.
  *
@@ -63,7 +64,7 @@ final class Optima_Hub_Requests {
 	}
 
 	public static function recipient(): string {
-		$to = defined( 'OPTIMA_HUB_REQUEST_EMAIL' ) ? (string) OPTIMA_HUB_REQUEST_EMAIL : 'sean@optimadigitalmedia.com';
+		$to = defined( 'OPTIMA_HUB_REQUEST_EMAIL' ) ? (string) OPTIMA_HUB_REQUEST_EMAIL : implode( ',', Optima_Hub_Access::operator_emails() );
 		return (string) apply_filters( 'optima_hub_request_recipient', $to );
 	}
 

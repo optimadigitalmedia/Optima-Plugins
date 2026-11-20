@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Optima Forms Guard
  * Description:       In-house spam protection for Gravity Forms: a hidden honeypot, a time trap, and a signed token. Also refuses files sent to File Upload fields set to Hidden and list answers that carry hidden code (two reported Gravity Forms security flaws), and names the upload fields for you to fix. No reCAPTCHA, no Akismet, no third-party calls.
- * Version:           0.3.2.8
+ * Version:           0.3.7.0
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Requires Plugins:  gravityforms
@@ -17,6 +17,8 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+define( 'OPTIMA_FORMS_GUARD_VERSION', '0.3.7.0' );
 
 // Self-updating from the Optima Plugins releases (see includes/class-optima-plugin-updater.php).
 // Loaded on plugins_loaded, after every plugin's own file, so older Optima
@@ -57,6 +59,49 @@ final class Optima_Forms_Guard {
 		add_filter( 'gform_validation', array( __CLASS__, 'validate' ) );
 		add_filter( 'gform_validation_message', array( __CLASS__, 'message' ), 10, 2 );
 		add_filter( 'gform_entry_is_spam', array( __CLASS__, 'content_spam' ), 10, 3 );
+		add_filter( 'gform_pre_validation', array( __CLASS__, 'fix_website_urls' ) );
+	}
+
+	/**
+	 * Ids (as strings) of the form's Website fields. Reads field objects and
+	 * plain arrays alike.
+	 *
+	 * @param array $form Gravity Forms form array.
+	 * @return string[]
+	 */
+	private static function website_field_ids( $form ): array {
+		$ids = array();
+		foreach ( (array) ( isset( $form['fields'] ) ? $form['fields'] : array() ) as $field ) {
+			$type = is_object( $field ) ? ( isset( $field->type ) ? $field->type : '' ) : ( isset( $field['type'] ) ? $field['type'] : '' );
+			if ( 'website' !== $type ) {
+				continue;
+			}
+			$ids[] = (string) ( is_object( $field ) ? $field->id : ( isset( $field['id'] ) ? $field['id'] : '' ) );
+		}
+		return $ids;
+	}
+
+	/**
+	 * Website fields accept "www.example.com" or "example.com". Gravity Forms
+	 * rejects an address without http(s)://, which real visitors never type,
+	 * so the scheme is added before Gravity Forms checks the field.
+	 *
+	 * @param array $form Gravity Forms form array.
+	 */
+	public static function fix_website_urls( $form ) {
+		foreach ( self::website_field_ids( $form ) as $id ) {
+			$key = 'input_' . $id;
+			if ( ! isset( $_POST[ $key ] ) || ! is_string( $_POST[ $key ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+				continue;
+			}
+			$raw   = trim( $_POST[ $key ] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput
+			$value = wp_unslash( $raw );
+			if ( '' !== $value && ! preg_match( '#^[a-z][a-z0-9+.-]*://#i', $value ) && preg_match( '#^[^\s/]+\.[a-z]{2,}#i', $value ) ) {
+				// Prefix the raw (still slashed) value so Gravity Forms unslashes it as usual.
+				$_POST[ $key ] = 'https://' . $raw; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+			}
+		}
+		return $form;
 	}
 
 	/**
@@ -189,9 +234,11 @@ final class Optima_Forms_Guard {
 		if ( $is_spam || ! apply_filters( 'optima_forms_guard_content_check', true, $form ) ) {
 			return $is_spam;
 		}
+		// A Website field is the visitor's own site, which they are asked for.
+		$skip = self::website_field_ids( $form );
 		$text = '';
 		foreach ( (array) $entry as $key => $value ) {
-			if ( is_string( $value ) && preg_match( '/^\d+(\.\d+)?$/', (string) $key ) ) {
+			if ( is_string( $value ) && preg_match( '/^\d+(\.\d+)?$/', (string) $key ) && ! in_array( (string) $key, $skip, true ) ) {
 				$text .= ' ' . $value;
 			}
 		}

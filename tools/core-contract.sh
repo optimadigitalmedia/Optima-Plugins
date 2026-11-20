@@ -43,6 +43,14 @@ optima-core/includes/admin.php | public static function checks() | optima-build 
 optima-core/includes/admin.php | public static function render_checks( array $checks ) | optima-build (Site health: same check cards)
 optima-core/includes/schema/class-optima-schema.php | apply_filters( 'optima_schema_graph' | optima-events (adds Event and Person nodes to the graph)
 optima-core/includes/schema/class-optima-schema.php | home_url( '/#business' ) | optima-events (Event organizer points at the business)
+optima-core/includes/sync/class-optima-sync.php | public static function summary( | optima-build (Updates: the Approved copy step reads the counts)
+optima-core/includes/sync/class-optima-sync.php | const UPDATE | optima-build (Updates: copy waiting from the theme)
+optima-core/includes/sync/class-optima-sync.php | public static function plan( | optima-build (Updates: Apply approved copy)
+optima-core/includes/sync/class-optima-sync-admin.php | const ACTION = 'optima_sync'; | optima-build (Updates posts the Approved copy form to this action)
+optima-core/includes/schema/class-optima-schema.php | public static function plain( | optima-core breadcrumbs (schema names as plain text)
+optima-build/includes/class-optima-hub-access.php | public static function operators(): array | optima-core (staging mail guard and Change log read the Build operator list)
+optima-build/includes/class-optima-hub-access.php | const DEFAULT_OPERATOR_DOMAIN_HASHES | optima-core (staging mail guard: the partner domain, as a hash)
+optima-build/includes/class-optima-hub-access.php | public static function is_operator( | optima-core (Change log: edits by operators are not logged)
 CONTRACT
 
 exit "$fail"

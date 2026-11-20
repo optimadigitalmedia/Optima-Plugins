@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.7.0 (2026-11-19)
+
+- Ported from upstream 0.3.3 to 0.3.7. The List-field check from 0.3.7 already shipped in 0.3.2.7, so it is unchanged here.
+- **Website fields take "www.example.com".** Gravity Forms refused any address without https:// ("Please enter a valid Website URL"), which real visitors never type. Forms Guard now adds https:// before Gravity Forms checks the field, so www.example.com and example.com both go through. An address that already has a scheme, or text that is not an address, is left alone.
+- **Fix: a visitor's own website no longer marks the entry as spam.** The link check from 0.3.2.4 read every field, so a firm that filled in a "Current website" field would have landed in Spam. Website fields are now left out of that check; links typed in the message still count.
+- The plugin now defines `OPTIMA_FORMS_GUARD_VERSION`, like the other Optima plugins.
+- Not carried: upstream's admin kit relabels and warning rewording, its updater address move and its visitor-data file. This plugin keeps the Optima admin kit 1.8.0.0 and the checksum updater from 0.3.2.8 unchanged.
+
 ## 0.3.2.8 (2026-11-12)
 
 - Updates install only from the Optima Plugins release downloads (https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/). A release listed at any other address is skipped, and an update of an Optima plugin from any other address is refused with an error.
