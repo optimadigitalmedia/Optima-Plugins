@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.8.14 (2026-11-20)
+
+- Shared admin kit: the four Optima Law screens are filed in the menu (three under Content, form entries under Build).
+
 ## 0.1.8.13 (2026-11-13)
 
 - **Phones answered.** A second schedule on Hours, beside the office hours: not set, around the clock (24/7), or its own days and times. It shows as one line under the hours table and goes into the schema only as the intake ContactPoint's `hoursAvailable` (on the business entry, and on each office in Optima Core when the office has no phone hours of its own). The office hours stay the walk-in hours. Nothing changes until it is set, and nothing goes out until the hours are confirmed.

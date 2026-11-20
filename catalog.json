@@ -133,6 +133,17 @@
       ]
     },
     {
+      "slug": "optima-law",
+      "name": "Law firm tools",
+      "summary": "The firm's disclaimer lines set once and approved word for word, approval before posts and bios go live, a list of pages due for an attorney's review, and (when turned on) form entries deleted after 90 days.",
+      "tier": "core",
+      "law": true,
+      "requires": [],
+      "jobs": [
+        "law"
+      ]
+    },
+    {
       "slug": "optima-chat",
       "name": "Chat assistant",
       "summary": "A chat in the corner of your site that answers common questions, books calls and takes change requests. Every other question lands in your inbox with the visitor's email, and AI answers start once it's connected.",

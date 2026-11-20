@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.15.11 (2026-11-20)
+
+- Ships visitor-data.json, so Optima Core's privacy draft lists what goes to Google (page views, marked taps, form sends by form number only), the optima_consent cookie (180 days), the five-minute optima_form_submit cookie, and Google's own cookies.
+- The cookie notice dresses only from the theme's --optima-* design variables (rule 7), with the browser's neutral system colors as the fallback; its own hard-coded colors, radius and brand-color lookup are gone.
+- The cookie notice never takes focus on page load (WCAG 2.2). Focus moves into it only when the visitor opens it from Privacy choices, and goes back to that link when they answer or press Escape.
+- Shared admin kit: the four Optima Law screens are filed in the menu (three under Content, form entries under Build).
+
 ## 0.1.15.10 (2026-11-12)
 
 - Clicks now report the seven standard event names (rule 50): call_click, text_click, email_click, form_submit, booking_click, directions_click, chat_start, each with location and method. People's team_call and team_email links report as call_click and email_click from the team card.

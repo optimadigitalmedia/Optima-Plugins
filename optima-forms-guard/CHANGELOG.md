@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.7.1 (2026-11-20)
+
+- Ships visitor-data.json, so Optima Core's privacy draft says plainly that Forms Guard keeps no visitor information: only a monthly count of blocked submissions for 13 months, with spam left in Gravity Forms' own Spam folder.
+- Shared admin kit: the four Optima Law screens are filed in the menu (three under Content, form entries under Build).
+
 ## 0.3.7.0 (2026-11-19)
 
 - Ported from upstream 0.3.3 to 0.3.7. The List-field check from 0.3.7 already shipped in 0.3.2.7, so it is unchanged here.

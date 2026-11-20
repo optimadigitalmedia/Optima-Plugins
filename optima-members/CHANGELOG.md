@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.3.12 (2026-11-20)
+
+- The application form gives the same answer whether or not the email already has an account, so it no longer tells a stranger who is registered. The account's owner gets the next step by email instead (sign in, then apply), at most once an hour.
+- Shared admin kit: the four Optima Law screens are filed in the menu (three under Content, form entries under Build).
+
 ## 0.3.3.11 (2026-11-12)
 
 - Updates install only from the Optima Plugins release downloads (https://github.com/optimadigitalmedia/Optima-Plugins/releases/download/). A release listed at any other address is skipped, and an update of an Optima plugin from any other address is refused with an error.

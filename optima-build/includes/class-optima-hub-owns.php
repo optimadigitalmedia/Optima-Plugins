@@ -33,6 +33,7 @@ final class Optima_Hub_Owns {
 		'analytics'     => 'optima-analytics',
 		'forms-guard'   => 'optima-forms-guard',
 		'chat'          => 'optima-chat',
+		'law'           => 'optima-law',
 		'account-privacy' => 'optima-build',
 	);
 

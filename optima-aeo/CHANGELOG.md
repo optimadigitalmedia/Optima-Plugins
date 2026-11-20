@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.4.12 (2026-11-20)
+
+- Shared admin kit: the four Optima Law screens are filed in the menu (three under Content, form entries under Build).
+
 ## 0.2.4.11 (2026-11-13)
 
 - **/llms.txt describes each page with its current words.** The line after a link now comes from the page's SEO description, then the homepage description on the home page, then the theme's description for that address (optima-setup.json), and only then the excerpt or the opening of the page's own text. An excerpt carried over from an old site is no longer used when a current description exists.

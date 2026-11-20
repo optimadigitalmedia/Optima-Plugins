@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2.12 (2026-11-20)
+
+- A partner click counts at most once a day per visitor per partner, using a salted hash of the IP address and browser that is deleted after a day.
+- Each month's click count is its own row and is added in one database update, so clicks at the same moment are never lost. Counts saved before this release still show, and 24 months are kept.
+- Shared admin kit: the four Optima Law screens are filed in the menu (three under Content, form entries under Build).
+
 ## 0.1.2.11 (2026-11-12)
 
 - Added an uninstall cleanup. Deleting the plugin always removes the cached release lookup. Partners (with their levels, links, dates and click counts) and the level and placement lists stay unless a full wipe was asked for first (purge_on_uninstall in the optima_partners setting, or OPTIMA_PURGE_ON_UNINSTALL set to true in wp-config.php). Logos stay in the media library.

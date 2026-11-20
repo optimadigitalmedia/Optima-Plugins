@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.10.5 (2026-11-20)
+
+- Deleting the plugin keeps the firm-approved disclaimer wording and its approval record (with the rest of the Results setting) unless a full wipe is set: OPTIMA_PURGE_ON_UNINSTALL in wp-config.php or purge_on_uninstall in the setting.
+- Shared admin kit: the four Optima Law screens are filed in the menu (three under Content, form entries under Build).
+
 ## 0.1.10.4 (2026-11-13)
 
 - The practice-results slot for practice pages: the results tagged with the page's practice area, newest first, the disclaimer before the first figure, then "See all {practice} results" linking to the results page filtered to that area. The results page is set under Case results (Results page), or found at /case-results/ or /results/.

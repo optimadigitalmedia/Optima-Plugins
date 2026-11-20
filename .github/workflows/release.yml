@@ -56,6 +56,7 @@ on:
           - optima-events
           - optima-forms-guard
           - optima-hours
+          - optima-law
           - optima-members
           - optima-optimize
           - optima-partners

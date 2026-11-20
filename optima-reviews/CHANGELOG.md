@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.5.14 (2026-11-20)
+
+- Ships visitor-data.json, so Optima Core's privacy draft lists private notes, the hashed note limit, review page visit totals, copied Google and hand-added reviews, and what Google sees when reviewer photos and review page fonts load.
+- Shared admin kit: the four Optima Law screens are filed in the menu (three under Content, form entries under Build).
+
 ## 0.5.5.13 (2026-11-13)
 
 - The practice-reviews slot for practice pages: approved reviews whose topic belongs to the page's practice area, each with "Read about our {practice} work" linking the practice page. A topic belongs to the practice page with its own address unless Display, Topics and practice pages names another. With no practice (home, office pages) it shows the featured reviews. The "Selected client reviews" label, the Google link and the law-site disclaimer from 0.5.5.12 come with it.

@@ -226,6 +226,10 @@ final class Optima_Hub_Inbox {
 			);
 		}
 
+		if ( class_exists( 'Optima_Law_Inbox' ) ) {
+			$kinds = array_merge( $kinds, Optima_Law_Inbox::kinds() );
+		}
+
 		self::$kinds = $kinds;
 		return $kinds;
 	}
