@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.11.6 (2026-11-23)
+
+- Email sends through Cloudflare Email Service first: smtp.mx.cloudflare.net, port 465 with implicit TLS, user name api_token, and a Cloudflare API token with Email Sending: Edit, stored encrypted like the app password or set as OPTIMA_MAIL_PASSWORD in wp-config.php. New setups start on Cloudflare.
+- Google stays as the second route. A site saved before this release (no route saved) keeps sending through Google with its app password. A third route, Other mail service, takes any SMTP server, port and user name.
+- Changing the route clears the saved token or password and the last test, since a Google app password is not a Cloudflare token. OPTIMA_MAIL_SERVICE in wp-config.php fixes the route.
+- The Email screen opens on what needs doing: the Cloudflare checklist (DNS on Cloudflare, check DMARC, add the domain in Email Sending, create the token, paste and test, confirm spf, dkim and dmarc pass), with the domain's DMARC record and Cloudflare's cf-bounce records looked up live. Then Send test, then Nothing to do.
+- The screen and the save notice warn when the send-from address is not on the site's own domain.
+- Plain fixes for Cloudflare errors: 535 means the token is wrong or lacks Email Sending: Edit; 550 5.7.1 Sender denied means the domain is not added in Cloudflare Email Sending.
+- Build, Updates and Site health say "Not set up: form emails go out from the host and often land in junk. Connect Cloudflare email so they come from your domain." until it is set up, then name the route, for example "Sending through Cloudflare as forms@example.com."
+- New guide docs/email-sending.md and test tools/tests/mail-services.php.
+
 ## 0.7.11.5 (2026-11-20)
 
 # optima-build: changelog bullets (INV-2611-02)

@@ -328,7 +328,8 @@ final class Optima_Hub_Updates {
 		$ready = Optima_Hub_Mail::ready();
 		$state = ! $ready || 'bad' === $check['state'] ? 'needs' : ( 'good' === $check['state'] ? 'done' : 'ready' );
 		self::open_block( __( 'Email', 'optima-build' ), $state, 'sh-up-mail' );
-		echo '<p>' . esc_html( $ready ? $check['value'] . '. ' . $check['note'] : __( 'Not set up: the host sends form emails, which often land in junk.', 'optima-build' ) ) . '</p>';
+		// Not set up: the Cloudflare nudge. Set up: the route by name ("Sending through Cloudflare as ..."), or what a failed test means.
+		echo '<p>' . esc_html( $ready ? $check['note'] : Optima_Hub_Mail::not_set_up_text() ) . '</p>';
 		echo '<div class="sh-btns">';
 		if ( $ready ) {
 			$me = wp_get_current_user();

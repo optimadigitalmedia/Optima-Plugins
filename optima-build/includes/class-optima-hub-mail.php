@@ -1,18 +1,31 @@
 <?php
 /**
  * Optima Mail: the site's email (form notices, password resets, Optima checks)
- * goes out through a real Google mailbox instead of the host's mail server.
+ * goes out through a real mail service instead of the host's mail server.
  *
  * Managed hosts like WP Engine send from their own servers, which fail the
  * sender domain's SPF, so the mail lands in junk or vanishes. Here the site
- * signs in to Google's mail server (smtp.gmail.com) with one Gmail or Google
- * Workspace address and a Google app password, and sends as that address.
+ * signs in to a real mail server and sends as an address on its own domain.
+ *
+ * Three routes, in the order the screen offers them:
+ *  - Cloudflare Email Service (the default for a new setup): the domain's DNS
+ *    is on Cloudflare, Cloudflare adds the sending records (on cf-bounce), and
+ *    the site signs in to smtp.mx.cloudflare.net on port 465 (implicit TLS)
+ *    with the user name "api_token" and a Cloudflare API token that has
+ *    Email Sending: Edit. The From address must be on a domain added in
+ *    Cloudflare, Email, Email Sending.
+ *  - Google: one Gmail or Google Workspace address and a Google app password
+ *    (smtp.gmail.com, port 587, STARTTLS). A site saved before routes existed
+ *    (no 'service' key) keeps this route.
+ *  - Other service: any SMTP relay, with the server, port and user typed in.
+ *
  * Whatever "From" a form set (a client's own address, say) becomes the
  * Reply-To, so replies still reach the right person.
  *
- * One screen: address, app password, sender name, Send test. The password is
- * stored encrypted with the site's own salts, never shown again, and can live
- * in wp-config.php instead:  define( 'OPTIMA_MAIL_PASSWORD', 'abcd efgh ijkl mnop' );
+ * The token or password is stored encrypted with the site's own salts, never
+ * shown again, and can live in wp-config.php instead:
+ *   define( 'OPTIMA_MAIL_PASSWORD', 'the Cloudflare token or Google app password' );
+ *   define( 'OPTIMA_MAIL_SERVICE', 'cloudflare' ); // optional: cloudflare, google, other
  *
  * @package Optima_Build
  */
@@ -30,6 +43,20 @@ final class Optima_Hub_Mail {
 	const HOST   = 'smtp.gmail.com';
 	const PORT   = 587;
 
+	/**
+	 * How the site can send, in the order the screen lists them. A null host,
+	 * port or user is typed on the screen; a null user on Google means the
+	 * send-from address is the user name.
+	 */
+	const SERVICES = array(
+		'cloudflare' => array( 'label' => 'Cloudflare Email Service', 'name' => 'Cloudflare', 'host' => 'smtp.mx.cloudflare.net', 'port' => 465, 'user' => 'api_token' ),
+		'google'     => array( 'label' => 'Google (Gmail or Workspace)', 'name' => 'Google', 'host' => 'smtp.gmail.com', 'port' => 587, 'user' => null ),
+		'other'      => array( 'label' => 'Other mail service (SMTP)', 'name' => '', 'host' => null, 'port' => null, 'user' => null ),
+	);
+
+	/** The route a new setup starts on. */
+	const DEFAULT_SERVICE = 'cloudflare';
+
 	/** @var string The last wp_mail error during a test send. */
 	private static $error = '';
 
@@ -43,16 +70,69 @@ final class Optima_Hub_Mail {
 		add_filter( 'gform_pre_send_email', array( __CLASS__, 'brand_form' ), 20, 4 );
 	}
 
-	/** @return array{email:string, name:string, password:string, accent:string, last:array} */
+	/** @return array{service:string, host:string, port:int, user:string, email:string, name:string, password:string, accent:string, last:array} */
 	private static function settings(): array {
 		$s = get_option( self::OPTION, array() );
 		$s = is_array( $s ) ? $s : array();
+		if ( isset( $s['service'] ) ) {
+			// An unknown value never strands a site: it sends through Google as before.
+			$service = isset( self::SERVICES[ (string) $s['service'] ] ) ? (string) $s['service'] : 'google';
+		} elseif ( '' !== (string) ( $s['email'] ?? '' ) || '' !== (string) ( $s['password'] ?? '' ) ) {
+			$service = 'google'; // Saved before routes existed: it was Google then.
+		} else {
+			$service = self::DEFAULT_SERVICE;
+		}
+		if ( defined( 'OPTIMA_MAIL_SERVICE' ) && isset( self::SERVICES[ (string) OPTIMA_MAIL_SERVICE ] ) ) {
+			$service = (string) OPTIMA_MAIL_SERVICE;
+		}
 		return array(
+			'service'  => $service,
+			'host'     => (string) ( $s['host'] ?? '' ),
+			'port'     => (int) ( $s['port'] ?? 0 ),
+			'user'     => (string) ( $s['user'] ?? '' ),
 			'email'    => (string) ( $s['email'] ?? '' ),
 			'name'     => (string) ( $s['name'] ?? '' ),
 			'password' => (string) ( $s['password'] ?? '' ),
 			'accent'   => (string) ( $s['accent'] ?? '' ),
 			'last'     => is_array( $s['last'] ?? null ) ? $s['last'] : array(),
+		);
+	}
+
+	/** The route the site sends through: cloudflare, google or other. */
+	public static function service(): string {
+		return self::settings()['service'];
+	}
+
+	/** The short name of the route for sentences: Cloudflare, Google, or the typed server. */
+	public static function route_name(): string {
+		$s    = self::settings();
+		$name = (string) self::SERVICES[ $s['service'] ]['name'];
+		if ( '' !== $name ) {
+			return $name;
+		}
+		return '' !== $s['host'] ? $s['host'] : __( 'your mail service', 'optima-build' );
+	}
+
+	/**
+	 * Where and as whom the site signs in.
+	 *
+	 * @return array{host:string, port:int, user:string}
+	 */
+	private static function server(): array {
+		$s   = self::settings();
+		$def = self::SERVICES[ $s['service'] ];
+		if ( 'other' === $s['service'] ) {
+			$port = in_array( $s['port'], array( 465, 587, 2525 ), true ) ? $s['port'] : 587;
+			return array(
+				'host' => $s['host'],
+				'port' => $port,
+				'user' => $s['user'],
+			);
+		}
+		return array(
+			'host' => (string) $def['host'],
+			'port' => (int) $def['port'],
+			'user' => null === $def['user'] ? $s['email'] : (string) $def['user'],
 		);
 	}
 
@@ -63,33 +143,97 @@ final class Optima_Hub_Mail {
 		return self::decrypt( self::settings()['password'] );
 	}
 
-	/** Set up: an address and a password are both saved. */
+	/** Set up: an address, a token or password, and a server to sign in to. */
 	public static function ready(): bool {
-		return is_email( self::settings()['email'] ) && '' !== self::password();
+		$server = self::server();
+		return is_email( self::settings()['email'] ) && '' !== self::password() && '' !== $server['host'] && '' !== $server['user'];
+	}
+
+	/**
+	 * Settings after the route changes. A Google app password is not a
+	 * Cloudflare token (and the other way round), so the saved secret goes, and
+	 * the last test no longer says anything about the new route.
+	 *
+	 * @param array  $s       Saved settings.
+	 * @param string $service The route picked on the screen.
+	 */
+	public static function with_service( array $s, string $service ): array {
+		if ( ! isset( self::SERVICES[ $service ] ) || $service === ( $s['service'] ?? '' ) ) {
+			return $s;
+		}
+		$s['service']  = $service;
+		$s['password'] = '';
+		$s['last']     = array();
+		$s['host']     = '';
+		$s['port']     = 0;
+		$s['user']     = '';
+		return $s;
+	}
+
+	/**
+	 * The registrable part of a host name: example.com for forms.example.com,
+	 * example.co.uk for www.example.co.uk. Good enough for a warning; no
+	 * public suffix list.
+	 */
+	public static function registrable_domain( string $host ): string {
+		$host   = strtolower( trim( $host, ". \t\n" ) );
+		$labels = array_values( array_filter( explode( '.', $host ), 'strlen' ) );
+		$n      = count( $labels );
+		if ( $n <= 2 ) {
+			return implode( '.', $labels );
+		}
+		$two   = $labels[ $n - 2 ] . '.' . $labels[ $n - 1 ];
+		$takes = ( 2 === strlen( $labels[ $n - 1 ] ) && in_array( $labels[ $n - 2 ], array( 'co', 'com', 'net', 'org', 'gov', 'ac', 'edu', 'ltd', 'plc' ), true ) ) ? 3 : 2;
+		return 3 === $takes ? $labels[ $n - 3 ] . '.' . $two : $two;
+	}
+
+	/**
+	 * Is the send-from address on the site's own domain? Cloudflare only sends
+	 * from a domain added in Email Sending, which for us is the site's domain.
+	 *
+	 * @param string $email The send-from address.
+	 * @param string $home  The site address (defaults to home_url()).
+	 */
+	public static function from_on_site_domain( string $email, string $home = '' ): bool {
+		$at = strrpos( $email, '@' );
+		if ( false === $at ) {
+			return false;
+		}
+		$home = '' !== $home ? $home : home_url( '/' );
+		$site = self::registrable_domain( (string) wp_parse_url( $home, PHP_URL_HOST ) );
+		return '' !== $site && self::registrable_domain( substr( $email, $at + 1 ) ) === $site;
+	}
+
+	/** The site's own domain, for placeholders and the checklist. */
+	private static function site_domain(): string {
+		return self::registrable_domain( (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
 	}
 
 	/* ---------------------------------------------------------------- */
 
-	/** Route every wp_mail through Google once the screen is filled in. */
+	/** Route every wp_mail through the chosen service once the screen is filled in. */
 	public static function mailer( $phpmailer ): void {
 		if ( ! self::ready() ) {
 			return;
 		}
-		$s    = self::settings();
-		$from = $phpmailer->From;
-		$name = $phpmailer->FromName;
+		$s      = self::settings();
+		$server = self::server();
+		$from   = $phpmailer->From;
+		$name   = $phpmailer->FromName;
 
 		$phpmailer->isSMTP();
-		$phpmailer->Host       = (string) apply_filters( 'optima_mail_host', self::HOST );
-		$phpmailer->Port       = (int) apply_filters( 'optima_mail_port', self::PORT );
-		$phpmailer->SMTPSecure = 'tls';
+		$phpmailer->Host       = (string) apply_filters( 'optima_mail_host', $server['host'] );
+		$phpmailer->Port       = (int) apply_filters( 'optima_mail_port', $server['port'] );
+		// Port 465 is implicit TLS (Cloudflare takes nothing else); 587 is STARTTLS.
+		$phpmailer->SMTPSecure = 465 === (int) $phpmailer->Port ? 'ssl' : 'tls';
 		$phpmailer->SMTPAuth   = true;
-		$phpmailer->Username   = $s['email'];
+		$phpmailer->Username   = $server['user'];
 		$phpmailer->Password   = self::password();
 
-		// Google only sends as the signed-in address. A different From the
-		// email asked for (a form's "send as the business owner") becomes the
-		// Reply-To, unless the email already set one.
+		// The site always sends as the saved address (Google only allows the
+		// signed-in address; Cloudflare only a domain added in Email Sending). A
+		// different From the email asked for (a form's "send as the business
+		// owner") becomes the Reply-To, unless the email already set one.
 		if ( $from && strtolower( $from ) !== strtolower( $s['email'] ) && is_email( $from ) && ! $phpmailer->getReplyToAddresses() && ! self::is_default_from( $from ) ) {
 			$phpmailer->addReplyTo( $from, $name );
 		}
@@ -125,6 +269,20 @@ final class Optima_Hub_Mail {
 		return add_query_arg( array_merge( array( 'page' => self::PAGE ), $args ), admin_url( 'admin.php' ) );
 	}
 
+	/** What the Email card on Build says when nothing is set up. */
+	public static function not_set_up_text(): string {
+		return __( 'Not set up: form emails go out from the host and often land in junk. Connect Cloudflare email so they come from your domain.', 'optima-build' );
+	}
+
+	/** One sentence naming the route: "Sending through Cloudflare as forms@example.com." */
+	public static function summary(): string {
+		if ( ! self::ready() ) {
+			return self::not_set_up_text();
+		}
+		/* translators: 1: Cloudflare, Google or the mail server, 2: email address */
+		return sprintf( __( 'Sending through %1$s as %2$s.', 'optima-build' ), self::route_name(), self::settings()['email'] );
+	}
+
 	/** One line for Site health. */
 	public static function check(): array {
 		$s = self::settings();
@@ -133,19 +291,26 @@ final class Optima_Hub_Mail {
 				'label'     => __( 'Site email', 'optima-build' ),
 				'value'     => __( 'Host mail', 'optima-build' ),
 				'state'     => 'warn',
-				'note'      => __( 'Form emails go out through the host, which often lands them in junk. Set up Email to send through Google.', 'optima-build' ),
+				'note'      => self::not_set_up_text(),
 				'link'      => self::url(),
 				'link_text' => __( 'Set up Email', 'optima-build' ),
 			);
 		}
 		$last = $s['last'];
 		$bad  = isset( $last['ok'] ) && ! $last['ok'];
+		if ( $bad ) {
+			$note = __( 'The last test did not go out: ', 'optima-build' ) . self::explain( (string) ( $last['error'] ?? '' ), $s['service'] );
+		} elseif ( empty( $last ) ) {
+			$note = self::summary() . ' ' . __( 'Send a test to confirm it arrives.', 'optima-build' );
+		} else {
+			$note = self::summary();
+		}
 		return array(
 			'label'     => __( 'Site email', 'optima-build' ),
-			'value'     => $bad ? __( 'Last test failed', 'optima-build' ) : __( 'Through Google', 'optima-build' ),
+			/* translators: %s: Cloudflare, Google or the mail server */
+			'value'     => $bad ? __( 'Last test failed', 'optima-build' ) : sprintf( __( 'Through %s', 'optima-build' ), self::route_name() ),
 			'state'     => $bad ? 'bad' : ( empty( $last ) ? 'warn' : 'good' ),
-			/* translators: %s: email address */
-			'note'      => empty( $last ) ? sprintf( __( 'Sends as %s. Send a test to confirm it arrives.', 'optima-build' ), $s['email'] ) : sprintf( __( 'Sends as %s.', 'optima-build' ), $s['email'] ),
+			'note'      => $note,
 			'link'      => self::url(),
 			'link_text' => __( 'Email settings', 'optima-build' ),
 		);
@@ -158,10 +323,11 @@ final class Optima_Hub_Mail {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( esc_html__( 'Only site admins can change the site email.', 'optima-build' ), 403 );
 		}
-		$s     = self::settings();
-		$email = sanitize_email( wp_unslash( (string) ( $_POST['email'] ?? '' ) ) );
-		$pass  = preg_replace( '/\s+/', '', wp_unslash( (string) ( $_POST['password'] ?? '' ) ) );
-		$clear = ! empty( $_POST['clear'] );
+		$s       = self::settings();
+		$email   = sanitize_email( wp_unslash( (string) ( $_POST['email'] ?? '' ) ) );
+		$pass    = preg_replace( '/\s+/', '', wp_unslash( (string) ( $_POST['password'] ?? '' ) ) );
+		$service = sanitize_key( wp_unslash( (string) ( $_POST['service'] ?? $s['service'] ) ) );
+		$clear   = ! empty( $_POST['clear'] );
 
 		if ( $clear ) {
 			delete_option( self::OPTION );
@@ -171,6 +337,16 @@ final class Optima_Hub_Mail {
 		if ( '' !== $email && ! is_email( $email ) ) {
 			self::notice( __( 'That email address does not look right.', 'optima-build' ), 'error' );
 			self::back();
+		}
+		$changed = ! defined( 'OPTIMA_MAIL_SERVICE' ) && isset( self::SERVICES[ $service ] ) && $service !== $s['service'];
+		if ( $changed ) {
+			$s = self::with_service( $s, $service );
+		} elseif ( 'other' === $s['service'] ) {
+			// The server fields belong to the route they were typed for.
+			$s['host'] = strtolower( preg_replace( '/[^a-zA-Z0-9.-]/', '', wp_unslash( (string) ( $_POST['host'] ?? '' ) ) ) );
+			$port      = (int) ( $_POST['port'] ?? 0 );
+			$s['port'] = in_array( $port, array( 465, 587, 2525 ), true ) ? $port : 0;
+			$s['user'] = sanitize_text_field( wp_unslash( (string) ( $_POST['user'] ?? '' ) ) );
 		}
 		$s['email'] = $email;
 		$s['name']  = sanitize_text_field( wp_unslash( (string) ( $_POST['name'] ?? '' ) ) );
@@ -182,7 +358,24 @@ final class Optima_Hub_Mail {
 			$s['last']     = array();
 		}
 		update_option( self::OPTION, $s, false );
-		self::notice( self::ready() ? __( 'Saved. Send a test to make sure it arrives.', 'optima-build' ) : __( 'Saved. Add the app password to switch it on.', 'optima-build' ), 'success' );
+
+		if ( self::ready() ) {
+			$msg = __( 'Saved. Send a test to make sure it arrives.', 'optima-build' );
+		} elseif ( 'cloudflare' === $s['service'] ) {
+			$msg = __( 'Saved. Add a send-from address on your domain and the Cloudflare API token to switch it on.', 'optima-build' );
+		} elseif ( 'google' === $s['service'] ) {
+			$msg = __( 'Saved. Add the Google address and its app password to switch it on.', 'optima-build' );
+		} else {
+			$msg = __( 'Saved. Add the mail server, user name, password and send-from address to switch it on.', 'optima-build' );
+		}
+		if ( $changed ) {
+			$msg .= ' ' . __( 'The route changed, so the saved token or password was cleared.', 'optima-build' );
+		}
+		if ( 'google' !== $s['service'] && '' !== $email && ! self::from_on_site_domain( $email ) ) {
+			/* translators: %s: the site's domain */
+			$msg .= ' ' . sprintf( __( 'Check the send-from address: it is not on %s, so the mail service may refuse it unless that domain is added there too.', 'optima-build' ), self::site_domain() );
+		}
+		self::notice( $msg, 'success' );
 		self::back();
 	}
 
@@ -217,7 +410,8 @@ final class Optima_Hub_Mail {
 			/* translators: %s: email address */
 			self::notice( sprintf( __( 'Sent to %s. Check that inbox (and junk, the first time).', 'optima-build' ), $to ), 'success' );
 		} else {
-			self::notice( __( 'Google did not accept it: ', 'optima-build' ) . self::explain( self::$error ), 'error' );
+			/* translators: %s: Cloudflare, Google or the mail server */
+			self::notice( sprintf( __( '%s did not accept it: ', 'optima-build' ), self::route_name() ) . self::explain( self::$error, self::service() ), 'error' );
 		}
 		self::back();
 	}
@@ -231,8 +425,8 @@ final class Optima_Hub_Mail {
 		$s    = self::settings();
 		$url  = home_url( '/' );
 		$host = (string) wp_parse_url( $url, PHP_URL_HOST );
-		/* translators: 1: site address, 2: sending address */
-		$text = sprintf( __( 'This came from %1$s through Google, sent as %2$s. Form messages, booking notes and password resets will arrive the same way, in the inbox instead of junk.', 'optima-build' ), $host, $s['email'] );
+		/* translators: 1: site address, 2: sending address, 3: Cloudflare, Google or the mail server */
+		$text = sprintf( __( 'This came from %1$s through %3$s, sent as %2$s. Form messages, booking notes and password resets will arrive the same way, in the inbox instead of junk.', 'optima-build' ), $host, $s['email'], self::route_name() );
 		return self::card(
 			$site,
 			__( 'Your website can send email.', 'optima-build' ),
@@ -459,13 +653,41 @@ foreach ( array_values( $buttons ) as $i => $b ) {
 		return '#0F63AB';
 	}
 
-	/** Turn Google's error text into the fix. */
-	private static function explain( string $error ): string {
-		if ( preg_match( '/authenticat|password|535|534|Username and Password/i', $error ) ) {
-			return __( 'the address or app password is wrong. Make a new app password for this address and paste it in.', 'optima-build' );
-		}
-		if ( preg_match( '/connect|timed out|could not/i', $error ) ) {
-			return __( 'the site could not reach Google\'s mail server. Ask the host whether port 587 is open.', 'optima-build' );
+	/**
+	 * Turn the mail server's error text into the fix.
+	 *
+	 * @param string $error   What PHPMailer reported.
+	 * @param string $service The route: cloudflare, google or other.
+	 */
+	private static function explain( string $error, string $service = '' ): string {
+		$service = '' !== $service ? $service : self::service();
+		if ( 'cloudflare' === $service ) {
+			if ( preg_match( '/535|authenticat|password|credentials/i', $error ) ) {
+				return __( 'Cloudflare turned down the API token (535, sign-in failed). The token is wrong, or it is missing the Email Sending: Edit permission. Make a new one with that permission and paste it in.', 'optima-build' );
+			}
+			if ( preg_match( '/5\.7\.1|sender denied/i', $error ) ) {
+				return __( 'Cloudflare would not send as this address (550 5.7.1, sender denied). Its domain is not added in Cloudflare, Email, Email Sending. Add the domain there, or use an address on a domain that is.', 'optima-build' );
+			}
+			if ( preg_match( '/connect|timed out|could not/i', $error ) ) {
+				return __( 'the site could not reach smtp.mx.cloudflare.net on port 465. Ask the host whether outbound port 465 is open.', 'optima-build' );
+			}
+		} elseif ( 'google' === $service ) {
+			if ( preg_match( '/authenticat|password|535|534|Username and Password/i', $error ) ) {
+				return __( 'the address or app password is wrong. Make a new app password for this address and paste it in.', 'optima-build' );
+			}
+			if ( preg_match( '/connect|timed out|could not/i', $error ) ) {
+				return __( 'the site could not reach Google\'s mail server. Ask the host whether port 587 is open.', 'optima-build' );
+			}
+		} else {
+			if ( preg_match( '/authenticat|password|535|534/i', $error ) ) {
+				return __( 'the user name or password is wrong. Make a new sending key in the service and paste it in.', 'optima-build' );
+			}
+			if ( preg_match( '/not verified|sender|550|553|554/i', $error ) ) {
+				return __( 'the service would not send as this address. Use an address on a domain the service has verified.', 'optima-build' );
+			}
+			if ( preg_match( '/connect|timed out|could not/i', $error ) ) {
+				return __( 'the site could not reach the mail server. Check the server name and port, and ask the host whether that port is open.', 'optima-build' );
+			}
 		}
 		return '' !== $error ? $error : __( 'no reason given.', 'optima-build' );
 	}
@@ -491,14 +713,113 @@ foreach ( array_values( $buttons ) as $i => $b ) {
 
 	/* ---------------------------------------------------------------- */
 
+	/**
+	 * What the domain's DNS says today, for the Cloudflare checklist: the
+	 * DMARC record (Cloudflare adds a p=reject one only when there is none) and
+	 * whether Cloudflare's cf-bounce records are in. Cached ten minutes.
+	 *
+	 * @return array{dmarc:?string, cf:?bool} null means the lookup could not run.
+	 */
+	private static function dns_status( string $domain ): array {
+		$out = array( 'dmarc' => null, 'cf' => null );
+		if ( '' === $domain || ! function_exists( 'dns_get_record' ) ) {
+			return $out;
+		}
+		$key    = 'optima_mail_dns_' . md5( $domain );
+		$cached = get_transient( $key );
+		if ( is_array( $cached ) ) {
+			return $cached;
+		}
+		$txt = @dns_get_record( '_dmarc.' . $domain, DNS_TXT ); // phpcs:ignore WordPress.PHP.NoSilencedErrors -- a failed lookup is reported as unknown.
+		if ( is_array( $txt ) ) {
+			$out['dmarc'] = '';
+			foreach ( $txt as $r ) {
+				$v = (string) ( $r['txt'] ?? '' );
+				if ( 0 === stripos( $v, 'v=DMARC1' ) ) {
+					$out['dmarc'] = $v;
+					break;
+				}
+			}
+		}
+		$mx = @dns_get_record( 'cf-bounce.' . $domain, DNS_MX ); // phpcs:ignore WordPress.PHP.NoSilencedErrors -- a failed lookup is reported as unknown.
+		if ( is_array( $mx ) ) {
+			$out['cf'] = false;
+			foreach ( $mx as $r ) {
+				if ( false !== stripos( (string) ( $r['target'] ?? '' ), 'mx.cloudflare.net' ) ) {
+					$out['cf'] = true;
+					break;
+				}
+			}
+		}
+		set_transient( $key, $out, 10 * MINUTE_IN_SECONDS );
+		return $out;
+	}
+
+	/** The Cloudflare setup steps, with what the domain's DNS shows today. */
+	private static function cloudflare_steps( string $domain ): void {
+		$dns = self::dns_status( $domain );
+		?>
+		<ol class="sm-steps">
+			<li>
+				<?php /* translators: %s: the site's domain */ echo esc_html( sprintf( __( 'Make sure %s uses Cloudflare for its DNS, in the Cloudflare account that will send the email.', 'optima-build' ), $domain ) ); ?>
+			</li>
+			<li>
+				<?php esc_html_e( 'Check DMARC first. In Cloudflare, open Email, then Email Sending, and add the domain. Cloudflare adds its own records on cf-bounce (an MX, an SPF record with include:_spf.mx.cloudflare.net, and DKIM at cf-bounce._domainkey). It adds a DMARC record only when the domain has none, and that one is p=reject.', 'optima-build' ); ?>
+				<?php if ( null !== $dns['dmarc'] ) : ?>
+					<span class="sh-note" style="display:block">
+						<?php
+						echo esc_html(
+							'' !== $dns['dmarc']
+								/* translators: %s: the DMARC record */
+								? sprintf( __( 'DMARC found: %s. Cloudflare leaves it alone.', 'optima-build' ), $dns['dmarc'] )
+								: __( 'No DMARC record found, so Cloudflare would add p=reject. If the domain\'s staff mail is not DKIM-signed yet, add v=DMARC1; p=none first.', 'optima-build' )
+						);
+						?>
+					</span>
+				<?php endif; ?>
+				<?php if ( null !== $dns['cf'] ) : ?>
+					<span class="sh-note" style="display:block"><?php echo esc_html( $dns['cf'] ? __( 'Cloudflare\'s cf-bounce records are in.', 'optima-build' ) : __( 'Cloudflare\'s cf-bounce records are not in yet.', 'optima-build' ) ); ?></span>
+				<?php endif; ?>
+			</li>
+			<li><?php esc_html_e( 'In Cloudflare, create an API token with the Email Sending: Edit permission. It is shown once: keep it in the password manager.', 'optima-build' ); ?></li>
+			<li><?php /* translators: %s: example address */ echo esc_html( sprintf( __( 'Paste the token below with a send-from address on your domain, such as %s. Save, then Send test.', 'optima-build' ), 'forms@' . $domain ) ); ?></li>
+			<li><?php esc_html_e( 'Open the test in the inbox, show the original message, and check it says spf=pass, dkim=pass and dmarc=pass.', 'optima-build' ); ?></li>
+		</ol>
+		<p class="sh-note" style="margin-top:8px"><?php esc_html_e( 'Cloudflare email sending needs the Workers Paid plan and is still in beta.', 'optima-build' ); ?></p>
+		<?php
+	}
+
+	/** The Send test form, and what the last failure means. */
+	private static function test_section( array $last, string $service ): void {
+		?>
+		<section class="sh-box" style="margin-top:14px">
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="sm-actions" style="margin-top:0">
+				<input type="hidden" name="action" value="<?php echo esc_attr( self::TEST ); ?>">
+				<?php wp_nonce_field( self::TEST ); ?>
+				<label><?php esc_html_e( 'Send a test to', 'optima-build' ); ?>
+					<input type="email" name="to" value="<?php echo esc_attr( (string) ( $last['to'] ?? wp_get_current_user()->user_email ) ); ?>">
+				</label>
+				<button type="submit" class="button button-primary"><?php esc_html_e( 'Send test', 'optima-build' ); ?></button>
+			</form>
+			<?php if ( ! empty( $last['error'] ) ) : ?>
+				<p class="sh-note" style="margin-top:10px"><?php /* translators: %s: Cloudflare, Google or the mail server */ echo esc_html( sprintf( __( '%s said: ', 'optima-build' ), self::route_name() ) . $last['error'] ); ?></p>
+				<p class="sh-note"><?php echo esc_html( __( 'What to do: ', 'optima-build' ) . self::explain( (string) $last['error'], $service ) ); ?></p>
+			<?php endif; ?>
+		</section>
+		<?php
+	}
+
 	public static function render(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
-		$s     = self::settings();
-		$ready = self::ready();
+		$s         = self::settings();
+		$ready     = self::ready();
+		$service   = $s['service'];
+		$domain    = self::site_domain();
+		$server    = self::server();
 		$in_config = defined( 'OPTIMA_MAIL_PASSWORD' ) && '' !== (string) OPTIMA_MAIL_PASSWORD;
-		Optima_Admin_UI::open( __( 'Email', 'optima-build' ), __( 'Send the site\'s email (form notices, password resets) through Google, so it reaches the inbox instead of junk.', 'optima-build' ) );
+		Optima_Admin_UI::open( __( 'Email', 'optima-build' ), __( 'Send the site\'s email (form notices, password resets) through Cloudflare from your own domain, so it reaches the inbox instead of junk.', 'optima-build' ) );
 
 		$key    = 'optima_mail_notice_' . get_current_user_id();
 		$notice = get_transient( $key );
@@ -510,12 +831,14 @@ foreach ( array_values( $buttons ) as $i => $b ) {
 			echo '<div class="notice notice-warning"><p>' . esc_html__( 'WP Mail SMTP is also installed. Optima Email takes over once it is set up here, so you can delete WP Mail SMTP.', 'optima-build' ) . '</p></div>';
 		}
 		$last = $s['last'];
+		// Rule 52: open on what needs doing. Set it up, then test it, then nothing.
+		$todo = ! $ready ? 'setup' : ( empty( $last ) || empty( $last['ok'] ) ? 'test' : 'done' );
 		?>
 		<style>
 			.sm-steps{margin:0; padding-left:20px; display:grid; gap:6px}
 			.sm-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px}
 			.sm-row label{display:grid; gap:6px; font-weight:600}
-			.sm-row input{width:100%}
+			.sm-row input, .sm-row select{width:100%}
 			.sm-color{display:grid; gap:6px; align-content:start}
 			.sm-color > label{font-weight:600}
 			.sm-color-row{display:flex; gap:8px; align-items:center}
@@ -529,7 +852,7 @@ foreach ( array_values( $buttons ) as $i => $b ) {
 		<div class="sh-grid sh-grid-2">
 			<section class="sh-box sh-check is-<?php echo esc_attr( $ready ? ( isset( $last['ok'] ) && ! $last['ok'] ? 'bad' : 'good' ) : 'warn' ); ?>">
 				<p class="sh-label"><?php esc_html_e( 'Status', 'optima-build' ); ?></p>
-				<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php echo esc_html( $ready ? __( 'Sending through Google', 'optima-build' ) : __( 'Not set up: the host sends', 'optima-build' ) ); ?></p>
+				<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php echo esc_html( $ready ? self::summary() : __( 'Not set up: the host sends', 'optima-build' ) ); ?></p>
 				<p class="sh-note">
 					<?php
 					if ( ! empty( $last['at'] ) ) {
@@ -542,25 +865,96 @@ foreach ( array_values( $buttons ) as $i => $b ) {
 				</p>
 			</section>
 			<section class="sh-box">
-				<p class="sh-label"><?php esc_html_e( 'Set it up once', 'optima-build' ); ?></p>
-				<ol class="sm-steps">
-					<li><?php esc_html_e( 'Sign in to Google as the address the site should send from.', 'optima-build' ); ?></li>
-					<li><?php echo wp_kses( __( 'Open <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">myaccount.google.com/apppasswords</a>, name it after this site, and copy the 16 letters.', 'optima-build' ), array( 'a' => array( 'href' => true, 'target' => true, 'rel' => true ) ) ); ?></li>
-					<li><?php esc_html_e( 'Paste them below, Save, then Send test.', 'optima-build' ); ?></li>
-				</ol>
+				<?php if ( 'done' === $todo ) : ?>
+					<p class="sh-label"><?php esc_html_e( 'Next step', 'optima-build' ); ?></p>
+					<p><?php esc_html_e( 'Nothing to do. The last test arrived.', 'optima-build' ); ?></p>
+				<?php elseif ( 'test' === $todo ) : ?>
+					<p class="sh-label"><?php esc_html_e( 'Next step', 'optima-build' ); ?></p>
+					<p><?php echo esc_html( empty( $last ) ? __( 'Send a test below, then check it arrives with spf=pass, dkim=pass and dmarc=pass.', 'optima-build' ) : __( 'The last test did not go out. Fix what it says below, then send another.', 'optima-build' ) ); ?></p>
+				<?php elseif ( 'cloudflare' === $service ) : ?>
+					<p class="sh-label"><?php esc_html_e( 'Set up Cloudflare email', 'optima-build' ); ?></p>
+					<?php self::cloudflare_steps( $domain ); ?>
+				<?php elseif ( 'google' === $service ) : ?>
+					<p class="sh-label"><?php esc_html_e( 'Set it up once', 'optima-build' ); ?></p>
+					<ol class="sm-steps">
+						<li><?php esc_html_e( 'Sign in to Google as the address the site should send from.', 'optima-build' ); ?></li>
+						<li><?php echo wp_kses( __( 'Open <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">myaccount.google.com/apppasswords</a>, name it after this site, and copy the 16 letters.', 'optima-build' ), array( 'a' => array( 'href' => true, 'target' => true, 'rel' => true ) ) ); ?></li>
+						<li><?php esc_html_e( 'Paste them below, Save, then Send test.', 'optima-build' ); ?></li>
+					</ol>
+				<?php else : ?>
+					<p class="sh-label"><?php esc_html_e( 'Set it up once', 'optima-build' ); ?></p>
+					<ol class="sm-steps">
+						<li><?php esc_html_e( 'In the mail service, add the site\'s domain and add the DNS records it lists. Wait until it shows as verified.', 'optima-build' ); ?></li>
+						<li><?php esc_html_e( 'Make a key with sending access only. It is shown once.', 'optima-build' ); ?></li>
+						<li><?php esc_html_e( 'Fill in the server, user name, key and a send-from address on that domain below, Save, then Send test.', 'optima-build' ); ?></li>
+					</ol>
+				<?php endif; ?>
 			</section>
 		</div>
+
+		<?php
+		if ( 'test' === $todo ) {
+			self::test_section( $last, $service );
+		}
+		?>
 
 		<section class="sh-box" style="margin-top:14px">
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<input type="hidden" name="action" value="<?php echo esc_attr( self::SAVE ); ?>">
 				<?php wp_nonce_field( self::SAVE ); ?>
 				<div class="sm-row">
-					<label><?php esc_html_e( 'Send from (Gmail or Google Workspace)', 'optima-build' ); ?>
-						<input type="email" name="email" value="<?php echo esc_attr( $s['email'] ); ?>" placeholder="name@gmail.com" autocomplete="off">
+					<label><?php esc_html_e( 'Send through', 'optima-build' ); ?>
+						<select name="service" <?php disabled( defined( 'OPTIMA_MAIL_SERVICE' ) ); ?>>
+							<?php foreach ( self::SERVICES as $id => $svc ) : ?>
+								<option value="<?php echo esc_attr( $id ); ?>" <?php selected( $service, $id ); ?>><?php echo esc_html( 'cloudflare' === $id ? $svc['label'] . ' ' . __( '(recommended)', 'optima-build' ) : $svc['label'] ); ?></option>
+							<?php endforeach; ?>
+						</select>
+						<span class="sh-note" style="font-weight:400"><?php echo esc_html( defined( 'OPTIMA_MAIL_SERVICE' ) ? __( 'Set in wp-config.php (OPTIMA_MAIL_SERVICE).', 'optima-build' ) : __( 'Changed it? Save once to see its fields. A new route clears the saved token or password.', 'optima-build' ) ); ?></span>
 					</label>
-					<label><?php esc_html_e( 'App password', 'optima-build' ); ?>
-						<input type="password" name="password" value="" autocomplete="new-password" placeholder="<?php echo esc_attr( $in_config ? __( 'Set in wp-config.php', 'optima-build' ) : ( '' !== $s['password'] ? __( 'Saved. Paste a new one to replace it.', 'optima-build' ) : 'abcd efgh ijkl mnop' ) ); ?>" <?php disabled( $in_config ); ?>>
+					<?php if ( 'other' === $service ) : ?>
+						<label><?php esc_html_e( 'Mail server', 'optima-build' ); ?>
+							<input type="text" name="host" value="<?php echo esc_attr( $s['host'] ); ?>" placeholder="smtp.example.com" autocomplete="off" spellcheck="false">
+						</label>
+						<label><?php esc_html_e( 'Port', 'optima-build' ); ?>
+							<select name="port">
+								<?php foreach ( array( 587, 465, 2525 ) as $pt ) : ?>
+									<option value="<?php echo esc_attr( (string) $pt ); ?>" <?php selected( (int) $server['port'], $pt ); ?>><?php echo esc_html( (string) $pt ); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</label>
+						<label><?php esc_html_e( 'User name', 'optima-build' ); ?>
+							<input type="text" name="user" value="<?php echo esc_attr( $s['user'] ); ?>" autocomplete="off" spellcheck="false">
+						</label>
+					<?php endif; ?>
+					<label>
+						<?php
+						if ( 'cloudflare' === $service ) {
+							esc_html_e( 'Send from (an address on your domain)', 'optima-build' );
+						} elseif ( 'google' === $service ) {
+							esc_html_e( 'Send from (Gmail or Google Workspace)', 'optima-build' );
+						} else {
+							esc_html_e( 'Send from (an address on a domain the service verified)', 'optima-build' );
+						}
+						?>
+						<input type="email" name="email" value="<?php echo esc_attr( $s['email'] ); ?>" placeholder="<?php echo esc_attr( 'google' === $service ? 'name@gmail.com' : 'forms@' . $domain ); ?>" autocomplete="off">
+						<?php if ( 'google' !== $service && '' !== $s['email'] && ! self::from_on_site_domain( $s['email'] ) ) : ?>
+							<span class="sh-note" style="font-weight:400"><?php /* translators: %s: the site's domain */ echo esc_html( sprintf( __( 'This address is not on %s. The mail service only sends from a domain added there, so use an address on your own domain.', 'optima-build' ), $domain ) ); ?></span>
+						<?php endif; ?>
+					</label>
+					<label>
+						<?php
+						if ( 'cloudflare' === $service ) {
+							esc_html_e( 'Cloudflare API token', 'optima-build' );
+						} elseif ( 'google' === $service ) {
+							esc_html_e( 'App password', 'optima-build' );
+						} else {
+							esc_html_e( 'Password or key', 'optima-build' );
+						}
+						?>
+						<input type="password" name="password" value="" autocomplete="new-password" placeholder="<?php echo esc_attr( $in_config ? __( 'Set in wp-config.php', 'optima-build' ) : ( '' !== $s['password'] ? __( 'Saved. Paste a new one to replace it.', 'optima-build' ) : ( 'google' === $service ? 'abcd efgh ijkl mnop' : '' ) ) ); ?>" <?php disabled( $in_config ); ?>>
+						<?php if ( 'cloudflare' === $service ) : ?>
+							<span class="sh-note" style="font-weight:400"><?php /* translators: 1: server, 2: port */ echo esc_html( sprintf( __( 'Needs the Email Sending: Edit permission. The site signs in to %1$s on port %2$d as api_token.', 'optima-build' ), $server['host'], $server['port'] ) ); ?></span>
+						<?php endif; ?>
 					</label>
 					<label><?php esc_html_e( 'Sender name', 'optima-build' ); ?>
 						<input type="text" name="name" value="<?php echo esc_attr( $s['name'] ); ?>" placeholder="<?php echo esc_attr( wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES ) ); ?>">
@@ -599,20 +993,10 @@ foreach ( array_values( $buttons ) as $i => $b ) {
 			</form>
 		</section>
 
-		<section class="sh-box" style="margin-top:14px">
-			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="sm-actions" style="margin-top:0">
-				<input type="hidden" name="action" value="<?php echo esc_attr( self::TEST ); ?>">
-				<?php wp_nonce_field( self::TEST ); ?>
-				<label><?php esc_html_e( 'Send a test to', 'optima-build' ); ?>
-					<input type="email" name="to" value="<?php echo esc_attr( (string) ( $last['to'] ?? wp_get_current_user()->user_email ) ); ?>">
-				</label>
-				<button type="submit" class="button button-primary"><?php esc_html_e( 'Send test', 'optima-build' ); ?></button>
-			</form>
-			<?php if ( ! empty( $last['error'] ) ) : ?>
-				<p class="sh-note" style="margin-top:10px"><?php echo esc_html( __( 'Google said: ', 'optima-build' ) . $last['error'] ); ?></p>
-			<?php endif; ?>
-		</section>
 		<?php
+		if ( 'test' !== $todo ) {
+			self::test_section( $last, $service );
+		}
 		Optima_Admin_UI::close();
 	}
 
