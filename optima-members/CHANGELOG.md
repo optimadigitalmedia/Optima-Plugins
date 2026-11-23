@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.3.13 (2026-11-23)
+
+- The admin menu icon is now Optima's tilted arrow (the logo's arrow), replacing a lightning bolt that was never Optima's mark.
+
 ## 0.3.3.12 (2026-11-20)
 
 - The application form gives the same answer whether or not the email already has an account, so it no longer tells a stranger who is registered. The account's owner gets the next step by email instead (sign in, then apply), at most once an hour.

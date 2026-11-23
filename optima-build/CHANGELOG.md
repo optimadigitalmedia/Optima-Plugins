@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.11.7 (2026-11-23)
+
+- The admin menu icon is now Optima's tilted arrow (the logo's arrow), replacing a lightning bolt that was never Optima's mark.
+
 ## 0.7.11.6 (2026-11-23)
 
 - Email sends through Cloudflare Email Service first: smtp.mx.cloudflare.net, port 465 with implicit TLS, user name api_token, and a Cloudflare API token with Email Sending: Edit, stored encrypted like the app password or set as OPTIMA_MAIL_PASSWORD in wp-config.php. New setups start on Cloudflare.
