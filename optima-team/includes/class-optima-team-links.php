@@ -57,7 +57,7 @@ final class Optima_Team_Links {
 			'posts'    => $posts,
 			'results'  => $results,
 			'reviewed' => $reviewed,
-			'card'     => class_exists( 'Optima_Cards' ),
+			'card'     => class_exists( 'Optima_Cards_Settings' ) && Optima_Team::shows( $p, 'card' ),
 		);
 	}
 
@@ -79,14 +79,17 @@ final class Optima_Team_Links {
 		$c = self::counts( $post->ID );
 		$u = self::urls( $post->ID );
 		$rows = array(
-			array( __( 'Team page', 'optima-team' ), 'publish' === $post->post_status ? __( 'Listed', 'optima-team' ) : __( 'Not until published', 'optima-team' ), (string) get_post_type_archive_link( Optima_Team::POST_TYPE ) ),
-			array( __( 'Profile page', 'optima-team' ), 'publish' === $post->post_status ? (string) wp_parse_url( Optima_Team::public_url( $post->ID ), PHP_URL_PATH ) : __( 'Not until published', 'optima-team' ), 'publish' === $post->post_status ? Optima_Team::public_url( $post->ID ) : '' ),
+			array( __( 'Team page', 'optima-team' ), 'publish' !== $post->post_status ? __( 'Not until published', 'optima-team' ) : ( Optima_Team::on_team_page( $post->ID ) ? __( 'Listed', 'optima-team' ) : __( 'Off', 'optima-team' ) ), (string) get_post_type_archive_link( Optima_Team::POST_TYPE ) ),
+			array( __( 'Profile page', 'optima-team' ), 'publish' !== $post->post_status ? __( 'Not until published', 'optima-team' ) : ( '' !== Optima_Team::profile_url( $post->ID ) ? (string) wp_parse_url( Optima_Team::public_url( $post->ID ), PHP_URL_PATH ) : __( 'Off', 'optima-team' ) ), 'publish' === $post->post_status ? Optima_Team::profile_url( $post->ID ) : '' ),
 			/* translators: %d: posts */
 			array( __( 'Bylines', 'optima-team' ), sprintf( _n( '%d post', '%d posts', $c['posts'], 'optima-team' ), $c['posts'] ), $u['posts'] ),
 		);
 		if ( post_type_exists( 'optima_result' ) ) {
 			/* translators: %d: case results */
 			$rows[] = array( __( 'Case results', 'optima-team' ), sprintf( _n( '%d result', '%d results', $c['results'], 'optima-team' ), $c['results'] ), $u['results'] );
+		}
+		if ( class_exists( 'Optima_Cards_Settings' ) ) {
+			$rows[] = array( __( 'Business card', 'optima-team' ), $c['card'] ? __( 'On', 'optima-team' ) : __( 'Off', 'optima-team' ), '' );
 		}
 		/* translators: %d: pages */
 		$rows[] = array( __( 'Reviewed by', 'optima-team' ), sprintf( _n( '%d page', '%d pages', $c['reviewed'], 'optima-team' ), $c['reviewed'] ), $u['reviewed'] );

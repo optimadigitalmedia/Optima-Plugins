@@ -140,7 +140,12 @@ final class Optima_Hub_Mail {
 		if ( defined( 'OPTIMA_MAIL_PASSWORD' ) && '' !== (string) OPTIMA_MAIL_PASSWORD ) {
 			return (string) OPTIMA_MAIL_PASSWORD;
 		}
-		return self::decrypt( self::settings()['password'] );
+		$stored = self::settings()['password'];
+		if ( class_exists( 'Optima_Hub_Secret' ) ) {
+			// Reads as empty when the host changed the site's security keys since it was saved.
+			return Optima_Hub_Secret::read( 'mail', $stored, static fn( string $v ): string => self::decrypt( $v ) )['plain'];
+		}
+		return self::decrypt( $stored );
 	}
 
 	/** Set up: an address, a token or password, and a server to sign in to. */
@@ -271,6 +276,9 @@ final class Optima_Hub_Mail {
 
 	/** What the Email card on Build says when nothing is set up. */
 	public static function not_set_up_text(): string {
+		if ( class_exists( 'Optima_Hub_Secret' ) && 'unreadable' === Optima_Hub_Secret::mail_state() ) {
+			return __( 'The saved token can\'t be read: the host changed the site\'s security keys. Paste the token again, then Send test.', 'optima-build' );
+		}
 		return __( 'Not set up: form emails go out from the host and often land in junk. Connect Cloudflare email so they come from your domain.', 'optima-build' );
 	}
 

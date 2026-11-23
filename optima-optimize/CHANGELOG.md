@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.11.0 (2026-11-23)
+
+Brought in from 0.9.3 to 0.9.11:
+- Ships visitor-data.json, so Optima Core's privacy draft says this plugin collects and sends nothing about visitors.
+- After the bulk optimizer rewrites an image, it asks Optima Core to drop that image's addresses (every size, plus WebP and AVIF copies) from Cloudflare, when the site has set up Cloudflare purge.
+- The same happens when an existing image's files are rewritten in place (a replaced file or regenerated sizes). A fresh upload is skipped, since nothing is cached yet.
+
 ## 0.9.3.11 (2026-11-20)
 
 - Shared admin kit: the four Optima Law screens are filed in the menu (three under Content, form entries under Build).

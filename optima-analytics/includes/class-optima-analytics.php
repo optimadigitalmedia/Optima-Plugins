@@ -154,12 +154,32 @@ final class Optima_Analytics {
 		$host = (string) wp_parse_url( home_url(), PHP_URL_HOST );
 		$live = '1' === (string) get_option( 'blog_public' )
 			&& 'production' === wp_get_environment_type()
-			&& ! preg_match( '/(wpengine\.com|wpenginepowered\.com|staging|\.local$|\.test$|localhost|^127\.|^10\.|^192\.168\.)/i', $host );
+			&& ! self::staging_host( $host );
 		$live = (bool) apply_filters( 'optima_analytics_is_live', $live );
 		if ( ! $live || '' === self::tag() || is_admin() ) {
 			return false;
 		}
 		return ! ( self::settings()['skip_editors'] && current_user_can( 'edit_posts' ) );
+	}
+
+	/**
+	 * A staging, local or private address. The hosting providers' staging
+	 * suffixes come from Optima Core's list (Optima_Core_Staging::HOSTS) when
+	 * Optima Core is active, so every Optima plugin agrees on what staging is;
+	 * without it, the two WP Engine suffixes this plugin always knew.
+	 */
+	public static function staging_host( string $host ): bool {
+		$host     = strtolower( $host );
+		$suffixes = ( class_exists( 'Optima_Core_Staging' ) && defined( 'Optima_Core_Staging::HOSTS' ) )
+			? (array) Optima_Core_Staging::HOSTS
+			: array( '.wpengine.com', '.wpenginepowered.com' );
+		foreach ( $suffixes as $suffix ) {
+			$suffix = strtolower( (string) $suffix );
+			if ( '' !== $suffix && ( str_ends_with( $host, $suffix ) || ltrim( $suffix, '.' ) === $host ) ) {
+				return true;
+			}
+		}
+		return (bool) preg_match( '/(staging|\.local$|\.test$|localhost|^127\.|^10\.|^192\.168\.)/i', $host );
 	}
 
 	public static function default_notice( string $mode ): string {

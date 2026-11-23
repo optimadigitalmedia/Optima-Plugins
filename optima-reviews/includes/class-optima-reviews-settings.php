@@ -116,17 +116,61 @@ final class Optima_Reviews_Settings {
 	}
 
 	/**
-	 * Replace one platform's totals from code (the Google sync), without going
-	 * through the form's rules.
+	 * Replace one platform's totals from code (the Google sync or the daily
+	 * Google check), without going through the form's rules. The row is stamped
+	 * as checked now.
 	 */
 	public static function set_profile( string $slug, array $profile ): void {
 		$settings                      = self::get();
-		$settings['profiles'][ $slug ] = array_merge( self::profile( $slug ), $profile );
+		$settings['profiles'][ $slug ] = array_merge( self::profile( $slug ), $profile, array( 'checked' => time() ) );
 		self::$internal_write          = true;
 		update_option( self::OPTION, $settings );
 		self::$internal_write = false;
 		update_option( self::STAMP, time(), false );
 		Optima_Reviews_Query::flush();
+	}
+
+	/**
+	 * Write several platforms' totals that someone checked on a given day (the
+	 * theme's optima-setup.json, through Optima Build). Each row keeps its review
+	 * link and remembers its own check time, and the saved stamp moves to that
+	 * day, never to now, so the freshness warning still measures the real check.
+	 *
+	 * @param array<string,array> $rows    slug => { rating, count, url }.
+	 * @param int                 $checked When the totals were checked (a Unix time).
+	 */
+	public static function set_totals( array $rows, int $checked ): void {
+		if ( ! $rows ) {
+			return;
+		}
+		$settings = self::get();
+		foreach ( $rows as $slug => $row ) {
+			$current                       = is_array( $settings['profiles'][ $slug ] ?? null ) ? $settings['profiles'][ $slug ] : array();
+			$merged                        = array_merge( self::profile( $slug ), $current, $row );
+			$merged['checked']             = $checked;
+			$settings['profiles'][ $slug ] = $merged;
+		}
+		self::$internal_write = true;
+		update_option( self::OPTION, $settings );
+		self::$internal_write = false;
+		if ( $checked > (int) get_option( self::STAMP, 0 ) ) {
+			update_option( self::STAMP, $checked, false );
+		}
+		Optima_Reviews_Query::flush();
+	}
+
+	/**
+	 * When one platform's totals were last checked. Every write stamps its own
+	 * rows (the form, a sync, the daily Google check, the theme), so a fresh
+	 * Google number does not make an old Yelp number look fresh. Rows saved
+	 * before per-platform stamps fall back to the last save of the whole form.
+	 */
+	public static function checked_at( string $slug ): int {
+		$row = self::get()['profiles'][ $slug ] ?? array();
+		if ( is_array( $row ) && ! empty( $row['checked'] ) ) {
+			return (int) $row['checked'];
+		}
+		return (int) get_option( self::STAMP, 0 );
 	}
 
 	public static function sanitize( $input ): array {
@@ -155,6 +199,7 @@ final class Optima_Reviews_Settings {
 				'count'     => max( 0, (int) ( $row['count'] ?? 0 ) ),
 				'url'       => esc_url_raw( trim( (string) ( $row['url'] ?? '' ) ), array( 'https', 'http' ) ),
 				'write_url' => esc_url_raw( trim( (string) ( $row['write_url'] ?? '' ) ), array( 'https', 'http' ) ),
+				'checked'   => time(), // Saving the form is a check of every row (see checked_at()).
 			);
 			if ( $clean['rating'] || $clean['count'] || $clean['url'] || $clean['write_url'] ) {
 				$out['profiles'][ $slug ] = $clean;

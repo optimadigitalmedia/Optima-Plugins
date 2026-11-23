@@ -18,6 +18,13 @@ delete_option( 'optima_team' );
 delete_transient( 'optima_updater_optima-team' );
 delete_transient( 'optima_updater_optima-team__test' );
 
+// Links people fill in their own words with, and details still waiting for an
+// OK: a link must never outlive the plugin that checks it. Photos sent with
+// them stay in the media library, like every photo.
+delete_metadata( 'post', 0, '_optima_team_link_hash', '', true );
+delete_metadata( 'post', 0, '_optima_team_link', '', true );
+delete_metadata( 'post', 0, '_optima_team_pending', '', true );
+
 if ( ! defined( 'OPTIMA_PURGE_ON_UNINSTALL' ) || ! OPTIMA_PURGE_ON_UNINSTALL ) {
 	return;
 }
@@ -32,3 +39,10 @@ foreach ( $optima_team_ids as $optima_team_id ) {
 
 // Any profile meta left behind (for example on revisions).
 delete_metadata( 'post', 0, '_optima_team', '', true );
+
+// Bylines on posts point at the profiles just deleted.
+delete_metadata( 'post', 0, '_optima_byline', '', true );
+
+// The record that the move to Shows on and sources ran. It stays when
+// profiles stay, so a reinstall never redoes it over choices made since.
+delete_option( 'optima_team_db' );

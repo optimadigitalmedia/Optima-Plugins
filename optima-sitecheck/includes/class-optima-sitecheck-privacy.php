@@ -9,7 +9,8 @@
  * batches and is cleared when the plugin is switched off.
  *
  * Privacy requests are matched by the email the visitor gave for the report.
- * Each saved check is one visitor's, so erasing deletes it whole.
+ * Each saved check is one visitor's, so erasing deletes it whole, clears its
+ * finishing jobs, and clears the short-lived count that limits checks per email.
  *
  * @package Optima_Sitecheck
  */
@@ -172,8 +173,13 @@ final class Optima_Sitecheck_Privacy {
 		$ids     = self::ids( $email, 1 );
 		$removed = false;
 		foreach ( $ids as $id ) {
+			// No finishing job left to run on a check that is gone.
+			wp_clear_scheduled_hook( Optima_Sitecheck::FINISH, array( $id ) );
+			wp_clear_scheduled_hook( Optima_Sitecheck::FINISH, array( $id, 'speed' ) );
 			$removed = (bool) wp_delete_post( $id, true ) || $removed;
 		}
+		// The per-email check count is a salted hash of the email: it goes too.
+		Optima_Sitecheck::forget_email( $email );
 		return array(
 			'items_removed'  => $removed,
 			'items_retained' => false,

@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.1.0 (2026-11-23)
+
+Brought in from 1.0.21 to 1.2.1:
+- Cards read from People. A person's name, title, photo, card phone, card email, intro, why talk to them and tags come from their People profile, through Optima_Team::card(), so a card shows nothing the profile page would hide. Anyone live in People with A business card switched on has a card; switch it off there, or take them off the site, and their card address answers "not found".
+- One-time move, nothing changes for visitors. Each card linked to a People profile switches on A business card in that profile, and its intro, why talk to them and tags are copied into the profile where the profile has none. A People value is never overwritten, and the card keeps its own words as the fallback. The Cards screen says once how many profiles moved.
+- The person's card phone shows on their card and goes into Save contact; with none, the business phone, as before. The card email wins over the profile email.
+- The Cards screen shows each person's card switch and words read-only with a link to People (typed once, rules 45 and 47), and keeps the card's own settings here: link name, share picture and Spotlight. People with a card come first. Add a person with a card opens Add a person with the card switched on.
+- Cards set up before People that point at no profile keep working, listed as before.
+- New box: When the plugin is deleted, Delete them too. Off by default. Ticked, deleting the plugin also deletes the card and link settings. Saving the screen keeps the choice.
+- With an older People, or People off, the screen and the cards work as before.
+
 ## 1.0.21.12 (2026-11-20)
 
 - Shared admin kit: the four Optima Law screens are filed in the menu (three under Content, form entries under Build).

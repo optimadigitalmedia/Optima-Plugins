@@ -22,6 +22,10 @@ delete_transient( 'optima_updater_optima-reviews__test' );
 wp_clear_scheduled_hook( 'optima_reviews_google_sync' );
 delete_transient( 'optima_reviews_google_token' );
 delete_option( 'optima_reviews_google' );
+// The Google API key and place ID for the daily Google check go too.
+wp_clear_scheduled_hook( 'optima_reviews_places_check' );
+delete_option( 'optima_reviews_places_key' );
+delete_option( 'optima_reviews_places' );
 delete_option( 'optima_reviews_request_routes' );
 delete_option( 'optima_reviews_build_parent' );
 

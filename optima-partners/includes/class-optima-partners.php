@@ -270,7 +270,7 @@ final class Optima_Partners {
 
 	/** True the first time today this visitor follows this partner's link. */
 	private static function first_click_today( int $id ): bool {
-		$ip    = isset( $_SERVER['REMOTE_ADDR'] ) ? (string) $_SERVER['REMOTE_ADDR'] : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- hashed, never stored.
+		$ip    = function_exists( 'optima_client_ip' ) ? optima_client_ip() : ( isset( $_SERVER['REMOTE_ADDR'] ) ? (string) $_SERVER['REMOTE_ADDR'] : '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- hashed, never stored.
 		$agent = isset( $_SERVER['HTTP_USER_AGENT'] ) ? (string) $_SERVER['HTTP_USER_AGENT'] : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- hashed, never stored.
 		$key   = 'optima_partner_seen_' . substr( hash_hmac( 'sha256', $id . '|' . wp_date( 'Y-m-d' ) . '|' . $ip . '|' . $agent, wp_salt( 'nonce' ) ), 0, 24 );
 		if ( get_transient( $key ) ) {

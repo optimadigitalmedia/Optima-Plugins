@@ -243,7 +243,9 @@ final class Optima_Reviews_Render {
 
 	/**
 	 * The "as of" date for a platform's totals: Google's last sync when it
-	 * syncs, else the day the totals were last saved. '' when unknown.
+	 * syncs, else the day that platform's totals were last checked (a save on
+	 * Review settings, the daily Google check, or the date the theme's totals
+	 * carry). '' when unknown.
 	 */
 	public static function as_of( string $source ): string {
 		$ts = 0;
@@ -252,7 +254,7 @@ final class Optima_Reviews_Render {
 			$ts = '' === (string) ( $g['last_error'] ?? '' ) ? (int) ( $g['last_sync'] ?? 0 ) : 0;
 		}
 		if ( ! $ts ) {
-			$ts = (int) get_option( Optima_Reviews_Settings::STAMP, 0 );
+			$ts = Optima_Reviews_Settings::checked_at( $source );
 		}
 		return $ts > 0 ? wp_date( (string) get_option( 'date_format' ), $ts ) : '';
 	}

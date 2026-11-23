@@ -410,10 +410,15 @@ final class Optima_Redirects_Admin {
 		}
 		?>
 		<section class="sh-box">
-			<div class="sh-status <?php echo ( $missing7 || $broken ) ? 'is-warn' : ''; ?>"><span class="sh-dot" aria-hidden="true"></span><p class="sh-value"><?php echo esc_html( implode( ' ', $parts ) ); ?></p></div>
+			<?php // Gold only when a link on the site's own pages leads nowhere: that is the real problem. Missing addresses alone are routine. ?>
+			<div class="sh-status <?php echo $broken ? 'is-warn' : ''; ?>"><span class="sh-dot" aria-hidden="true"></span><p class="sh-value"><?php echo esc_html( implode( ' ', $parts ) ); ?></p>
+				<?php if ( $internal ) : ?>
+					<a class="button sh-quiet" href="#optima-broken"><?php esc_html_e( 'See the broken links', 'optima-redirects' ); ?> &rsaquo;</a>
+				<?php endif; ?>
+			</div>
 		</section>
 
-		<div class="sr-layout">
+		<?php ob_start(); // The redirect list and its form. ?>
 			<section class="sh-box sr-main" id="optima-list">
 				<h2 class="sh-title"><?php esc_html_e( 'Redirect list', 'optima-redirects' ); ?></h2>
 				<p><?php esc_html_e( 'Old addresses and where they go now. Use permanent for pages that moved for good; search engines then move the old page\'s standing to the new one.', 'optima-redirects' ); ?></p>
@@ -531,7 +536,10 @@ final class Optima_Redirects_Admin {
 				<?php endif; ?>
 			</section>
 
-			<div class="sr-side">
+		<?php
+		$list_box = (string) ob_get_clean();
+		ob_start(); // Missing pages.
+		?>
 				<section class="sh-box" id="optima-missing">
 					<h2 class="sh-title"><?php esc_html_e( 'Missing pages', 'optima-redirects' ); ?></h2>
 					<p><?php esc_html_e( 'Addresses people asked for that are not on the site, most visited first. Search engine crawlers, bots and file requests are left out.', 'optima-redirects' ); ?></p>
@@ -560,13 +568,18 @@ final class Optima_Redirects_Admin {
 										<?php if ( '' !== $row->referrer ) : ?>
 											<p class="sh-note sr-ref">
 												<?php
-												echo esc_html(
-													(int) $row->internal
-														/* translators: %s: page address on this site */
-														? sprintf( __( 'Linked from your page %s', 'optima-redirects' ), Optima_Redirects::normalize_source( $row->referrer ) )
-														/* translators: %s: other website */
-														: sprintf( __( 'Came from %s', 'optima-redirects' ), (string) wp_parse_url( $row->referrer, PHP_URL_HOST ) )
-												);
+												if ( (int) $row->internal ) {
+													/* translators: %s: page address on this site */
+													$came = sprintf( __( 'Linked from your page %s', 'optima-redirects' ), Optima_Redirects::normalize_source( $row->referrer ) );
+												} elseif ( Optima_Redirects::is_home_url( $row->referrer ) ) {
+													// Said to come from this site, but that page has no such link (often a faked referrer).
+													/* translators: %s: page address on this site */
+													$came = sprintf( __( 'Came from your page %s', 'optima-redirects' ), Optima_Redirects::normalize_source( $row->referrer ) );
+												} else {
+													/* translators: %s: other website */
+													$came = sprintf( __( 'Came from %s', 'optima-redirects' ), (string) wp_parse_url( $row->referrer, PHP_URL_HOST ) );
+												}
+												echo esc_html( $came );
 												?>
 											</p>
 										<?php endif; ?>
@@ -596,6 +609,10 @@ final class Optima_Redirects_Admin {
 						</div>
 					<?php endif; ?>
 				</section>
+		<?php
+		$missing_box = (string) ob_get_clean();
+		ob_start(); // Broken links on the site's own pages.
+		?>
 
 				<section class="sh-box" id="optima-broken">
 					<h2 class="sh-title"><?php esc_html_e( 'Broken links on your pages', 'optima-redirects' ); ?></h2>
@@ -636,8 +653,20 @@ final class Optima_Redirects_Admin {
 						</ul>
 					<?php endif; ?>
 				</section>
-			</div>
-		</div>
+		<?php
+		$broken_box = (string) ob_get_clean();
+		// What needs doing comes first (rule 52); see box_order().
+		$boxes = array(
+			'list'    => $list_box,
+			'broken'  => $broken_box,
+			'missing' => $missing_box,
+		);
+		$order = array();
+		foreach ( self::box_order( (bool) $editing, (bool) $internal, (bool) $missing ) as $key ) {
+			$order[] = $boxes[ $key ];
+		}
+		echo '<div class="sr-stack">' . implode( '', $order ) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput -- each box was escaped as it was built above.
+		?>
 
 		<div class="sh-grid sh-grid-2">
 			<form method="post" action="<?php echo esc_url( $post_url ); ?>" class="sh-box" id="optima-settings">
@@ -673,5 +702,32 @@ final class Optima_Redirects_Admin {
 		</div>
 		<?php
 		Optima_Admin_UI::close();
+	}
+
+	/**
+	 * The order of the screen's boxes. What needs doing comes first (plugin-first
+	 * rule 52): broken links on the site's own pages, then missing pages people
+	 * asked for, then the redirect list and its form. While someone is changing a
+	 * redirect, the form stays on top. A box with nothing in it waits below the list.
+	 *
+	 * @return string[] Box keys: list, broken, missing.
+	 */
+	public static function box_order( bool $editing, bool $has_broken, bool $has_missing ): array {
+		if ( $editing ) {
+			return array( 'list', 'broken', 'missing' );
+		}
+		$first = array();
+		$last  = array();
+		if ( $has_broken ) {
+			$first[] = 'broken';
+		} else {
+			$last[] = 'broken';
+		}
+		if ( $has_missing ) {
+			$first[] = 'missing';
+		} else {
+			array_unshift( $last, 'missing' );
+		}
+		return array_merge( $first, array( 'list' ), $last );
 	}
 }

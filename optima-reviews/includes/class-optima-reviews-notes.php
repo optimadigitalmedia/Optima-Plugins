@@ -196,7 +196,7 @@ final class Optima_Reviews_Notes {
 	}
 
 	private static function under_limit(): bool {
-		$ip  = (string) ( $_SERVER['REMOTE_ADDR'] ?? '' );
+		$ip  = function_exists( 'optima_client_ip' ) ? optima_client_ip() : (string) ( $_SERVER['REMOTE_ADDR'] ?? '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- hashed, never stored.
 		$key = 'srn_' . substr( hash_hmac( 'sha256', $ip, wp_salt( 'nonce' ) ), 0, 20 );
 		$n   = (int) get_transient( $key );
 		if ( $n >= 5 ) {
@@ -243,7 +243,7 @@ final class Optima_Reviews_Notes {
 			sprintf( __( 'Read it in your inbox: %s', 'optima-reviews' ), Optima_Reviews_Inbox::url() ),
 		);
 		wp_mail(
-			(string) apply_filters( 'optima_reviews_note_recipient', '' !== Optima_Reviews_Requests::get()['note_email'] ? Optima_Reviews_Requests::get()['note_email'] : get_option( 'admin_email' ) ),
+			(string) apply_filters( 'optima_reviews_note_recipient', Optima_Reviews_Requests::note_recipient() ),
 			__( 'New note from your review page', 'optima-reviews' ),
 			implode( "\n", $lines )
 		);

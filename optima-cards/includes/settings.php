@@ -63,6 +63,7 @@ final class Optima_Cards_Settings {
 			'spot_sub'     => '',
 			'spot_url'     => '',
 			'people'       => array(),
+			'purge_on_uninstall' => 0, // Deleting the plugin also deletes these settings (the box under Addresses).
 			'links_intro'  => get_bloginfo( 'description' ),
 			'links_latest' => 1,
 			'links'        => array(
@@ -97,7 +98,7 @@ final class Optima_Cards_Settings {
 				}
 				continue;
 			}
-			if ( in_array( $k, array( 'enable_cards', 'enable_links', 'links_latest', 'photo_id', 'logo_id', 'share_card_id', 'share_links_id' ), true ) ) {
+			if ( in_array( $k, array( 'enable_cards', 'enable_links', 'links_latest', 'photo_id', 'logo_id', 'share_card_id', 'share_links_id', 'purge_on_uninstall' ), true ) ) {
 				$d[ $k ] = (int) $v;
 				continue;
 			}
@@ -137,6 +138,110 @@ final class Optima_Cards_Settings {
 	/** Is People (Optima Team) running, so cards read from profiles (rule 47)? */
 	public static function people_on() {
 		return class_exists( 'Optima_Team' ) && post_type_exists( 'optima_team' );
+	}
+
+	/** The record that the card switch and the card's words moved to People. */
+	const PEOPLE_DB = 'optima_cards_people_db';
+
+	/** Card record key => People profile key, for the card's words. */
+	const WORDS = array(
+		'intro' => 'card_intro',
+		'pick'  => 'card_why',
+		'tags'  => 'card_tags',
+	);
+
+	/**
+	 * Does this Optima Team keep the card switch and the card's words on the
+	 * profile (Shows on, the Business card box)? Older versions do not.
+	 */
+	public static function people_has_cards() {
+		return self::people_on()
+			&& method_exists( 'Optima_Team', 'card' )
+			&& method_exists( 'Optima_Team', 'card_ids' )
+			&& method_exists( 'Optima_Team', 'set_show' )
+			&& array_key_exists( 'card_intro', (array) Optima_Team::empty_profile() );
+	}
+
+	/** Cards read People: the switch and the words live there, and the one-time move has run. */
+	public static function reading_people() {
+		return self::people_has_cards() && (int) get_option( self::PEOPLE_DB, 0 ) >= 1;
+	}
+
+	/**
+	 * Once: each card that points at a People profile switches on A business
+	 * card in that profile, and its intro, "why talk to them" and tags are copied
+	 * into the profile where the profile has none. A People value is never
+	 * overwritten, and the card keeps its own copy for the fallback. Runs on
+	 * init after Optima Team's own move, so visitors see the same cards.
+	 */
+	public static function move_to_people() {
+		if ( ! self::people_has_cards() || (int) get_option( self::PEOPLE_DB, 0 ) >= 1 || get_transient( 'optima_cards_people_moving' ) ) {
+			return;
+		}
+		set_transient( 'optima_cards_people_moving', 1, 5 * MINUTE_IN_SECONDS );
+		$saved = get_option( self::OPTION );
+		$moved = 0;
+		foreach ( is_array( $saved ) ? (array) ( $saved['people'] ?? array() ) : array() as $card ) {
+			$id = (int) ( $card['profile'] ?? 0 );
+			if ( ! $id || 'optima_team' !== get_post_type( $id ) ) {
+				continue;
+			}
+			$profile = Optima_Team::profile( $id );
+			$next    = self::copy_words( $profile, (array) $card );
+			if ( $next !== $profile ) {
+				update_post_meta( $id, Optima_Team::META, $next );
+			}
+			Optima_Team::set_show( $id, 'card', true );
+			++$moved;
+		}
+		update_option( self::PEOPLE_DB, 1, false );
+		if ( $moved ) {
+			update_option( 'optima_cards_people_note', $moved, false );
+		}
+		delete_transient( 'optima_cards_people_moving' );
+	}
+
+	/**
+	 * A card's words laid into a profile where the profile field is empty. Pure.
+	 *
+	 * @param array $profile The People profile.
+	 * @param array $card    The saved card record.
+	 */
+	public static function copy_words( array $profile, array $card ) {
+		foreach ( self::WORDS as $from => $to ) {
+			$value = trim( (string) ( $card[ $from ] ?? '' ) );
+			if ( '' !== $value && '' === trim( (string) ( $profile[ $to ] ?? '' ) ) ) {
+				$profile[ $to ] = $value;
+			}
+		}
+		return $profile;
+	}
+
+	/**
+	 * One person's card from what People holds and what the card saved. People
+	 * wins for every fact and word it has; the card's own saved words fill the
+	 * gaps (and are all there is with an older Optima Team). Pure.
+	 *
+	 * @param array $person What Optima_Team::card() returns.
+	 * @param array $entry  The saved card record (may be empty).
+	 */
+	public static function merge_person( array $person, array $entry ) {
+		$email = '' !== (string) ( $person['card_email'] ?? '' ) ? (string) $person['card_email'] : (string) ( $person['email'] ?? '' );
+		return array_merge(
+			$entry,
+			array(
+				'profile'  => (int) $person['id'],
+				'name'     => (string) $person['name'],
+				'title'    => (string) $person['role'],
+				'email'    => $email,
+				'phone'    => (string) ( $person['phone'] ?? '' ),
+				'photo_id' => (int) $person['photo_id'],
+				'intro'    => '' !== (string) ( $person['intro'] ?? '' ) ? (string) $person['intro'] : (string) ( $entry['intro'] ?? '' ),
+				'pick'     => '' !== (string) ( $person['why'] ?? '' ) ? (string) $person['why'] : (string) ( $entry['pick'] ?? '' ),
+				'tags'     => '' !== (string) ( $person['tags'] ?? '' ) ? (string) $person['tags'] : (string) ( $entry['tags'] ?? '' ),
+				'slug'     => ! empty( $entry['slug'] ) ? (string) $entry['slug'] : (string) $person['slug'],
+			)
+		);
 	}
 
 	/**
@@ -185,7 +290,7 @@ final class Optima_Cards_Settings {
 	/** The People profile with this name or email, or 0. */
 	public static function match_profile( $name, $email ) {
 		foreach ( get_posts( array( 'post_type' => 'optima_team', 'post_status' => array( 'publish', 'draft', 'private' ), 'posts_per_page' => 200 ) ) as $post ) {
-			$prof = (array) get_post_meta( $post->ID, '_optima_team', true );
+			$prof = method_exists( 'Optima_Team', 'profile' ) ? Optima_Team::profile( (int) $post->ID ) : (array) get_post_meta( $post->ID, '_optima_team', true );
 			if ( ( '' !== $name && 0 === strcasecmp( trim( $name ), trim( $post->post_title ) ) ) || ( '' !== $email && 0 === strcasecmp( $email, (string) ( $prof['email'] ?? '' ) ) ) ) {
 				return (int) $post->ID;
 			}
@@ -193,8 +298,20 @@ final class Optima_Cards_Settings {
 		return 0;
 	}
 
-	/** One card's person facts from their People profile: name, title, email, photo. */
+	/**
+	 * One card's person facts from their People profile: name, title, email,
+	 * photo, and with an Optima Team that keeps them, the card phone and the
+	 * card's words. Read through Optima_Team::card(), so the card shows
+	 * nothing the profile page would hide.
+	 */
 	public static function from_profile( $id, array $entry, array $s ) {
+		if ( self::people_has_cards() ) {
+			$person = Optima_Team::card( (int) $id );
+			if ( ! $person || 'trash' === $person['status'] ) {
+				return null;
+			}
+			return self::merge_person( $person, $entry );
+		}
 		$post = get_post( (int) $id );
 		if ( ! $post || 'optima_team' !== $post->post_type || 'trash' === $post->post_status ) {
 			return null;
@@ -267,7 +384,7 @@ final class Optima_Cards_Settings {
 				'spot'     => self::spot( $s ),
 			),
 		);
-		foreach ( (array) $s['people'] as $p ) {
+		foreach ( self::records( $s ) as $p ) {
 			// A card linked to a People profile takes its name, title, email and photo from it (rule 47).
 			if ( ! empty( $p['profile'] ) && self::people_on() ) {
 				$p = self::from_profile( (int) $p['profile'], (array) $p, $s );
@@ -287,6 +404,8 @@ final class Optima_Cards_Settings {
 				'last'     => count( $parts ) > 1 ? end( $parts ) : '',
 				'title'    => $p['title'] ?? '',
 				'email'    => ! empty( $p['email'] ) ? $p['email'] : $s['email'],
+				'phone'    => (string) ( $p['phone'] ?? '' ), // The card phone from People; blank uses the business phone.
+				'profile'  => (int) ( $p['profile'] ?? 0 ),
 				'intro'    => $p['intro'] ?? '',
 				'pick'     => $p['pick'] ?? '',
 				'tags'     => array_values( array_filter( array_map( 'trim', explode( ',', $p['tags'] ?? '' ) ) ) ),
@@ -299,6 +418,49 @@ final class Optima_Cards_Settings {
 				'spot'     => self::spot( $p ),
 				'share_id' => (int) ( $p['share_id'] ?? 0 ),
 			);
+		}
+		return $out;
+	}
+
+	/**
+	 * The card records to show, in order. While cards read People: everyone
+	 * live with A business card on, in team page order, each with the card
+	 * record that points at them (or a new one), then the cards set up before
+	 * People that point at no profile. Otherwise the saved records as they are.
+	 *
+	 * @param array $s Settings.
+	 */
+	public static function records( array $s ) {
+		$saved = array_values( (array) $s['people'] );
+		if ( ! self::reading_people() ) {
+			return $saved;
+		}
+		return self::order_records( $saved, array_map( 'intval', (array) Optima_Team::card_ids( true ) ) );
+	}
+
+	/**
+	 * Pure: the card records for the people with a card, in their order, then
+	 * the records that point at no profile.
+	 *
+	 * @param array $saved The saved card records.
+	 * @param int[] $ids   People with A business card on, in team page order.
+	 */
+	public static function order_records( array $saved, array $ids ) {
+		$by  = array();
+		$out = array();
+		foreach ( $saved as $rec ) {
+			$pid = (int) ( $rec['profile'] ?? 0 );
+			if ( $pid && ! isset( $by[ $pid ] ) ) {
+				$by[ $pid ] = (array) $rec;
+			}
+		}
+		foreach ( $ids as $id ) {
+			$out[] = array_merge( $by[ $id ] ?? array(), array( 'profile' => (int) $id ) );
+		}
+		foreach ( $saved as $rec ) {
+			if ( empty( $rec['profile'] ) && ! empty( $rec['name'] ) ) {
+				$out[] = (array) $rec;
+			}
 		}
 		return $out;
 	}

@@ -8,14 +8,18 @@
      --optima-results-accent: var(--optima-accent);
      --optima-results-radius: 12px;
    }
+
+   Order for each value: the variable above when the theme sets it, then the
+   theme's DESIGN.md (the --optima-* variables Optima Build prints from the
+   optima-design block), then the neutral default.
 */
 
 .optima-results {
 	text-align: start;
-	--sr-surface: var(--optima-results-surface, transparent);
-	--sr-border: var(--optima-results-border, rgba(127, 127, 127, .35));
-	--sr-accent: var(--optima-results-accent, currentColor);
-	--sr-radius: var(--optima-results-radius, 12px);
+	--sr-surface: var(--optima-results-surface, var(--optima-surface, transparent));
+	--sr-border: var(--optima-results-border, var(--optima-line, rgba(127, 127, 127, .35)));
+	--sr-accent: var(--optima-results-accent, var(--optima-accent, currentColor));
+	--sr-radius: var(--optima-results-radius, var(--optima-radius-md, 12px));
 	--sr-gap: var(--optima-results-gap, 1.25rem);
 	margin: 0 0 2rem;
 }

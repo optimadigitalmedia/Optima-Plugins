@@ -58,7 +58,7 @@ final class Optima_Reviews_Requests {
 			'mode'          => 'page', // page: the review page. direct: skip it and go straight to one platform.
 			'primary'       => 'google',
 			'notes'         => true,   // The private note form at /review/note/.
-			'note_email'    => '',     // Who gets private notes. Empty: the site admin email.
+			'note_email'    => '',     // Who gets private notes. Empty: the shared notice address (see note_recipient()).
 			'business'      => '',
 			'headline'      => __( 'Thanks for working with us.', 'optima-reviews' ),
 			'ask'           => __( 'An honest review takes about a minute and helps other people find us.', 'optima-reviews' ),
@@ -91,6 +91,24 @@ final class Optima_Reviews_Requests {
 		$parts = preg_split( '/\s+[|\x{2013}\x{2014}-]\s+/u', $title, 2 );
 		$name  = trim( (string) ( $parts[0] ?? '' ) );
 		return '' !== $name ? $name : $title;
+	}
+
+	/**
+	 * The site's shared notice address: Optima Core's, when it has one, else
+	 * the site admin email.
+	 */
+	public static function shared_notice_email(): string {
+		return function_exists( 'optima_core_notice_email' ) ? (string) optima_core_notice_email() : (string) get_option( 'admin_email' );
+	}
+
+	/**
+	 * Who gets private notes: the address saved under "Send private notes to"
+	 * (an optional override), else the shared notice address. An address
+	 * already saved here keeps getting the notes.
+	 */
+	public static function note_recipient(): string {
+		$own = trim( (string) self::get()['note_email'] );
+		return '' !== $own ? $own : self::shared_notice_email();
 	}
 
 	public static function register(): void {
@@ -556,8 +574,8 @@ final class Optima_Reviews_Requests {
 						</tr>
 						<tr>
 							<th scope="row"><label for="srk-note-email"><?php esc_html_e( 'Send private notes to', 'optima-reviews' ); ?></label></th>
-							<td><input id="srk-note-email" type="email" class="regular-text" name="<?php echo esc_attr( $name . '[note_email]' ); ?>" value="<?php echo esc_attr( $s['note_email'] ); ?>" placeholder="<?php echo esc_attr( (string) get_option( 'admin_email' ) ); ?>" />
-							<p class="description"><?php esc_html_e( 'Leave empty to use the site\'s admin email.', 'optima-reviews' ); ?></p></td>
+							<td><input id="srk-note-email" type="email" class="regular-text" name="<?php echo esc_attr( $name . '[note_email]' ); ?>" value="<?php echo esc_attr( $s['note_email'] ); ?>" placeholder="<?php echo esc_attr( self::shared_notice_email() ); ?>" />
+							<p class="description"><?php echo function_exists( 'optima_core_notice_email' ) ? esc_html__( 'Leave empty to use the notice address in Your business.', 'optima-reviews' ) : esc_html__( 'Leave empty to use the site\'s admin email.', 'optima-reviews' ); ?></p></td>
 						</tr>
 						<tr>
 							<th scope="row"><?php esc_html_e( 'Business name', 'optima-reviews' ); ?></th>

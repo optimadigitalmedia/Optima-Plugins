@@ -216,6 +216,12 @@ final class Optima_Optimize_Batch {
 		$summary           = $processor->process( $original_path, $size_paths, $mime, $generate_webp, $generate_avif );
 		$summary['source'] = 'batch';
 		update_post_meta( $attachment_id, self::META_KEY, $summary );
+
+		// The files were rewritten at the addresses visitors already have cached:
+		// Optima Core drops Cloudflare's copies when the site has set that up.
+		if ( ! empty( $summary['optimized_count'] ) || $generate_webp || $generate_avif ) {
+			do_action( 'optima_core_purge_urls', Optima_Optimize_Pipeline::urls( (string) $uploads['baseurl'], $meta, $generate_webp, $generate_avif ), 'image' );
+		}
 	}
 
 	/**

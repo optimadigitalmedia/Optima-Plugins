@@ -65,7 +65,7 @@ final class Optima_Chat {
 			'name'      => (string) ( $s['name'] ?? '' ),
 			'team'      => (string) ( $s['team'] ?? '' ),
 			'launcher'  => (string) ( $s['launcher'] ?? '' ),
-			'notify'    => (string) ( $s['notify'] ?? get_option( 'admin_email' ) ),
+			'notify'    => (string) ( $s['notify'] ?? '' ), // Blank: notify_to() picks the shared address.
 			'alert'     => (string) ( $s['alert'] ?? '' ),
 			'book_url'  => (string) ( $s['book_url'] ?? '' ),
 			'work_url'  => (string) ( $s['work_url'] ?? '' ),
@@ -86,6 +86,26 @@ final class Optima_Chat {
 			'retention'        => isset( $s['retention'] ) ? max( 0, (int) $s['retention'] ) : self::RETENTION_DAYS,
 			'retention_reason' => (string) ( $s['retention_reason'] ?? '' ),
 		);
+	}
+
+	/**
+	 * Where new chat emails go: this screen's own address when one is set, else
+	 * the site's shared notice address (optima_core_notice_email(), once Optima
+	 * Core has one), else the site's admin email. A blank field used to send
+	 * nothing.
+	 */
+	public static function notify_to(): string {
+		$own = sanitize_email( self::settings()['notify'] );
+		if ( '' !== $own ) {
+			return $own;
+		}
+		return sanitize_email( function_exists( 'optima_core_notice_email' ) ? (string) optima_core_notice_email() : (string) get_option( 'admin_email' ) );
+	}
+
+	/** The site's booking page, or Contact when there is none (or it was removed). */
+	public static function site_booking_url(): string {
+		$url = function_exists( 'optima_booking_url' ) ? (string) optima_booking_url() : '';
+		return '' !== $url ? $url : home_url( '/contact/' );
 	}
 
 	/** The suite's form-entry policy: personal details go after 90 days unless the site records why it keeps them. */
@@ -226,7 +246,7 @@ final class Optima_Chat {
 	 */
 	public static function config(): array {
 		$s    = self::settings();
-		$book = '' !== $s['book_url'] ? $s['book_url'] : ( function_exists( 'optima_booking_url' ) ? optima_booking_url() : home_url( '/contact/' ) );
+		$book = '' !== $s['book_url'] ? $s['book_url'] : self::site_booking_url();
 		$name = '' !== $s['name'] ? $s['name'] : sprintf( /* translators: %s: site name */ __( '%s assistant', 'optima-chat' ), self::short_site_name() );
 		return array(
 			'rest'     => esc_url_raw( rest_url( self::NS ) ),
@@ -300,7 +320,7 @@ final class Optima_Chat {
 
 	/** At most $max requests per visitor IP per 10 minutes, per bucket. */
 	private static function too_many( string $bucket, int $max ): bool {
-		$ip  = (string) ( $_SERVER['REMOTE_ADDR'] ?? '' );
+		$ip  = function_exists( 'optima_client_ip' ) ? optima_client_ip() : (string) ( $_SERVER['REMOTE_ADDR'] ?? '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- hashed, never stored.
 		$key = 'optima_chat_' . $bucket . '_' . md5( $ip . wp_salt( 'nonce' ) );
 		$n   = (int) get_transient( $key );
 		if ( $n >= $max ) {
@@ -408,7 +428,7 @@ final class Optima_Chat {
 		update_post_meta( $id, '_optima_chat_disclosure', self::disclosure() );
 
 		$contact = trim( ( '' !== $phone ? __( 'Text back:', 'optima-chat' ) . ' ' . self::pretty_phone( $phone ) . ' ' : '' ) . ( '' !== $email ? '<' . $email . '>' : '' ) );
-		$to      = sanitize_email( self::settings()['notify'] );
+		$to      = self::notify_to();
 		if ( is_email( $to ) ) {
 			$body = $kinds[ $kind ] . "\n" . $name . ' ' . $contact . "\n" . ( '' !== $phone ? __( 'Tap to text:', 'optima-chat' ) . ' sms:+' . $phone . "\n" : '' ) . ( $page ? __( 'Page:', 'optima-chat' ) . ' ' . $page . "\n" : '' )
 				. "\n" . implode( "\n\n", $lines ) . "\n\n" . __( 'Open the inbox:', 'optima-chat' ) . ' ' . admin_url( 'edit.php?post_type=' . self::CPT );

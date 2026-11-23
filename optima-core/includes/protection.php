@@ -30,8 +30,10 @@
  *    Filter: `optima_core_close_comments` (bool).
  *
  *  - Hide login names, XML-RPC off, basic browser protections (nosniff,
- *    SAMEORIGIN framing, a referrer policy, HSTS on HTTPS; a header the host or
- *    Cloudflare already sends is kept), and the code editor off (also on WP
+ *    SAMEORIGIN framing, a referrer policy, HSTS on HTTPS; a header another
+ *    plugin already set in PHP is kept, but the host and Cloudflare add theirs
+ *    after PHP and cannot be seen here, so Site health checks the live page for
+ *    doubles), and the code editor off (also on WP
  *    Engine, whose wp-config.php sets DISALLOW_FILE_EDIT to false: the edit
  *    capabilities are taken away too). Filters: `optima_core_hide_users`,
  *    `optima_core_xmlrpc_needed`, `optima_core_browser_headers`.
@@ -527,7 +529,15 @@ final class Optima_Core_Protection {
 		return $endpoints;
 	}
 
-	/** Headers already set by the host (WP Engine, Cloudflare) are left as they are. */
+	/**
+	 * Adds the basic browser protections to the headers WordPress sends. Only
+	 * headers already in WordPress's own list (another plugin's wp_headers) are
+	 * left as they are. Headers the host or CDN adds (WP Engine, Cloudflare)
+	 * are added after PHP has sent the page, so they cannot be seen here: when
+	 * both send one, the browser gets it twice. Optima Build's Site health
+	 * (Security, "Headers sent twice") checks the live home page once a day and
+	 * names any doubled header, so one owner can be picked.
+	 */
 	public static function browser_headers( $headers ) {
 		$headers = is_array( $headers ) ? $headers : array();
 		$add     = array(

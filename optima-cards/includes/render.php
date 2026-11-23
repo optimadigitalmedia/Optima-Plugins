@@ -126,6 +126,7 @@ final class Optima_Cards_Render {
 		$host = preg_replace( '#^www\.#', '', (string) wp_parse_url( home_url(), PHP_URL_HOST ) );
 		$logo = Optima_Cards_Settings::logo_url();
 		$role = $p['title'] ? $p['title'] : $s['name']; // the business name is already on the photo
+		$shown = self::phone_for( $p, $s );
 		?>
   <section class="odc-hero-card" aria-labelledby="odc-name">
     <div class="odc-hero">
@@ -147,7 +148,7 @@ final class Optima_Cards_Render {
       <?php if ( $p['intro'] ) : ?><p class="odc-intro"><?php echo esc_html( $p['intro'] ); ?></p><?php endif; ?>
       <?php if ( $p['tags'] ) : ?><p class="odc-tags odc-hero-tags"><?php foreach ( $p['tags'] as $t ) { echo '<span>' . esc_html( $t ) . '</span>'; } ?></p><?php endif; ?>
       <dl class="odc-details">
-        <?php if ( $tel ) : ?><div><dt>Phone</dt><dd><a href="<?php echo esc_url( 'tel:' . $tel, array( 'tel' ) ); ?>"><?php echo esc_html( $s['phone'] ); ?></a></dd></div><?php endif; ?>
+        <?php if ( $tel ) : ?><div><dt>Phone</dt><dd><a href="<?php echo esc_url( 'tel:' . $tel, array( 'tel' ) ); ?>"><?php echo esc_html( $shown ); ?></a></dd></div><?php endif; ?>
         <?php if ( $p['email'] ) : ?><div><dt>Email</dt><dd><a href="<?php echo esc_url( 'mailto:' . $p['email'], array( 'mailto' ) ); ?>"><?php echo esc_html( $p['email'] ); ?></a></dd></div><?php endif; ?>
         <div><dt>Web</dt><dd><a href="<?php echo esc_url( home_url( '/' ) ); ?>"><?php echo esc_html( $host ); ?></a></dd></div>
       </dl>
@@ -244,10 +245,16 @@ final class Optima_Cards_Render {
 		echo '</section>';
 	}
 
+	/** The number a card shows: the person's card phone from People, else the business phone. */
+	public static function phone_for( array $p, array $s ) {
+		return ! empty( $p['phone'] ) ? (string) $p['phone'] : (string) $s['phone'];
+	}
+
 	public static function card_page( array $p, array $people ) {
 		$s       = Optima_Cards_Settings::get();
 		$is_team = 'team' === $p['key'];
-		$tel     = Optima_Cards_Settings::phone_e164( $s['phone'] );
+		$shown   = self::phone_for( $p, $s );
+		$tel     = Optima_Cards_Settings::phone_e164( $shown );
 		$place   = trim( $s['city'] . ( $s['region'] ? ', ' . $s['region'] : '' ) );
 		self::open(
 			array(
@@ -282,7 +289,7 @@ final class Optima_Cards_Render {
       <a href="<?php echo esc_url( home_url( '/' ) ); ?>"><?php echo self::icon( 'web' ); // phpcs:ignore ?><span>Website</span></a>
     </div>
     <dl class="odc-details">
-      <?php if ( $tel ) : ?><div><dt>Phone</dt><dd><a href="<?php echo esc_url( 'tel:' . $tel, array( 'tel' ) ); ?>"><?php echo esc_html( $s['phone'] ); ?></a></dd></div><?php endif; ?>
+      <?php if ( $tel ) : ?><div><dt>Phone</dt><dd><a href="<?php echo esc_url( 'tel:' . $tel, array( 'tel' ) ); ?>"><?php echo esc_html( $shown ); ?></a></dd></div><?php endif; ?>
       <?php if ( $p['email'] ) : ?><div><dt>Email</dt><dd><a href="<?php echo esc_url( 'mailto:' . $p['email'], array( 'mailto' ) ); ?>"><?php echo esc_html( $p['email'] ); ?></a></dd></div><?php endif; ?>
       <?php if ( $place ) : ?><div><dt>Based in</dt><dd><?php echo esc_html( $place ); ?></dd></div><?php endif; ?>
     </dl>

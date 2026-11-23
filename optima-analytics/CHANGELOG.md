@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.24.0 (2026-11-23)
+
+Brought in from 0.1.15 to 0.1.24:
+- Tracking stays off on a staging copy at every hosting provider Optima Core lists (WP Engine, Kinsta, Flywheel, Pantheon and Cloudways), not only WP Engine. Without Optima Core it keeps the WP Engine pair. Local and private addresses are treated as before. Live sites see no change.
+
 ## 0.1.15.11 (2026-11-20)
 
 - Ships visitor-data.json, so Optima Core's privacy draft lists what goes to Google (page views, marked taps, form sends by form number only), the optima_consent cookie (180 days), the five-minute optima_form_submit cookie, and Google's own cookies.

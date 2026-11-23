@@ -118,6 +118,10 @@ final class Optima_Team_Add {
 			'user'     => absint( $in['user'] ?? 0 ),
 			'order'    => (int) ( $in['order'] ?? 0 ),
 		);
+		// Opened from Optima Cards: the new person starts with A business card on.
+		if ( ! empty( $in['card'] ) ) {
+			$state['card'] = 1;
+		}
 		// From the setup file only, and only when it carries them: practice areas and the theme's bio page.
 		if ( ! empty( $in['areas'] ) ) {
 			$state['areas'] = Optima_Team::clean_practices( (array) $in['areas'] );
@@ -333,6 +337,12 @@ final class Optima_Team_Add {
 				exit;
 			}
 			self::forget();
+			// Save and send them a link: they fill in their own words, which wait for an OK.
+			if ( ! empty( $_POST['send_link'] ) && class_exists( 'Optima_Team_Link' ) && Optima_Team_Link::can_manage( $id ) ) {
+				Optima_Team_Link::create( $id );
+				wp_safe_redirect( add_query_arg( Optima_Team_Link::QUERY, 'link', (string) get_edit_post_link( $id, 'raw' ) ) );
+				exit;
+			}
 			self::notice(
 				'success',
 				$publish
@@ -376,6 +386,9 @@ final class Optima_Team_Add {
 		$profile['practice_areas']  = $state['areas'] ?? array();
 		$profile['bio_url']         = $state['bio_url'] ?? '';
 		$profile['schema_id']       = $state['schema_id'] ?? '';
+		if ( ! empty( $state['card'] ) ) {
+			$profile['shows']['card'] = true;
+		}
 		// The sanitizer takes these two lists as one-per-line text.
 		$profile['memberships'] = '';
 		$profile['same_as']     = '';
@@ -453,6 +466,11 @@ final class Optima_Team_Add {
 			return;
 		}
 		$state = self::state();
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- a starting choice on the screen address only.
+		if ( ! empty( $_GET['card'] ) && 1 === $state['step'] && empty( $state['card'] ) ) {
+			$state['card'] = 1;
+			self::save( $state );
+		}
 		Optima_Admin_UI::open(
 			__( 'Add a person', 'optima-team' ),
 			__( 'Three short steps. Facts come from the setup file, so you pick and connect rather than type. Leave at any step and it waits here for a day; the profile is created only at the end.', 'optima-team' ),
@@ -717,6 +735,7 @@ final class Optima_Team_Add {
 				<button type="submit" name="do" value="back" class="button sh-quiet" formnovalidate><?php esc_html_e( 'Back', 'optima-team' ); ?></button>
 				<button type="submit" name="publish" value="1" class="button button-primary"><?php esc_html_e( 'Publish to this site', 'optima-team' ); ?></button>
 				<button type="submit" class="button"><?php esc_html_e( 'Save as a draft', 'optima-team' ); ?></button>
+				<button type="submit" name="send_link" value="1" class="button"><?php esc_html_e( 'Save as a draft and send them a link', 'optima-team' ); ?></button>
 				<button type="submit" name="do" value="cancel" class="button-link sh-quiet" formnovalidate><?php esc_html_e( 'Cancel and create nothing', 'optima-team' ); ?></button>
 			</p>
 		</section>

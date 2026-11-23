@@ -3,7 +3,7 @@
  * Plugin Name:       Optima Build
  * Plugin URI:        https://optimadigitalmedia.com
  * Description:       The Optima menu on every site: Overview (is the site all right, what needs you, what Optima is doing), one Inbox, Site health, and Build for the site's operators (updates, features, design).
- * Version:           0.7.11.7
+ * Version:           0.7.11.8
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Author:            Optima Digital
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // Prefixed OPTIMA_HUB_ on purpose: the Optima Digital theme already defines a
 // OPTIMA_BUILD_MENU constant for its own menu.
-define( 'OPTIMA_HUB_VERSION', '0.7.11.7' );
+define( 'OPTIMA_HUB_VERSION', '0.7.11.8' );
 define( 'OPTIMA_HUB_FILE', __FILE__ );
 define( 'OPTIMA_HUB_DIR', plugin_dir_path( __FILE__ ) );
 define( 'OPTIMA_HUB_URL', plugin_dir_url( __FILE__ ) );
@@ -47,7 +47,13 @@ require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-lock.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-catalog.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-features.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-requests.php';
+require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-secret.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-health.php';
+require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-security.php';
+require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-plugins.php';
+require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-wp-health.php';
+require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-form-mail.php';
+require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-form-test.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-robots.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-privacy.php';
 require_once OPTIMA_HUB_DIR . 'includes/class-optima-hub-setup.php';
@@ -72,7 +78,12 @@ Optima_Hub_Business::boot();
 Optima_Hub_Pages::boot();
 Optima_Hub_Overview::boot();
 Optima_Hub_Inbox::boot();
+Optima_Hub_Secret::boot();
 Optima_Hub_Health::boot();
+Optima_Hub_Security::boot();
+Optima_Hub_WP_Health::boot();
+Optima_Hub_Form_Mail::boot();
+Optima_Hub_Form_Test::boot();
 Optima_Hub_Robots::boot();
 Optima_Hub_Privacy::boot();
 Optima_Hub_Setup::boot();
@@ -82,3 +93,4 @@ Optima_Hub_Themes::boot();
 Optima_Hub_Watch::boot();
 
 register_deactivation_hook( __FILE__, array( 'Optima_Hub_Watch', 'unschedule' ) );
+register_deactivation_hook( __FILE__, array( 'Optima_Hub_Form_Test', 'unschedule' ) );

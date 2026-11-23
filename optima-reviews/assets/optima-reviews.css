@@ -1,23 +1,24 @@
 /*
  * Optima Reviews: default design.
  *
- * Reads the Optima design tokens when the theme defines them (--surface,
- * --line, --text-2, --accent-text, --font-mono, --r-card), and falls back to
- * colors mixed from the text color, so it sits correctly on any light or dark
- * theme. Override any --sr-* variable on .optima-reviews to restyle.
+ * Reads the theme's own tokens when it defines them (--surface, --line,
+ * --text-2, --accent-text, --font-mono, --r-card), then the theme's DESIGN.md
+ * (the --optima-* variables Optima Build prints), and falls back to colors
+ * mixed from the text color, so it sits correctly on any light or dark theme.
+ * Override any --sr-* variable on .optima-reviews to restyle.
  */
 
 .optima-reviews,
 .optima-reviews-summary {
-	--sr-surface: var(--surface, color-mix(in srgb, currentColor 4%, transparent));
-	--sr-line: var(--line, color-mix(in srgb, currentColor 12%, transparent));
-	--sr-muted: var(--text-2, color-mix(in srgb, currentColor 68%, transparent));
-	--sr-faint: var(--text-3, color-mix(in srgb, currentColor 50%, transparent));
+	--sr-surface: var(--surface, var(--optima-surface, color-mix(in srgb, currentColor 4%, transparent)));
+	--sr-line: var(--line, var(--optima-line, color-mix(in srgb, currentColor 12%, transparent)));
+	--sr-muted: var(--text-2, var(--optima-ink-2, color-mix(in srgb, currentColor 68%, transparent)));
+	--sr-faint: var(--text-3, var(--optima-ink-2, color-mix(in srgb, currentColor 50%, transparent)));
 	--sr-link: var(--accent-text, var(--optima-accent));
 	--sr-star: var(--optima-highlight);
 	--sr-star-empty: color-mix(in srgb, currentColor 18%, transparent);
-	--sr-mono: var(--font-mono, ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace);
-	--sr-radius: var(--r-card, 18px);
+	--sr-mono: var(--font-mono, var(--optima-font-mono, ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace));
+	--sr-radius: var(--r-card, var(--optima-radius-lg, 18px));
 	--sr-gap: 20px;
 }
 

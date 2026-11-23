@@ -33,3 +33,5 @@ if ( ! $optima_cards_purge ) {
 
 delete_option( 'optima_cards_settings' );
 delete_option( 'optima_cards_r3' );
+delete_option( 'optima_cards_people_db' );
+delete_option( 'optima_cards_people_note' );

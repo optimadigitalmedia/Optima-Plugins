@@ -10,10 +10,14 @@
  *
  * Format (every section optional):
  * {
+ *   "business": { "name", "legal_name", "business_type", "phone", "email", "street", "city", "region",
+ *                 "postal", "country", "price_range", "latitude", "longitude", "same_as": [ "https://..." ] },
  *   "team":    [ { "name", "role", "bio", "email", "military_branch", "photo", "order",
  *                  "practice_areas", "bio_url", "schema_id" } ],
- *   "reviews": { "business", "headline", "ask", "photo", "card_headline", "google_review_url",
- *                "background", "text_color", "accent", "heading_font", "body_font", "label_font" },
+ *   "reviews": { "business", "headline", "ask", "photo", "card_headline", "google_review_url", "google_place_id",
+ *                "background", "text_color", "accent", "heading_font", "body_font", "label_font",
+ *                "totals": { "checked": "YYYY-MM-DD", "profiles": { "google": { "rating", "count", "url" } } },
+ *                "items": [ { "platform", "author", "rating", "text", "date", "url" } ] },
  *   "chat":    { "name", "team", "notify", "book_url", "work_url", "photo_1", "photo_2" },
  *   "hours":   { "confirmed": true, "days": { "tuesday": [ ["09:00", "17:00"] ] } },
  *   "analytics": { "gtm": "GTM-XXXXXXX" },
@@ -32,8 +36,17 @@
  *                  "practices", "primary" } ],
  *   "law":       { "state": "FL", "states": [ "FL" ], "threshold": 1000000 },
  *   "languages": [ "en" ],
- *   "layout":    { "hero", "home_order", "practice_order", "blocks": {...}, "concept" }
+ *   "layout":    { "hero", "home_order", "practice_order", "blocks": {...}, "concept" },
+ *   "approved_plugins": [ "plugin-folder", { "plugin", "job", "owner", "decided": "YYYY-MM-DD" } ]
  * }
+ * "business" fills Optima Core's Business info, blank fields only, so anything
+ * typed there stays. "same_as" is a list of https links; anything else is dropped.
+ * "reviews" totals and items go to Optima Reviews when it can take them
+ * (Optima_Reviews_Theme): the newest check wins for totals, and reviews are only
+ * ever added. "google_place_id" fills Optima Reviews' place ID when it is blank
+ * (Optima_Reviews_Places); the API key never comes from the theme.
+ * "approved_plugins" is read live by Site health (Optima_Hub_Plugins, rule 51),
+ * never filled into a plugin.
  * "offices" fills Optima Core's office list (option optima_core_offices) by
  * office id, blanks only, and never removes an office. "law" fills Optima
  * Results' state preset and publishing threshold while they are unset or
@@ -94,6 +107,33 @@ final class Optima_Hub_Setup {
 		return array( 'use' => $use, 'skip' => $skip );
 	}
 
+	/**
+	 * The outside plugins this site has said yes to, from "approved_plugins"
+	 * (plugin-first rule 51). Each entry mirrors a dated entry in the site's
+	 * decisions log: either the plugin's folder name ("wp-rocket") or an object
+	 * { "plugin", "job", "owner", "decided" }. Site health reads it; nothing is filled.
+	 *
+	 * @param array|null $data The setup file, or null to read the theme's.
+	 * @return array<string, array{job:string, owner:string, decided:string}> Folder name => entry.
+	 */
+	public static function approved_plugins( ?array $data = null ): array {
+		$data = null === $data ? self::data() : $data;
+		$out  = array();
+		foreach ( (array) ( $data['approved_plugins'] ?? array() ) as $entry ) {
+			$entry = is_array( $entry ) ? $entry : array( 'plugin' => $entry );
+			$slug  = is_scalar( $entry['plugin'] ?? null ) ? sanitize_key( (string) $entry['plugin'] ) : '';
+			if ( '' === $slug ) {
+				continue;
+			}
+			$out[ $slug ] = array(
+				'job'     => is_scalar( $entry['job'] ?? null ) ? (string) $entry['job'] : '',
+				'owner'   => is_scalar( $entry['owner'] ?? null ) ? (string) $entry['owner'] : '',
+				'decided' => is_scalar( $entry['decided'] ?? null ) ? (string) $entry['decided'] : '',
+			);
+		}
+		return $out;
+	}
+
 	public static function run(): void {
 		if ( ! current_user_can( 'manage_options' ) || wp_doing_ajax() ) {
 			return;
@@ -104,6 +144,7 @@ final class Optima_Hub_Setup {
 		}
 		$done = (array) get_option( self::DONE, array() );
 		$jobs = array(
+			'business' => array( __CLASS__, 'business' ),
 			'team'    => array( __CLASS__, 'team' ),
 			'reviews' => array( __CLASS__, 'reviews' ),
 			'chat'    => array( __CLASS__, 'chat' ),
@@ -132,7 +173,7 @@ final class Optima_Hub_Setup {
 			}
 			// The reviews section reruns once after 0.4.4, when untouched defaults started counting as blank.
 			// The team section reruns once after release 2, when practice areas, the bio address and the schema id started filling.
-			$hash = md5( (string) wp_json_encode( $data[ $section ] ) . ( 'reviews' === $section ? '|defaults-blank' : '' ) . ( 'seo' === $section ? '|' . self::theme_version() : '' ) . ( 'team' === $section ? '|r2-profile-links' : '' ) );
+			$hash = md5( (string) wp_json_encode( $data[ $section ] ) . ( 'reviews' === $section ? self::reviews_hash_extra( $data[ $section ] ) : '' ) . ( 'seo' === $section ? '|' . self::theme_version() : '' ) . ( 'team' === $section ? '|r2-profile-links' : '' ) );
 			if ( ( $done[ $section ] ?? '' ) === $hash ) {
 				continue;
 			}
@@ -148,6 +189,41 @@ final class Optima_Hub_Setup {
 	}
 
 	/* ---------- sections ---------- */
+
+	/**
+	 * Business info (Optima Core). Fills blank fields only, so anything typed on
+	 * Business info stays. "same_as" takes a list of https profile links.
+	 */
+	private static function business( array $in ): bool {
+		if ( ! class_exists( 'Optima_Core_Business' ) || ! method_exists( 'Optima_Core_Business', 'fields' ) ) {
+			return false;
+		}
+		$keys = array_diff( array_keys( (array) Optima_Core_Business::fields() ), array( 'hours' ) );
+		$fill = array();
+		foreach ( $keys as $key ) {
+			if ( ! isset( $in[ $key ] ) ) {
+				continue;
+			}
+			if ( 'same_as' === $key ) {
+				$links = array();
+				foreach ( (array) $in[ $key ] as $url ) {
+					$url = is_scalar( $url ) ? esc_url_raw( trim( (string) $url ), array( 'https' ) ) : '';
+					if ( '' !== $url ) {
+						$links[] = $url;
+					}
+				}
+				$fill[ $key ] = implode( "\n", $links );
+			} elseif ( ! is_scalar( $in[ $key ] ) ) {
+				continue;
+			} elseif ( 'email' === $key ) {
+				$fill[ $key ] = sanitize_email( (string) $in[ $key ] );
+			} else {
+				$fill[ $key ] = sanitize_text_field( (string) $in[ $key ] );
+			}
+		}
+		self::fill_option( Optima_Core_Business::OPTION, $fill );
+		return true;
+	}
 
 	private static function team( array $people ): bool {
 		if ( ! post_type_exists( 'optima_team' ) || ! class_exists( 'Optima_Team' ) ) {
@@ -218,6 +294,28 @@ final class Optima_Hub_Setup {
 		return true;
 	}
 
+	/**
+	 * Extra text in the reviews section's run hash, so the section runs again
+	 * when something outside the file changes what it would do:
+	 * - "|defaults-blank": once after 0.4.4, when untouched defaults started counting as blank.
+	 * - "|totals-waiting": the totals carry a future "checked" date. When that day
+	 *   comes the text drops out, the hash changes and the totals apply.
+	 * - "|reviews-old": the file has totals, reviews or a place ID but Optima Reviews
+	 *   can't take them yet. Once it can, the section runs again.
+	 */
+	private static function reviews_hash_extra( array $in ): string {
+		$extra = '|defaults-blank';
+		$old   = ( ( ! empty( $in['totals'] ) || ! empty( $in['items'] ) ) && ! class_exists( 'Optima_Reviews_Theme' ) )
+			|| ( ! empty( $in['google_place_id'] ) && ! class_exists( 'Optima_Reviews_Places' ) );
+		if ( $old ) {
+			$extra .= '|reviews-old';
+		} elseif ( is_array( $in['totals'] ?? null ) && class_exists( 'Optima_Reviews_Theme' ) && method_exists( 'Optima_Reviews_Theme', 'is_future' )
+			&& Optima_Reviews_Theme::is_future( (string) ( $in['totals']['checked'] ?? '' ) ) ) {
+			$extra .= '|totals-waiting';
+		}
+		return $extra;
+	}
+
 	private static function reviews( array $in ): bool {
 		if ( ! class_exists( 'Optima_Reviews_Requests' ) ) {
 			return false;
@@ -239,6 +337,21 @@ final class Optima_Hub_Setup {
 				$saved['profiles']['google']['write_url'] = $write;
 				update_option( Optima_Reviews_Settings::OPTION, $saved );
 			}
+		}
+
+		// Totals and reviews Optima keeps track of. The newest check wins for totals;
+		// reviews are only ever added. See Optima_Reviews_Theme, when Optima Reviews has it.
+		if ( class_exists( 'Optima_Reviews_Theme' ) ) {
+			if ( ! empty( $in['totals'] ) && is_array( $in['totals'] ) && method_exists( 'Optima_Reviews_Theme', 'apply_totals' ) ) {
+				Optima_Reviews_Theme::apply_totals( $in['totals'] );
+			}
+			if ( ! empty( $in['items'] ) && is_array( $in['items'] ) && method_exists( 'Optima_Reviews_Theme', 'add_items' ) ) {
+				Optima_Reviews_Theme::add_items( array_values( $in['items'] ) );
+			}
+		}
+		// The place ID for the daily Google check. Not a secret; the API key never comes from the theme.
+		if ( ! empty( $in['google_place_id'] ) && is_scalar( $in['google_place_id'] ) && class_exists( 'Optima_Reviews_Places' ) && method_exists( 'Optima_Reviews_Places', 'fill_place_id' ) ) {
+			Optima_Reviews_Places::fill_place_id( (string) $in['google_place_id'] );
 		}
 		return true;
 	}

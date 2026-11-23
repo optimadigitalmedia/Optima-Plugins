@@ -178,7 +178,9 @@ final class Optima_Cards_Admin {
 		echo '</table>';
 
 		echo '<h2>People</h2>';
-		if ( Optima_Cards_Settings::people_on() ) {
+		if ( Optima_Cards_Settings::reading_people() ) {
+			self::people_from_profiles( $s, $n );
+		} elseif ( Optima_Cards_Settings::people_on() ) {
 			echo '<p>Each person\'s card reads their name, title, email and photo from their profile in People. Tick a profile to give them a card; the words below are the card\'s own.</p>';
 			$linked = array();
 			$legacy = array();
@@ -243,6 +245,12 @@ final class Optima_Cards_Admin {
 		self::field( "{$n}[links_base]", $s['links_base'], 'Links address', 'text', 'Default: links.' );
 		echo '</table>';
 
+		// Deleting the plugin keeps these settings unless this is ticked first (uninstall.php reads it).
+		echo '<h2>When the plugin is deleted</h2><table class="form-table" role="presentation">';
+		echo '<tr><th scope="row">Card and link settings</th><td><label><input type="hidden" name="' . esc_attr( $n ) . '[purge_on_uninstall]" value="0"><input type="checkbox" name="' . esc_attr( $n ) . '[purge_on_uninstall]" value="1"' . checked( ! empty( $s['purge_on_uninstall'] ), true, false ) . '> Delete them too</label>'
+			. '<p class="description">Off: deleting the plugin keeps the people, links and wording, so the cards come back as they were if it is put back. Business facts on Details, People profiles and photos are never deleted.</p></td></tr>';
+		echo '</table>';
+
 		submit_button( 'Save' );
 		echo '</form>';
 		// Rare and destructive: last on the screen, closed, behind a confirm step.
@@ -303,8 +311,11 @@ final class Optima_Cards_Admin {
 		$out['enable_links'] = empty( $in['enable_links'] ) ? 0 : 1;
 		$out['card_base']    = sanitize_title( $in['card_base'] ?? '' ) ? sanitize_title( $in['card_base'] ) : 'card';
 		$out['links_base']   = sanitize_title( $in['links_base'] ?? '' ) ? sanitize_title( $in['links_base'] ) : 'links';
+		$out['purge_on_uninstall'] = empty( $in['purge_on_uninstall'] ) ? 0 : 1;
 		$out['people']       = array();
-		if ( Optima_Cards_Settings::people_on() ) {
+		if ( Optima_Cards_Settings::reading_people() ) {
+			$out['people'] = self::save_profiles( (array) ( $old['people'] ?? array() ), (array) ( $in['profiles'] ?? array() ) );
+		} elseif ( Optima_Cards_Settings::people_on() ) {
 			$prev = array();
 			foreach ( (array) ( $old['people'] ?? array() ) as $p ) {
 				if ( ! empty( $p['profile'] ) ) {
@@ -350,6 +361,129 @@ final class Optima_Cards_Admin {
 		update_option( Optima_Cards_Settings::OPTION, $out, false );
 		wp_safe_redirect( self::url( array( 'saved' => 1 ) ) );
 		exit;
+	}
+
+	/**
+	 * The People part of the screen while cards read People: one row per live
+	 * profile. Whether they have a card, their name, title, photo, card phone,
+	 * card email and the card's words are typed once, in People (rules 45 and
+	 * 47), and show here read-only with a link there. The card keeps its own
+	 * settings: link name, share picture and Spotlight.
+	 *
+	 * @param array  $s Settings.
+	 * @param string $n The option name.
+	 */
+	private static function people_from_profiles( array $s, $n ) {
+		$moved = (int) get_option( 'optima_cards_people_note', 0 );
+		if ( $moved ) {
+			delete_option( 'optima_cards_people_note' );
+			echo '<div class="notice notice-info"><p>' . esc_html( sprintf( 'Each card now switches on in People. %d profiles got A business card switched on, and their card words where the profile had none. Nothing visitors see changed.', $moved ) ) . '</p></div>';
+		}
+		echo '<p>Who has a card, and what it says, is set on each person\'s profile in People (Shows on, and the Business card box). Here each card keeps its link name, share picture and Spotlight.</p>';
+		$add = class_exists( 'Optima_Team_Add' ) ? add_query_arg( 'card', 1, Optima_Team_Add::url() ) : admin_url( 'admin.php?page=optima-team&tab=add&card=1' );
+		$profiles = get_posts( array( 'post_type' => 'optima_team', 'post_status' => 'publish', 'posts_per_page' => 100, 'orderby' => 'menu_order title', 'order' => 'ASC' ) );
+		if ( ! $profiles ) {
+			echo '<p class="description">No profiles yet. <a href="' . esc_url( $add ) . '">Add a person</a> in People first.</p>';
+		}
+		$linked = array();
+		foreach ( (array) $s['people'] as $p ) {
+			if ( ! empty( $p['profile'] ) ) {
+				$linked[ (int) $p['profile'] ] = $p;
+			}
+		}
+		// People with a card first (rule 52 keeps what matters on top), each part in team order.
+		usort(
+			$profiles,
+			static function ( $a, $b ) {
+				return (int) ! Optima_Team::shows( Optima_Team::profile( (int) $a->ID ), 'card' ) <=> (int) ! Optima_Team::shows( Optima_Team::profile( (int) $b->ID ), 'card' );
+			}
+		);
+		foreach ( $profiles as $post ) {
+			$card = Optima_Team::card( (int) $post->ID );
+			if ( ! $card ) {
+				continue;
+			}
+			$p    = $linked[ $post->ID ] ?? array();
+			$edit = (string) get_edit_post_link( $post->ID );
+			$base = "{$n}[profiles][{$post->ID}]";
+			$on   = ! empty( $card['on'] );
+			$row  = Optima_Cards_Settings::merge_person( $card, $p );
+			echo '<details class="sh-box"' . ( $on ? ' open' : '' ) . '><summary style="cursor:pointer;font-weight:600">' . esc_html( $post->post_title ) . ( $on ? ' · card on' : ' · no card' ) . '</summary>';
+			Optima_Admin_UI::fact( 'Business card', $on ? 'On' : 'Off', $edit, 'People (Shows on)' );
+			if ( ! $on ) {
+				echo '<input type="hidden" name="' . esc_attr( $base . '[keep]' ) . '" value="1">';
+				echo '</details>';
+				continue;
+			}
+			Optima_Admin_UI::fact( 'Title', (string) $row['title'], $edit, 'the profile' );
+			Optima_Admin_UI::fact( 'Email', (string) $row['email'], $edit, 'the profile' );
+			Optima_Admin_UI::fact( 'Card phone', '' !== (string) $row['phone'] ? (string) $row['phone'] : 'Business phone', $edit, 'the profile' );
+			Optima_Admin_UI::fact( 'Photo', $row['photo_id'] ? 'Set' : '', $edit, 'the profile' );
+			Optima_Admin_UI::fact( 'Intro', (string) $row['intro'], $edit, 'the profile' );
+			Optima_Admin_UI::fact( 'Why talk to them', (string) $row['pick'], $edit, 'the profile' );
+			Optima_Admin_UI::fact( 'Tags', (string) $row['tags'], $edit, 'the profile' );
+			echo '<input type="hidden" name="' . esc_attr( $base . '[keep]' ) . '" value="1">';
+			echo '<table class="form-table" role="presentation">';
+			self::field( "{$base}[slug]", (string) $row['slug'], 'Link name', 'text', 'Lowercase, no spaces. "alex" makes /' . $s['card_base'] . '/alex/.' );
+			self::photo( "{$base}[share_id]", (int) ( $p['share_id'] ?? 0 ), 'Share picture', 'Optional. Shows when this person\'s card link is texted or posted. 1200 by 630 pixels.' );
+			self::spot_fields( $base, $p );
+			echo '</table></details>';
+		}
+		echo '<p><a class="button" href="' . esc_url( $add ) . '">Add a person with a card</a></p>';
+		$legacy = array_filter( (array) $s['people'], static fn( $p ) => empty( $p['profile'] ) && ! empty( $p['name'] ) );
+		if ( $legacy ) {
+			echo '<div class="sh-box"><p class="sh-label">Cards not linked to a profile yet</p><p class="sh-note">These cards were set up before People. They keep working; add a profile with the same name and switch on its card.</p><ul class="sh-list">';
+			foreach ( $legacy as $p ) {
+				echo '<li>' . esc_html( (string) $p['name'] ) . ' · /' . esc_html( $s['card_base'] . '/' . ( $p['slug'] ?? '' ) ) . '/</li>';
+			}
+			echo '</ul></div>';
+		}
+	}
+
+	/**
+	 * The card records after a save while cards read People. Pure apart from
+	 * the profile check: a record per profile on the form keeps the card's own
+	 * settings (link name, share picture, Spotlight) and every value saved
+	 * before (its old words stay for the fallback); records that point at no
+	 * profile are kept exactly as they were.
+	 *
+	 * @param array $old    The saved records.
+	 * @param array $posted The form's profiles[ id ] fields.
+	 */
+	public static function save_profiles( array $old, array $posted ) {
+		$prev = array();
+		$out  = array();
+		foreach ( $old as $p ) {
+			if ( ! empty( $p['profile'] ) ) {
+				$prev[ (int) $p['profile'] ] = (array) $p;
+			} elseif ( ! empty( $p['name'] ) ) {
+				$out[] = $p;
+			}
+		}
+		foreach ( $posted as $pid => $p ) {
+			$pid = absint( $pid );
+			if ( ! $pid || 'optima_team' !== get_post_type( $pid ) ) {
+				continue;
+			}
+			$p = (array) $p;
+			if ( ! isset( $prev[ $pid ] ) && ! isset( $p['slug'] ) ) {
+				continue; // No card and nothing saved for one: nothing to keep.
+			}
+			$rec = $prev[ $pid ] ?? array( 'profile' => $pid );
+			unset( $prev[ $pid ] );
+			if ( isset( $p['slug'] ) ) {
+				$rec['slug']     = sanitize_title( '' !== (string) $p['slug'] ? (string) $p['slug'] : (string) get_post_field( 'post_name', $pid ) );
+				$rec['share_id'] = absint( $p['share_id'] ?? 0 );
+				$rec             = array_merge( $rec, self::clean_spot( $p ) );
+			}
+			$rec['profile'] = $pid;
+			$out[]          = $rec;
+		}
+		// Records for profiles not on the form (a draft, or more than the list shows) stay as they were.
+		foreach ( $prev as $rec ) {
+			$out[] = $rec;
+		}
+		return $out;
 	}
 
 	public static function reset() {

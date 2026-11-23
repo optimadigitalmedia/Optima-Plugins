@@ -362,6 +362,53 @@ final class Optima_Results {
 		return (bool) apply_filters( 'optima_results_may_publish', $ok, $r );
 	}
 
+	/**
+	 * Does Optima Law print the results disclaimer? True when Optima Law is
+	 * active and its "Next to case results" place is ticked for its results
+	 * line. Optima Law then hands its firm-wide wording to disclaimer() through
+	 * the `optima_results_disclaimer` filter, and the Case results screen points
+	 * there instead of asking for approval of its own box. The threshold, the
+	 * consent date and every result's own approval still apply here.
+	 */
+	public static function law_disclaimer(): bool {
+		$on = class_exists( 'Optima_Law_Disclaimers' )
+			&& method_exists( 'Optima_Law_Disclaimers', 'places_for' )
+			&& in_array( 'results', (array) Optima_Law_Disclaimers::places_for( 'results' ), true );
+		/** Filter whether Optima Law's wording is the results disclaimer. */
+		return (bool) apply_filters( 'optima_results_law_disclaimer', $on );
+	}
+
+	/**
+	 * Where the disclaimer the site prints stands, wherever it is set.
+	 *
+	 * @return array{source:string, flagged:bool, approved:bool, by:string, on:string}
+	 *   source: 'law' (Optima Law's wording) or 'results' (this plugin's box).
+	 *   flagged: the dashboard shows it as not approved.
+	 */
+	public static function disclaimer_state(): array {
+		if ( self::law_disclaimer() && method_exists( 'Optima_Law_Disclaimers', 'status' ) ) {
+			$approval = method_exists( 'Optima_Law_Disclaimers', 'approval' ) ? (array) Optima_Law_Disclaimers::approval( 'results' ) : array();
+			$approved = 'approved' === Optima_Law_Disclaimers::status( 'results' );
+			return array(
+				'source'   => 'law',
+				// Optima Law asks the firm to approve every line it shows.
+				'flagged'  => ! $approved,
+				'approved' => $approved,
+				'by'       => $approved ? (string) ( $approval['by'] ?? '' ) : '',
+				'on'       => $approved && ! empty( $approval['at'] ) ? wp_date( 'Y-m-d', (int) $approval['at'] ) : '',
+			);
+		}
+		$s        = self::settings();
+		$approved = self::disclaimer_approved();
+		return array(
+			'source'   => 'results',
+			'flagged'  => self::disclaimer_flagged(),
+			'approved' => $approved,
+			'by'       => $approved ? $s['approver'] : '',
+			'on'       => $approved ? $s['approved_on'] : '',
+		);
+	}
+
 	/** The disclaimer printed next to every result. Never empty. */
 	public static function disclaimer(): string {
 		$s    = self::settings();

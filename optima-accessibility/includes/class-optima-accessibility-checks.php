@@ -42,11 +42,11 @@ final class Optima_Accessibility_Checks {
 		return array(
 			'contrast' => array(
 				'title' => __( 'Color contrast', 'optima-accessibility' ),
-				'how'   => __( 'Text and buttons read clearly against their background: at least 4.5 to 1 for normal text and 3 to 1 for large text and icons. Check each page template with a contrast checker in the browser, including hover and focus colors.', 'optima-accessibility' ),
+				'how'   => __( 'Text and icons stand out from the background: 4.5 to 1 for normal text, 3 to 1 for large text, hover and focus included.', 'optima-accessibility' ),
 			),
 			'keyboard' => array(
 				'title' => __( 'Keyboard use', 'optima-accessibility' ),
-				'how'   => __( 'Tab through each page template without a mouse. Every link, button, menu and form field can be reached and used, the focus ring is easy to see, and nothing traps the keyboard.', 'optima-accessibility' ),
+				'how'   => __( 'Every link, button, menu and form field works with the Tab key alone, with a clear focus ring and no traps.', 'optima-accessibility' ),
 			),
 		);
 	}
@@ -192,8 +192,22 @@ final class Optima_Accessibility_Checks {
 	 * Classic themes do. A block theme does only when its template for this
 	 * page has a level-1 title block or its own H1; many custom block themes
 	 * put the H1 in the page content instead.
+	 *
+	 * A classic theme that has a template printing no page title (for example
+	 * a private partner page whose pasted block carries the page's one H1) says
+	 * so with the optima_accessibility_template_prints_title filter, so that
+	 * page's own H1 is not flagged as a second one:
+	 *
+	 *     add_filter( 'optima_accessibility_template_prints_title', function ( $prints, $post ) {
+	 *         return 'page-templates/private-partner.php' === get_page_template_slug( $post ) ? false : $prints;
+	 *     }, 10, 2 );
 	 */
 	public static function template_prints_title( WP_Post $post ): bool {
+		return (bool) apply_filters( 'optima_accessibility_template_prints_title', self::block_template_prints_title( $post ), $post );
+	}
+
+	/** What the theme's templates say on their own: true on a classic theme, the template's markup on a block theme. */
+	private static function block_template_prints_title( WP_Post $post ): bool {
 		if ( ! function_exists( 'wp_is_block_theme' ) || ! wp_is_block_theme() || ! function_exists( 'get_block_template' ) ) {
 			return true;
 		}

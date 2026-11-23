@@ -77,7 +77,7 @@ final class Optima_Hub_Overview {
 	 * @return array{state:string, text:string, url:string}
 	 */
 	public static function status(): array {
-		$checks = array_merge( Optima_Hub_Health::checks(), Optima_Hub_Health::ai_checks() );
+		$checks = Optima_Hub_Health::every_check();
 		$total  = count( $checks );
 		$good   = count( array_filter( $checks, static fn( $c ) => 'good' === $c['state'] ) );
 		$bad    = count( array_filter( $checks, static fn( $c ) => 'bad' === $c['state'] ) );

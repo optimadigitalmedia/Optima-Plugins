@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.7.11.8 (2026-11-23)
+
+Brought in from upstream Build 0.8 to 0.17:
+- Site health has a Security group (rule 19): Failed-login limit (moved here from Basics), XML-RPC, File editing, Admins, Two-step login, Backups and Security headers. The rows read Optima Core's Spam protection switches (on, forced_off, xmlrpc_needed, editor_locked) and say when Optima Core is missing or wp-config.php keeps a switch off. Each row is ok or look, never a fix. Only people who can manage the site see the group, because it names admins (never their email). The copied report gets a SECURITY block.
+- Site health has an Outside plugins row (rule 51): every active plugin that is not an Optima plugin or Gravity Forms reads "outside the standard" (a look, never red) unless the theme's optima-setup.json lists its folder under approved_plugins.
+- Saved secrets survive a change of the site's security keys. The theme key and the Email token or password keep an 8-character fingerprint of the keys they were saved with (never the keys or the secret). When the keys change they read "can't be read, paste again" instead of silently empty: Site health shows a red Site email row or a red Theme updates row, and Updates says to paste the theme key again. Keys saved earlier get their fingerprint the first time they are read. The Email screen itself is unchanged.
+- A nightly form test, off until an operator turns it on in Build, Features: each ticked Gravity Forms form is sent around 2 am with made-up answers, its emails go out with [Test] in the subject, the test entry is deleted and add-on feeds are skipped. One miss is not an alarm; two failed nights in a row turn the Site health row red, list the form in the Inbox and email the operators, then once a week while it keeps failing. It waits on staging copies.
+- Site health has a Form emails sent row: how many Gravity Forms notifications went out or failed in the last 7 days, naming the last failure with email addresses taken out.
+- WordPress's own Site Health checks now run once a day with Build's daily check and are listed by name in a WordPress checks row, with items only the host can change set apart. WordPress's own badge stays in step.
+- Direct answers counts FAQs added the same day: a page's check stops counting as soon as the page is saved, its Optima AEO answers change, or the theme or Optima AEO is updated, and it is checked again within minutes.
+- Fill from theme takes a business section into Optima Core's Business info (blank fields only; same_as takes https links only).
+- Fill from theme hands reviews totals, items and google_place_id to Optima Reviews when it can take them (Optima_Reviews_Theme, Optima_Reviews_Places). The API key never comes from the theme.
+- The Review totals row says when the daily Google check has failed for three days, with the reason and a link to Review settings, and says "Google is checked every day" when it works.
+- New tests: tools/tests/build-secret-health.php, build-security.php, build-outside-plugins.php, build-form-mail.php and build-form-test.php.
+- Site health, Security: new row "Headers sent twice". Once a day the site loads its live home page and names any of the four browser protections (Strict-Transport-Security, X-Content-Type-Options, X-Frame-Options, Referrer-Policy) that arrive twice, and says to pick one owner: the host/CDN or Optima Core's switch. Never red.
+- The daily header check now uses WordPress's safe request, runs once a day, and is skipped on a copy on someone's own computer.
+- Site health, Security: new row "Visitor address" that says where visitor addresses come from (Cloudflare's header, a named proxy, or the server), and warns when a Cloudflare header arrives from outside Cloudflare's ranges.
+- Site health: new row "Environment type" on WP Engine installs that do not set it: "Set the environment type on this install (production or staging) in WP Engine, so staging copies are always treated as staging." A look, never red.
+- Inbox: new "Sent their details" list from Optima Team, for people who sent their details by link and wait for an OK. Each row opens the profile and says when it was sent.
+
 ## 0.7.11.7 (2026-11-23)
 
 - The admin menu icon is now Optima's tilted arrow (the logo's arrow), replacing a lightning bolt that was never Optima's mark.

@@ -4,7 +4,9 @@
      --optima-a11y-gap      space between blocks (default 1em)
      --optima-a11y-radius   button corners (default 980px, a pill)
      --optima-a11y-border   button border color (default currentColor)
-     --optima-a11y-muted    the "last reviewed" line color (default inherits) */
+     --optima-a11y-muted    the "last reviewed" line color (default inherits)
+   Order for each value: the variable above when the theme sets it, then the
+   theme's DESIGN.md (the --optima-* variables Optima Build prints), then the default. */
 
 .optima-a11y { font: inherit; color: inherit; }
 .optima-a11y > * + * { margin-top: var(--optima-a11y-gap, 1em); }
@@ -16,15 +18,15 @@
 .optima-a11y-button {
 	display: inline-flex; align-items: center; justify-content: center;
 	min-height: 44px; padding: .55em 1.4em;
-	border: 2px solid var(--optima-a11y-border, currentColor);
-	border-radius: var(--optima-a11y-radius, 980px);
+	border: 2px solid var(--optima-a11y-border, var(--optima-accent, currentColor));
+	border-radius: var(--optima-a11y-radius, var(--optima-button-radius, 980px));
 	color: inherit; font-weight: 600; text-decoration: none;
 	overflow-wrap: anywhere; text-align: center;
 	transition: background-color .15s ease;
 }
 .optima-a11y-button:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
 .optima-a11y-button:focus-visible, .optima-a11y-link:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
-.optima-a11y-reviewed { color: var(--optima-a11y-muted, inherit); font-size: .9em; }
+.optima-a11y-reviewed { color: var(--optima-a11y-muted, var(--optima-ink-2, inherit)); font-size: .9em; }
 .optima-a11y-footer { text-align: center; margin: 0; padding: 12px 16px; font-size: .9em; }
 .optima-a11y-footer .optima-a11y-link { display: inline-flex; align-items: center; min-height: 44px; color: inherit; }
 

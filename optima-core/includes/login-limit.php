@@ -23,10 +23,12 @@
  *  - `optima_core_login_limit_lockout` (int seconds, 900): how long a lockout lasts.
  *  - `optima_core_login_limit_skip` (bool, false; $username, $ip): leave this attempt alone.
  *  - `optima_core_login_limit_proxy_header` (string, ''): the $_SERVER key of a
- *    proxy header to trust for the visitor's address. Set it only when the site
- *    really sits behind that proxy, for Cloudflare 'HTTP_CF_CONNECTING_IP'.
- *    Anyone can send the header to a site that is not behind it, so the default
- *    is REMOTE_ADDR.
+ *    proxy header to trust outright for the visitor's address. Left empty, the
+ *    address is optima_client_ip() (includes/client-ip.php), which already
+ *    trusts Cloudflare's header only when the request came from Cloudflare's
+ *    own ranges, so a site behind Cloudflare needs nothing set. Set it only
+ *    when the site really sits behind another proxy that sends that header:
+ *    anyone can send a header to a site that is not behind it.
  *  - `optima_core_login_limit_ip` (string): the address used, last word.
  *
  * @package Optima_Core
@@ -65,9 +67,9 @@ final class Optima_Core_Login_Limit {
 		return max( 60, (int) apply_filters( 'optima_core_login_limit_lockout', 15 * MINUTE_IN_SECONDS ) );
 	}
 
-	/** The visitor's address: REMOTE_ADDR, or the proxy header the site chose to trust. */
+	/** The visitor's address: optima_client_ip(), or the proxy header the site chose to trust. */
 	public static function ip(): string {
-		$ip     = (string) ( $_SERVER['REMOTE_ADDR'] ?? '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$ip     = function_exists( 'optima_client_ip' ) ? optima_client_ip() : (string) ( $_SERVER['REMOTE_ADDR'] ?? '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 		$header = (string) apply_filters( 'optima_core_login_limit_proxy_header', '' );
 		if ( '' !== $header && ! empty( $_SERVER[ $header ] ) ) {
 			$from = trim( explode( ',', (string) $_SERVER[ $header ] )[0] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput

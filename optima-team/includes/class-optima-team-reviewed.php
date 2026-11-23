@@ -274,7 +274,38 @@ final class Optima_Team_Reviewed {
 
 	/* ---------- on the site ---------- */
 
-	/** reviewedBy and lastReviewed on the page's node, and the reviewer's Person node. */
+	/** Node types that describe a page: reviewedBy and lastReviewed sit on these. */
+	const PAGE_TYPES = array( 'WebPage', 'ProfilePage', 'AboutPage', 'ContactPage', 'CollectionPage', 'ItemPage', 'FAQPage', 'QAPage', 'MedicalWebPage' );
+
+	/**
+	 * The graph keys that get reviewedBy: the article, and every node whose type
+	 * describes a page (Optima Core's webpage, Team's ProfilePage, or a page node
+	 * a theme's setup file lists under its own key).
+	 *
+	 * @param array $graph Optima Core graph, keyed.
+	 */
+	public static function stamp_keys( array $graph ): array {
+		$keys = array();
+		foreach ( $graph as $key => $node ) {
+			if ( ! is_array( $node ) ) {
+				continue;
+			}
+			$types = isset( $node['@type'] ) ? (array) $node['@type'] : array();
+			if ( 'article' === $key || array_intersect( $types, self::PAGE_TYPES ) ) {
+				$keys[] = $key;
+			}
+		}
+		return $keys;
+	}
+
+	/**
+	 * reviewedBy and lastReviewed on the page's node, and the reviewer's Person
+	 * node. Optima Core adds its WebPage node after the optima_schema_graph
+	 * filter, so on a plain page there is no node yet: this asks Core's own
+	 * builder for it first (Optima_Schema::add_webpage() steps aside when a page
+	 * node is already there, so it is never added twice). Not on a theme's exact
+	 * page graph, which lists its own nodes.
+	 */
 	public static function schema( $graph ) {
 		if ( ! is_singular() || ! is_array( $graph ) ) {
 			return $graph;
@@ -283,12 +314,14 @@ final class Optima_Team_Reviewed {
 		if ( ! $r['who'] ) {
 			return $graph;
 		}
-		foreach ( array( 'webpage', 'article', 'optima_team_page' ) as $key ) {
-			if ( isset( $graph[ $key ] ) && is_array( $graph[ $key ] ) ) {
-				$graph[ $key ]['reviewedBy'] = array( '@id' => Optima_Team_Schema::person_id( $r['who'] ) );
-				if ( '' !== $r['when'] ) {
-					$graph[ $key ]['lastReviewed'] = $r['when'];
-				}
+		$exact = class_exists( 'Optima_SEO_Setup' ) && method_exists( 'Optima_SEO_Setup', 'exact' ) && Optima_SEO_Setup::exact();
+		if ( ! self::stamp_keys( $graph ) && ! $exact && class_exists( 'Optima_Schema' ) && method_exists( 'Optima_Schema', 'add_webpage' ) ) {
+			$graph = Optima_Schema::add_webpage( $graph );
+		}
+		foreach ( self::stamp_keys( $graph ) as $key ) {
+			$graph[ $key ]['reviewedBy'] = array( '@id' => Optima_Team_Schema::person_id( $r['who'] ) );
+			if ( '' !== $r['when'] ) {
+				$graph[ $key ]['lastReviewed'] = $r['when'];
 			}
 		}
 		if ( ! isset( $graph[ 'person_' . $r['who'] ] ) ) {

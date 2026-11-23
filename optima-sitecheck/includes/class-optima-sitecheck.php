@@ -61,7 +61,7 @@ final class Optima_Sitecheck {
 	public static function settings(): array {
 		$s = (array) get_option( self::OPTION, array() );
 		return array(
-			'notify'     => (string) ( $s['notify'] ?? get_option( 'admin_email' ) ),
+			'notify'     => (string) ( $s['notify'] ?? '' ), // Blank: notify_to() picks the shared address.
 			'lead_name'  => (string) ( $s['lead_name'] ?? '' ),
 			'lead_photo' => (string) ( $s['lead_photo'] ?? '' ),
 			'book_url'   => (string) ( $s['book_url'] ?? '' ),
@@ -86,6 +86,20 @@ final class Optima_Sitecheck {
 		return $s['retention'];
 	}
 
+	/**
+	 * Where the team's copy goes, and the reply address on the report: this
+	 * screen's own address when one is set, else the site's shared notice
+	 * address (optima_core_notice_email(), once Optima Core has one), else the
+	 * site's admin email. A blank field used to send the team nothing.
+	 */
+	public static function notify_to(): string {
+		$own = sanitize_email( self::settings()['notify'] );
+		if ( '' !== $own ) {
+			return $own;
+		}
+		return sanitize_email( function_exists( 'optima_core_notice_email' ) ? (string) optima_core_notice_email() : (string) get_option( 'admin_email' ) );
+	}
+
 	/** Google's speed tool key: wp-config's OPTIMA_SITECHECK_PSI_KEY wins over the setting. */
 	public static function psi_key(): string {
 		return defined( 'OPTIMA_SITECHECK_PSI_KEY' ) ? (string) OPTIMA_SITECHECK_PSI_KEY : self::settings()['psi_key'];
@@ -102,7 +116,9 @@ final class Optima_Sitecheck {
 		if ( '' !== $u ) {
 			return $u;
 		}
-		return function_exists( 'optima_booking_url' ) ? (string) optima_booking_url() : home_url( '/contact/' );
+		// The booking page, or Contact when there is none (or it was removed later).
+		$booking = function_exists( 'optima_booking_url' ) ? (string) optima_booking_url() : '';
+		return '' !== $booking ? $booking : home_url( '/contact/' );
 	}
 
 	public static function register_type(): void {
@@ -251,6 +267,11 @@ final class Optima_Sitecheck {
 		);
 	}
 
+	/** Clear the per-email check count, as the privacy eraser does when it erases that email. */
+	public static function forget_email( string $email ): void {
+		delete_transient( self::limit_key( 'em' . strtolower( trim( $email ) ) ) );
+	}
+
 	/** The transient for a limit. The key is a salted hash, so no address or email is stored. */
 	private static function limit_key( string $key ): string {
 		return 'optima_ssc_' . md5( $key . wp_salt( 'nonce' ) );
@@ -311,7 +332,7 @@ final class Optima_Sitecheck {
 		if ( ! is_email( $email ) ) {
 			return new WP_Error( 'optima_ssc_email', __( 'Add your email so we can send the full report.', 'optima-sitecheck' ), array( 'status' => 400 ) );
 		}
-		$ip     = (string) ( $_SERVER['REMOTE_ADDR'] ?? '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- hashed, never stored.
+		$ip     = function_exists( 'optima_client_ip' ) ? optima_client_ip() : (string) ( $_SERVER['REMOTE_ADDR'] ?? '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- hashed, never stored.
 		$limits = array(
 			// Per visitor first, so someone over their own limit never uses up the site's allowance.
 			array( 'ip' . $ip, 3, HOUR_IN_SECONDS ),

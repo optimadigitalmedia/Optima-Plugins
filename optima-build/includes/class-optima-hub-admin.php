@@ -391,6 +391,9 @@ final class Optima_Hub_Admin {
 		<?php endif; ?>
 
 		<?php
+		if ( $operator && class_exists( 'Optima_Hub_Form_Test' ) ) {
+			Optima_Hub_Form_Test::render_settings();
+		}
 		$log = Optima_Hub_Features::recent_log();
 		if ( $operator && $log ) :
 			$verbs = array( 'on' => __( 'Turned on', 'optima-build' ), 'off' => __( 'Turned off', 'optima-build' ), 'back' => __( 'Went back a version', 'optima-build' ), 'channel' => __( 'Release channel', 'optima-build' ), 'update' => __( 'Updated', 'optima-build' ) );
@@ -576,8 +579,10 @@ final class Optima_Hub_Admin {
 		$ai     = Optima_Hub_Health::ai_checks();
 		$score  = count( array_filter( $ai, static fn( $c ) => 'good' === $c['state'] ) );
 		$basics = Optima_Hub_Health::checks();
+		$secure = Optima_Hub_Health::security_checks();
 		$search = self::search_checks();
 		$bgood  = count( array_filter( $basics, static fn( $c ) => 'good' === $c['state'] ) );
+		$xgood  = count( array_filter( $secure, static fn( $c ) => 'good' === $c['state'] ) );
 		$sgood  = count( array_filter( $search, static fn( $c ) => 'good' === $c['status'] ) );
 		$status = Optima_Hub_Overview::status();
 		?>
@@ -604,6 +609,9 @@ final class Optima_Hub_Admin {
 			<div class="sh-status is-<?php echo esc_attr( $status['state'] ); ?>"><span class="sh-dot" aria-hidden="true"></span><p class="sh-value"><?php echo esc_html( $status['text'] ); ?></p></div>
 			<ul>
 				<li><a href="#basics"><?php echo esc_html( sprintf( /* translators: 1: passed, 2: total */ __( 'Basics %1$d of %2$d', 'optima-build' ), $bgood, count( $basics ) ) ); ?></a></li>
+				<?php if ( $secure ) : ?>
+					<li><a href="#security"><?php echo esc_html( sprintf( /* translators: 1: passed, 2: total */ __( 'Security %1$d of %2$d', 'optima-build' ), $xgood, count( $secure ) ) ); ?></a></li>
+				<?php endif; ?>
 				<?php if ( $search ) : ?>
 					<li><a href="#search"><?php echo esc_html( sprintf( /* translators: 1: passed, 2: total */ __( 'Search %1$d of %2$d', 'optima-build' ), $sgood, count( $search ) ) ); ?></a></li>
 				<?php endif; ?>
@@ -616,6 +624,14 @@ final class Optima_Hub_Admin {
 			<h2><?php echo esc_html( sprintf( /* translators: 1: passed, 2: total */ __( '%1$d of %2$d good', 'optima-build' ), $bgood, count( $basics ) ) ); ?></h2>
 		</div>
 		<?php self::check_grid( $basics ); ?>
+		<?php if ( $secure ) : ?>
+			<div class="sh-section-head" id="security">
+				<p class="sh-eyebrow"><?php esc_html_e( 'Security', 'optima-build' ); ?></p>
+				<h2><?php echo esc_html( sprintf( /* translators: 1: passed, 2: total */ __( '%1$d of %2$d good', 'optima-build' ), $xgood, count( $secure ) ) ); ?></h2>
+				<p class="sh-note"><?php esc_html_e( 'The security baseline every Optima site runs. Optima Core sets the switches in Spam protection; these rows only read.', 'optima-build' ); ?></p>
+			</div>
+			<?php self::check_grid( $secure ); ?>
+		<?php endif; ?>
 		<?php
 		if ( $search ) {
 			?>
@@ -689,14 +705,14 @@ final class Optima_Hub_Admin {
 
 	/** The whole Site health report as plain text (every check, the plugins, the theme). */
 	public static function report_text(): string {
-		return self::health_report( Optima_Hub_Health::checks(), self::search_checks(), Optima_Hub_Health::ai_checks() );
+		return self::health_report( Optima_Hub_Health::checks(), self::search_checks(), Optima_Hub_Health::ai_checks(), Optima_Hub_Health::security_checks() );
 	}
 
 	/**
 	 * The whole Site health page as plain text: one line per check, then the
 	 * active Optima plugins with versions. Built for pasting into a chat.
 	 */
-	private static function health_report( array $basics, array $search, array $ai ): string {
+	private static function health_report( array $basics, array $search, array $ai, array $security = array() ): string {
 		$mark  = static fn( string $state ): string => 'good' === $state ? '[ok]  ' : ( 'bad' === $state ? '[fix] ' : '[look]' );
 		$lines = array(
 			sprintf( 'Optima Build site health: %s (%s)', wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES ), home_url( '/' ) ),
@@ -706,6 +722,13 @@ final class Optima_Hub_Admin {
 		);
 		foreach ( $basics as $c ) {
 			$lines[] = $mark( $c['state'] ) . ' ' . $c['label'] . ': ' . $c['value'] . '. ' . $c['note'];
+		}
+		if ( $security ) {
+			$lines[] = '';
+			$lines[] = 'SECURITY';
+			foreach ( $security as $c ) {
+				$lines[] = $mark( $c['state'] ) . ' ' . $c['label'] . ': ' . $c['value'] . '. ' . $c['note'];
+			}
 		}
 		if ( $search ) {
 			$lines[] = '';

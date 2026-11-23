@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.16.0 (2026-11-23)
+
+Brought in from 0.1.8 to 0.1.16:
+- Ships visitor-data.json, so Optima Core's privacy draft lists the one browser storage item Hours uses (optimaHoursBar, which remembers a closed notice bar until the tab is closed) and notes that closing the bar is passed to Optima Analytics when it is on.
+
 ## 0.1.8.14 (2026-11-20)
 
 - Shared admin kit: the four Optima Law screens are filed in the menu (three under Content, form entries under Build).

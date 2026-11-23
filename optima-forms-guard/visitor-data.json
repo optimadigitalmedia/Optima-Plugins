@@ -1,6 +1,14 @@
 {
   "plugin": "optima-forms-guard",
-  "items": [],
+  "items": [
+    {
+      "what": "The Cloudflare Turnstile answer from the visitor's browser and the visitor's IP address, sent to check that a form was filled in by a person. Cloudflare's script on the form page reads browser signals to make that answer.",
+      "where": "Sent from the visitor's browser and from this website to Cloudflare. This website does not store them.",
+      "kept": "Not kept by this website",
+      "shared": "Cloudflare (Turnstile)",
+      "when": "only when the web team set the Turnstile keys in wp-config.php, and only on pages that show a form. Turnstile is a security check that keeps spam out of the forms, not tracking or advertising, so it runs as a strictly necessary (functional) part of the form without waiting for cookie consent."
+    }
+  ],
   "cookies": [],
-  "notes": "Optima Forms Guard keeps no information about visitors and makes no calls to other services. It checks Gravity Forms submissions for spam with hidden fields on the form and keeps only a monthly count of blocked ones (the last 13 months, with nothing about who sent them). A blocked submission is refused before it is saved. A message it marks as spam because of its links or wording stays in that form's Spam folder as Gravity Forms' own data, and a file sent to a hidden upload field is dropped before it is saved."
+  "notes": "Optima Forms Guard keeps no information about visitors. It checks Gravity Forms submissions for spam with hidden fields on the form and keeps only a monthly count of blocked ones (the last 13 months, with nothing about who sent them). A blocked submission is refused before it is saved. A message it marks as spam because of its links or wording, or because it failed the optional Cloudflare Turnstile check, stays in that form's Spam folder as Gravity Forms' own data, and a file sent to a hidden upload field is dropped before it is saved. It makes no calls to other services unless the optional Turnstile check is turned on (see the item above)."
 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.13.0 (2026-11-23)
+
+Brought in from 0.2.4 to 0.2.13:
+- "Email new checks to" is an optional override. When it is blank, the team's copy and the report's reply address go to the site's admin email (or the site's shared notice address once Optima Core has one). Before, a field saved blank sent the team nothing. An address already saved here keeps working.
+- The Book a call button is never empty: when the booking page is missing or was removed, it goes to the Contact page.
+- Erasing a person's data with WordPress's Erase Personal Data tool now also clears the finishing jobs of their deleted checks and the count that limits checks per email.
+- The site check's limits now count each visitor by their real address behind Cloudflare (Optima Core's `optima_client_ip()`), instead of Cloudflare's server address. Without Optima Core it works as before.
+
 ## 0.2.4.12 (2026-11-20)
 
 - Ships visitor-data.json, so Optima Core's privacy draft lists the site check records (90 days by default, deleted with the plugin), the address sent to Google PageSpeed Insights, and the hashed IP and email limits.

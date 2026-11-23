@@ -67,6 +67,10 @@ final class Optima_Forms_Guard_Admin {
 		/* translators: 1: blocked this month, 2: blocked in the last year */
 		echo '<p class="sh-note">' . esc_html( sprintf( '%1$d blocked this month, %2$d in the last year.', $month, $year ) ) . '</p>';
 		echo '</section>';
+		$turnstile = Optima_Forms_Guard::turnstile_status();
+		echo '<section class="sh-box sh-check is-' . esc_attr( (string) $turnstile['state'] ) . '"><p class="sh-label">' . esc_html( (string) $turnstile['label'] ) . '</p>';
+		echo '<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span>' . esc_html( (string) $turnstile['value'] ) . '</p>';
+		echo '<p class="sh-note">' . esc_html( (string) $turnstile['note'] ) . '</p></section>';
 		$upload = Optima_Forms_Guard::upload_check();
 		echo '<section class="sh-box sh-check is-' . esc_attr( (string) $upload['state'] ) . '"><p class="sh-label">' . esc_html( (string) $upload['label'] ) . '</p>';
 		echo '<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span>' . esc_html( (string) $upload['value'] ) . '</p>';

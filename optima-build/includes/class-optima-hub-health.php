@@ -12,41 +12,100 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class Optima_Hub_Health {
 
-	const SCAN_KEY  = 'optima_hub_answer_scan_v2';
+	const SCAN_KEY  = 'optima_hub_answer_scan_v3'; // The last background run: when, and how many pages it tried and loaded. v3: counts come from the page rows now.
 	const NAV_KEY   = 'optima_hub_nav_pages'; // Page IDs linked from the home page's menus, in order. // v2 (0.4.9): new page choice, so old counts are dropped.
 	const SCAN_HOOK = 'optima_hub_answer_scan';
-	const SEEN_KEY  = 'optima_hub_answer_seen';
+	const SEEN_KEY  = 'optima_hub_answer_seen'; // Page ID => array( f: has FAQPage, d: day checked, t: time checked, v: theme_stamp(), stale: set when the page's FAQs change ).
+	const FAQ_META  = '_optima_aeo_faqs'; // Optima AEO's answers (Optima_AEO_FAQ::META). Saving them doesn't touch post_modified.
 
 	/** Host suffixes that only ever serve a host's staging or temporary copy of a site. */
 	const STAGING_HOSTS = array( '.wpenginepowered.com', '.wpengine.com', '.kinsta.cloud', '.flywheelsites.com', '.pantheonsite.io', '.cloudwaysapps.com' );
 
+	/** @var string|null */
+	private static $stamp = null;
+
 	public static function boot(): void {
 		add_action( self::SCAN_HOOK, array( __CLASS__, 'run_scan' ) );
 		add_action( 'template_redirect', array( __CLASS__, 'watch_page' ), 99 );
+		foreach ( array( 'added_post_meta', 'updated_post_meta', 'deleted_post_meta' ) as $hook ) {
+			add_action( $hook, array( __CLASS__, 'meta_changed' ), 10, 3 );
+		}
+	}
+
+	/**
+	 * What every page check is tied to: the active theme (and its parent) and
+	 * Optima AEO, each with its version. A theme update changes what pages print,
+	 * so a check made before it no longer counts (a client staging site: a theme
+	 * update added FAQs and the morning checks kept saying 0 of 11).
+	 */
+	public static function theme_stamp(): string {
+		if ( null === self::$stamp ) {
+			$theme  = wp_get_theme();
+			$parent = $theme->parent();
+			$raw    = $theme->get_stylesheet() . '@' . $theme->get( 'Version' );
+			$raw   .= $parent ? '/' . $parent->get_stylesheet() . '@' . $parent->get( 'Version' ) : '';
+			$raw   .= defined( 'OPTIMA_AEO_VERSION' ) ? '+aeo@' . OPTIMA_AEO_VERSION : '';
+			self::$stamp = substr( md5( $raw ), 0, 10 );
+		}
+		return self::$stamp;
+	}
+
+	/**
+	 * Whether a page's saved check still describes the page: made with the
+	 * current theme, after the page was last saved, and before its FAQs changed.
+	 */
+	private static function row_fresh( $row, WP_Post $page ): bool {
+		return is_array( $row ) && ! empty( $row['t'] ) && empty( $row['stale'] )
+			&& self::theme_stamp() === ( $row['v'] ?? '' )
+			&& (int) get_post_modified_time( 'U', true, $page ) <= (int) $row['t'];
+	}
+
+	/** Optima AEO's answers on a page changed: its saved check no longer counts. */
+	public static function meta_changed( $meta_id, $object_id, $meta_key ): void {
+		if ( self::FAQ_META !== $meta_key ) {
+			return;
+		}
+		$seen = (array) get_option( self::SEEN_KEY, array() );
+		$id   = (int) $object_id;
+		if ( isset( $seen[ $id ] ) && is_array( $seen[ $id ] ) && empty( $seen[ $id ]['stale'] ) ) {
+			$seen[ $id ]['stale'] = true;
+			update_option( self::SEEN_KEY, $seen, false );
+		}
+	}
+
+	/** Save one page's check, reading the list fresh so a check running alongside isn't lost. */
+	private static function note_page( int $id, bool $faq ): void {
+		$seen        = (array) get_option( self::SEEN_KEY, array() );
+		$seen[ $id ] = array( 'f' => $faq, 'd' => gmdate( 'Y-m-d' ), 't' => time(), 'v' => self::theme_stamp() );
+		update_option( self::SEEN_KEY, $seen, false );
+	}
+
+	/** Whether a page's HTML carries FAQPage schema. */
+	private static function has_faq( string $html ): bool {
+		return (bool) preg_match( '/"@type"\s*:\s*(\[[^\]]*)?"FAQPage"/', $html );
 	}
 
 	/**
 	 * Many hosts and firewalls stop a site from loading its own pages, which
 	 * leaves the background scan stuck. So when a visitor opens a page, note
-	 * whether it carries FAQPage, at most once a day per page. The scan falls
-	 * back to these notes.
+	 * whether it carries FAQPage: at most once a day per page, and again as
+	 * soon as the page, its FAQs or the theme change.
 	 */
 	public static function watch_page(): void {
 		if ( is_admin() || ! is_page() || 'GET' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) || is_preview() ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- compared only.
 			return;
 		}
-		$id    = (int) get_queried_object_id();
-		$seen  = (array) get_option( self::SEEN_KEY, array() );
-		$today = gmdate( 'Y-m-d' );
-		if ( ! $id || ( isset( $seen[ $id ]['d'] ) && $today === $seen[ $id ]['d'] ) ) {
+		$id   = (int) get_queried_object_id();
+		$page = $id ? get_post( $id ) : null;
+		$seen = (array) get_option( self::SEEN_KEY, array() );
+		$row  = $seen[ $id ] ?? null;
+		if ( ! $page instanceof WP_Post || ( gmdate( 'Y-m-d' ) === ( $row['d'] ?? '' ) && self::row_fresh( $row, $page ) ) ) {
 			return;
 		}
 		ob_start(
-			static function ( $html ) use ( $id, $today ) {
+			static function ( $html ) use ( $id ) {
 				if ( is_string( $html ) && false !== stripos( $html, '</html>' ) ) {
-					$seen        = (array) get_option( self::SEEN_KEY, array() );
-					$seen[ $id ] = array( 'f' => (bool) preg_match( '/"@type"\s*:\s*(\[[^\]]*)?"FAQPage"/', $html ), 'd' => $today, 't' => time() );
-					update_option( self::SEEN_KEY, $seen, false );
+					self::note_page( $id, self::has_faq( $html ) );
 					if ( (int) get_option( 'page_on_front' ) === $id ) {
 						self::note_nav( $html );
 					}
@@ -56,52 +115,62 @@ final class Optima_Hub_Health {
 		);
 	}
 
-	/** What visitors' page views showed in the last 30 days, or null when there are none. */
-	private static function seen_scan(): ?array {
-		$found   = 0;
-		$checked = 0;
-		$time    = 0;
-		$cut     = strtotime( '-30 days' );
-		$main    = array_map( 'intval', wp_list_pluck( self::main_pages(), 'ID' ) );
-		foreach ( (array) get_option( self::SEEN_KEY, array() ) as $id => $row ) {
-			$t = (int) ( $row['t'] ?? strtotime( (string) ( $row['d'] ?? '' ) ) );
-			if ( ! $t || $t < $cut || ! in_array( (int) $id, $main, true ) || 'publish' !== get_post_status( (int) $id ) ) {
-				continue;
-			}
-			++$checked;
-			$found += empty( $row['f'] ) ? 0 : 1;
-			$time   = max( $time, $t );
-		}
-		return $checked ? array( 'found' => $found, 'checked' => $checked, 'time' => $time ) : null;
-	}
-
 	/**
 	 * Which key pages print FAQ schema. Themes and plugins all do FAQs their
-	 * own way, so this looks at what the pages actually send: it loads up to
-	 * 15 of the main pages from the site itself (in the background, through
-	 * WP-Cron) and counts those carrying FAQPage. Cached for 12 hours.
+	 * own way, so this looks at what the pages actually send: each of up to 15
+	 * main pages is loaded by a visitor or by the site itself (in the background,
+	 * through WP-Cron), and the count is made fresh from those checks each time.
+	 * A page is checked at most once a day while it stays the same; a page that
+	 * changed (saved, FAQs edited, theme updated) is left out of the count and
+	 * checked again within a few minutes.
 	 *
-	 * @return array{found:int, checked:int, time:int}|null Null while the first scan runs.
+	 * @return array{found:int, checked:int, time:int, oldest:int, changed:int, blocked:bool}|null Null while the first checks run.
 	 */
 	public static function answer_scan(): ?array {
-		$scan = get_transient( self::SCAN_KEY );
-		if ( is_array( $scan ) && ! empty( $scan['checked'] ) ) {
-			return $scan;
+		$seen  = (array) get_option( self::SEEN_KEY, array() );
+		$today = gmdate( 'Y-m-d' );
+		$cut   = time() - 30 * DAY_IN_SECONDS;
+		$out   = array( 'found' => 0, 'checked' => 0, 'time' => 0, 'oldest' => 0, 'changed' => 0 );
+		$due   = false; // A page changed or has no recent check.
+		$old   = false; // A page was last checked before today.
+		foreach ( self::main_pages() as $p ) {
+			$row = $seen[ (int) $p->ID ] ?? null;
+			if ( ! self::row_fresh( $row, $p ) ) {
+				$due             = true;
+				$out['changed'] += is_array( $row ) ? 1 : 0;
+				continue;
+			}
+			$t = (int) $row['t'];
+			if ( $t < $cut ) {
+				$due = true;
+				continue;
+			}
+			$old            = $old || $today !== ( $row['d'] ?? '' );
+			++$out['checked'];
+			$out['found']  += empty( $row['f'] ) ? 0 : 1;
+			$out['time']    = max( $out['time'], $t );
+			$out['oldest']  = $out['oldest'] ? min( $out['oldest'], $t ) : $t;
 		}
-		$seen = self::seen_scan();
-		if ( $seen ) {
-			return $seen;
+
+		// The last background run. Kept 12 hours when it could load pages, 30
+		// minutes when it couldn't (often a staging password).
+		$run    = get_transient( self::SCAN_KEY );
+		$failed = is_array( $run ) && ! empty( $run['tried'] ) && empty( $run['loaded'] );
+		$again  = is_array( $run ) && ! $failed && time() - (int) ( $run['time'] ?? 0 ) >= 2 * MINUTE_IN_SECONDS;
+		if ( ( ( $due || $old ) && ! is_array( $run ) ) || ( $due && $again ) ) {
+			if ( ! wp_next_scheduled( self::SCAN_HOOK ) ) {
+				wp_schedule_single_event( time(), self::SCAN_HOOK );
+				spawn_cron();
+			}
 		}
-		if ( is_array( $scan ) ) {
-			return $scan;
+		$out['blocked'] = $failed; // The site couldn't load its own pages: only visitors' views check them now.
+		if ( ! $out['checked'] ) {
+			return $failed ? $out : null;
 		}
-		if ( ! wp_next_scheduled( self::SCAN_HOOK ) ) {
-			wp_schedule_single_event( time(), self::SCAN_HOOK );
-			spawn_cron();
-		}
-		return null;
+		return $out;
 	}
 
+	/** Check again: the next look at Site health starts a background run for every page that is due. */
 	public static function forget_scan(): void {
 		delete_transient( self::SCAN_KEY );
 	}
@@ -200,25 +269,30 @@ final class Optima_Hub_Health {
 	}
 
 	public static function run_scan(): void {
-		$home  = wp_remote_get( home_url( '/' ), array( 'timeout' => 8, 'redirection' => 2, 'sslverify' => self::self_sslverify(), 'headers' => array( 'Cache-Control' => 'no-cache' ) ) );
+		$args = array( 'timeout' => 8, 'redirection' => 2, 'sslverify' => self::self_sslverify(), 'headers' => array( 'Cache-Control' => 'no-cache' ) );
+		$home = wp_remote_get( home_url( '/' ), $args );
 		if ( ! is_wp_error( $home ) && 200 === (int) wp_remote_retrieve_response_code( $home ) ) {
 			self::note_nav( (string) wp_remote_retrieve_body( $home ) );
 		}
-		$pages = self::main_pages();
-
-		$found   = 0;
-		$checked = 0;
-		foreach ( $pages as $p ) {
-			$r = wp_remote_get( get_permalink( $p ), array( 'timeout' => 8, 'redirection' => 2, 'sslverify' => self::self_sslverify(), 'headers' => array( 'Cache-Control' => 'no-cache' ) ) );
+		$seen   = (array) get_option( self::SEEN_KEY, array() );
+		$today  = gmdate( 'Y-m-d' );
+		$tried  = 0;
+		$loaded = 0;
+		foreach ( self::main_pages() as $p ) {
+			$row = $seen[ (int) $p->ID ] ?? null;
+			if ( $today === ( $row['d'] ?? '' ) && self::row_fresh( $row, $p ) ) {
+				continue; // Unchanged and already checked today.
+			}
+			++$tried;
+			// A throwaway query string gets past page caches that would hand back the page as it was before the change.
+			$r = wp_remote_get( add_query_arg( 'optima_check', time(), get_permalink( $p ) ), $args );
 			if ( is_wp_error( $r ) || 200 !== (int) wp_remote_retrieve_response_code( $r ) ) {
 				continue;
 			}
-			++$checked;
-			if ( preg_match( '/"@type"\s*:\s*(\[[^\]]*)?"FAQPage"/', (string) wp_remote_retrieve_body( $r ) ) ) {
-				++$found;
-			}
+			++$loaded;
+			self::note_page( (int) $p->ID, self::has_faq( (string) wp_remote_retrieve_body( $r ) ) );
 		}
-		set_transient( self::SCAN_KEY, array( 'found' => $found, 'checked' => $checked, 'time' => time() ), $checked ? 12 * HOUR_IN_SECONDS : 30 * MINUTE_IN_SECONDS );
+		set_transient( self::SCAN_KEY, array( 'time' => time(), 'tried' => $tried, 'loaded' => $loaded ), $tried && ! $loaded ? 30 * MINUTE_IN_SECONDS : 12 * HOUR_IN_SECONDS );
 	}
 
 	/**
@@ -290,6 +364,36 @@ final class Optima_Hub_Health {
 			'value' => $public ? __( 'Allowed', 'optima-build' ) : __( 'Hidden', 'optima-build' ),
 			'state' => $public ? 'good' : 'warn',
 			'note'  => $public ? __( 'Google can find the site.', 'optima-build' ) : __( 'Settings, Reading asks search engines to stay away. Right for staging, wrong for a live site.', 'optima-build' ),
+		);
+	}
+
+	/**
+	 * A WP Engine install: its must-use plugin is loaded (is_wpe(), the WPE
+	 * constants), or the site's address is a WP Engine one.
+	 */
+	public static function on_wp_engine(): bool {
+		if ( ( function_exists( 'is_wpe' ) && is_wpe() ) || defined( 'WPE_APIKEY' ) || defined( 'PWP_NAME' ) || class_exists( 'WpeCommon' ) ) {
+			return true;
+		}
+		$host = strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) );
+		return '' !== $host && ( str_ends_with( $host, '.wpengine.com' ) || str_ends_with( $host, '.wpenginepowered.com' ) );
+	}
+
+	/**
+	 * On WP Engine, the environment type should be set on every install, so a
+	 * staging copy copied from live (or live copied from staging) is always
+	 * read right by Optima Core's staging guard and by this screen, whatever
+	 * its address. Null when it is set, or off WP Engine. A look, never red.
+	 */
+	public static function environment_type_row( bool $wp_engine, bool $defined ): ?array {
+		if ( ! $wp_engine || $defined ) {
+			return null;
+		}
+		return array(
+			'label' => __( 'Environment type', 'optima-build' ),
+			'value' => __( 'Not set', 'optima-build' ),
+			'state' => 'warn',
+			'note'  => __( 'Set the environment type on this install (production or staging) in WP Engine, so staging copies are always treated as staging.', 'optima-build' ),
 		);
 	}
 
@@ -571,20 +675,35 @@ final class Optima_Hub_Health {
 	 * in on Review settings) were last saved. Optima Reviews 0.5.5 stamps each
 	 * save. a client site site showed 17 Google reviews while Google showed 20. Null
 	 * when Optima Reviews is not running or no totals are entered.
+	 *
+	 * With Optima Reviews' daily Google check on (an API key and a place ID,
+	 * Optima_Reviews_Places::status()): when it works the note says so, and when
+	 * it has failed for three days it is a look with the reason and a link to
+	 * Review settings. While the check is off, nothing changes.
 	 */
 	public static function review_totals(): ?array {
 		if ( ! class_exists( 'Optima_Reviews_Settings' ) ) {
 			return null;
+		}
+		$link = array(
+			'link'      => admin_url( 'admin.php?page=optima-reviews-settings' ),
+			'link_text' => __( 'Review settings', 'optima-build' ),
+		);
+		$auto = class_exists( 'Optima_Reviews_Places' ) && method_exists( 'Optima_Reviews_Places', 'status' ) ? (array) Optima_Reviews_Places::status() : array( 'on' => false );
+		if ( ! empty( $auto['on'] ) && (int) ( $auto['failing_days'] ?? 0 ) >= 3 ) {
+			return array(
+				'label' => __( 'Review totals', 'optima-build' ),
+				'value' => __( 'Google check failing', 'optima-build' ),
+				'state' => 'warn',
+				/* translators: 1: number of days, 2: what went wrong, in plain words. */
+				'note'  => trim( sprintf( __( 'The daily Google check has not worked for %1$d days. %2$s', 'optima-build' ), (int) $auto['failing_days'], (string) ( $auto['error'] ?? '' ) ) ),
+			) + $link;
 		}
 		$profiles = (array) ( Optima_Reviews_Settings::get()['profiles'] ?? array() );
 		$counted  = array_filter( $profiles, static fn( $p ) => is_array( $p ) && (int) ( $p['count'] ?? 0 ) > 0 );
 		if ( ! $counted ) {
 			return null;
 		}
-		$link  = array(
-			'link'      => admin_url( 'admin.php?page=optima-reviews-settings' ),
-			'link_text' => __( 'Review settings', 'optima-build' ),
-		);
 		$stamp = (int) get_option( 'optima_reviews_totals_updated', 0 );
 		if ( ! $stamp ) {
 			return array(
@@ -601,7 +720,7 @@ final class Optima_Hub_Health {
 			/* translators: %d: days */
 			'value' => 0 === $days ? __( 'Today', 'optima-build' ) : sprintf( _n( '%d day ago', '%d days ago', $days, 'optima-build' ), $days ),
 			'state' => $old ? 'warn' : 'good',
-			'note'  => $old ? __( 'The review counts on the site have not been updated in over a month. Check each platform and type in its current rating and count.', 'optima-build' ) : __( 'The review counts on the site were updated in the last month.', 'optima-build' ),
+			'note'  => $old ? __( 'The review counts on the site have not been updated in over a month. Check each platform and type in its current rating and count.', 'optima-build' ) : ( ! empty( $auto['working'] ) ? __( 'Google is checked every day.', 'optima-build' ) : __( 'The review counts on the site were updated in the last month.', 'optima-build' ) ),
 		) + ( $old ? $link : array() );
 	}
 
@@ -763,10 +882,23 @@ final class Optima_Hub_Health {
 			'note'  => $https ? __( 'The site loads over HTTPS.', 'optima-build' ) : __( 'The site address is not HTTPS.', 'optima-build' ),
 		);
 		$out[] = self::search_engines();
-		$out[] = self::login_limit();
+		$env   = self::environment_type_row( self::on_wp_engine(), defined( 'WP_ENVIRONMENT_TYPE' ) );
+		if ( $env ) {
+			$out[] = $env;
+		}
+		// The failed-login limit moved to the Security group (Optima_Hub_Security::rows()).
 
 		if ( class_exists( 'Optima_Hub_Mail' ) ) {
-			$out[] = Optima_Hub_Mail::check();
+			// A saved token or password the site's security keys can no longer read is a fix, not "Host mail".
+			$out[] = class_exists( 'Optima_Hub_Secret' ) && Optima_Hub_Secret::UNREADABLE === Optima_Hub_Secret::mail_state()
+				? Optima_Hub_Secret::mail_row( Optima_Hub_Mail::url() )
+				: Optima_Hub_Mail::check();
+		}
+		if ( class_exists( 'Optima_Hub_Themes' ) && method_exists( 'Optima_Hub_Themes', 'health_row' ) ) {
+			$theme = Optima_Hub_Themes::health_row();
+			if ( $theme ) {
+				$out[] = $theme;
+			}
 		}
 
 		// Hidden upload fields, from Optima Forms Guard 0.3.0+.
@@ -778,7 +910,23 @@ final class Optima_Hub_Health {
 		if ( $forms ) {
 			$out[] = $forms;
 		}
+		// Whether the form emails actually went out, and the nightly form test.
+		if ( class_exists( 'Optima_Hub_Form_Mail' ) ) {
+			$sent = Optima_Hub_Form_Mail::row();
+			if ( $sent ) {
+				$out[] = $sent;
+			}
+		}
+		if ( class_exists( 'Optima_Hub_Form_Test' ) ) {
+			$test = Optima_Hub_Form_Test::row();
+			if ( $test ) {
+				$out[] = $test;
+			}
+		}
 		$out[]   = self::test_builds();
+		if ( class_exists( 'Optima_Hub_Plugins' ) ) {
+			$out[] = Optima_Hub_Plugins::check();
+		}
 		$channel = self::release_channel();
 		if ( $channel ) {
 			$out[] = $channel;
@@ -789,26 +937,29 @@ final class Optima_Hub_Health {
 		}
 		$out[] = self::page_tree();
 
-		$health = json_decode( (string) get_transient( 'health-check-site-status-result' ), true );
-		if ( is_array( $health ) ) {
-			$critical = (int) ( $health['critical'] ?? 0 );
-			$advised  = (int) ( $health['recommended'] ?? 0 );
-			$out[]    = array(
-				'label' => __( 'Site Health', 'optima-build' ),
-				'value' => $critical ? __( 'Needs attention', 'optima-build' ) : __( 'Good', 'optima-build' ),
-				'state' => $critical ? 'bad' : ( $advised > 3 ? 'warn' : 'good' ),
-				/* translators: 1: critical count, 2: recommended count */
-				'note'  => sprintf( __( '%1$d critical, %2$d recommended (WordPress Site Health).', 'optima-build' ), $critical, $advised ),
-			);
-		} else {
-			$out[] = array(
-				'label' => __( 'Site Health', 'optima-build' ),
-				'value' => __( 'Not checked yet', 'optima-build' ),
-				'state' => 'warn',
-				'note'  => __( 'Open Tools, Site Health once to run WordPress\'s own check.', 'optima-build' ),
-			);
-		}
+		// WordPress's own Site Health, run daily by Optima Build and listed by name (Optima_Hub_WP_Health).
+		$out[] = class_exists( 'Optima_Hub_WP_Health' ) ? Optima_Hub_WP_Health::row() : array(
+			'label' => __( 'WordPress checks', 'optima-build' ),
+			'value' => __( 'Not checked yet', 'optima-build' ),
+			'state' => 'warn',
+			'note'  => __( 'Open Tools, Site Health once to run WordPress\'s own check.', 'optima-build' ),
+		);
 		return $out;
+	}
+
+	/**
+	 * The Security group (rule 19): Optima Core's switches and the rest of the
+	 * baseline, for people who can manage the site. Empty for anyone else.
+	 *
+	 * @return array<int, array{label:string, value:string, state:string, note:string, link?:string, link_text?:string}>
+	 */
+	public static function security_checks(): array {
+		return class_exists( 'Optima_Hub_Security' ) ? Optima_Hub_Security::visible_rows() : array( self::login_limit() );
+	}
+
+	/** Every check on Site health, all groups (Basics, Security, AI search), for the status line and Updates. */
+	public static function every_check(): array {
+		return array_merge( self::checks(), self::security_checks(), self::ai_checks() );
 	}
 
 	/**
@@ -898,14 +1049,28 @@ final class Optima_Hub_Health {
 				/* translators: %d: FAQ count */
 				$bits[] = sprintf( _n( '%d FAQ', '%d FAQs', $hub, 'optima-build' ), $hub );
 			}
-			/* translators: %s: time since the check */
-			$bits[] = sprintf( __( 'checked %s ago', 'optima-build' ), human_time_diff( (int) $scan['time'] ) );
+			// When each page was checked, not when the count was made: the count is
+			// made fresh every time, so "5 minutes ago" alone hid checks from the morning.
+			$newest = human_time_diff( (int) $scan['time'] );
+			$oldest = human_time_diff( (int) ( $scan['oldest'] ?? $scan['time'] ) );
+			/* translators: 1: time since the newest page check, 2: time since the oldest */
+			$bits[] = $newest === $oldest ? sprintf( __( 'pages checked %s ago', 'optima-build' ), $newest ) : sprintf( __( 'pages checked %1$s to %2$s ago', 'optima-build' ), $newest, $oldest );
+			$redo   = (int) ( $scan['changed'] ?? 0 );
+			if ( ! $redo ) {
+				$again = '';
+			} elseif ( empty( $scan['blocked'] ) ) {
+				/* translators: %d: pages being checked again */
+				$again = ' ' . sprintf( _n( '%d page changed and is being checked again.', '%d pages changed and are being checked again.', $redo, 'optima-build' ), $redo );
+			} else {
+				/* translators: %d: pages waiting for a visit */
+				$again = ' ' . sprintf( _n( '%d page changed. The site can\'t load its own pages, so it is checked again the next time someone opens it.', '%d pages changed. The site can\'t load its own pages, so each is checked again the next time someone opens it.', $redo, 'optima-build' ), $redo );
+			}
 			$out[]  = array(
 				'label' => __( 'Direct answers', 'optima-build' ),
 				/* translators: 1: pages with answers, 2: pages checked */
 				'value' => sprintf( __( '%1$d of %2$d pages', 'optima-build' ), $scan['found'], $scan['checked'] ),
 				'state' => $good ? 'good' : 'warn',
-				'note'  => ucfirst( implode( ', ', $bits ) ) . '.' . ( $good ? '' : ' ' . __( 'AI tools quote short, direct answers. Add questions to the pages that bring in business.', 'optima-build' ) ),
+				'note'  => ucfirst( implode( ', ', $bits ) ) . '.' . $again . ( $good ? '' : ' ' . __( 'AI tools quote short, direct answers. Add questions to the pages that bring in business.', 'optima-build' ) ),
 			) + ( $good ? array() : array( 'link' => $set, 'link_text' => $set_tx ) );
 		}
 

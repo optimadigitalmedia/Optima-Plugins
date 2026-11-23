@@ -1,0 +1,6 @@
+{
+  "plugin": "optima-accessibility",
+  "items": [],
+  "cookies": [],
+  "notes": "The statement page and footer link collect nothing and set no cookies. The email and call buttons on the statement page are marked so Optima Analytics can count taps on them when that plugin is on; Optima Analytics lists that data."
+}
