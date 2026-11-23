@@ -75,7 +75,8 @@ final class Optima_Cards_VCard {
 		if ( $p['email'] ) {
 			$lines[] = 'EMAIL;TYPE=WORK,INTERNET:' . $p['email'];
 		}
-		$tel = Optima_Cards_Settings::phone_e164( $s['phone'] );
+		// The person's card phone from People, else the business phone.
+		$tel = Optima_Cards_Settings::phone_e164( ! empty( $p['phone'] ) ? (string) $p['phone'] : (string) $s['phone'] );
 		if ( $tel ) {
 			$lines[] = 'TEL;TYPE=WORK,VOICE:' . $tel;
 		}

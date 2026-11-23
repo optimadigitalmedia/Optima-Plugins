@@ -61,6 +61,8 @@ add_action(
 		}
 		Optima_Cards_Routes::init();
 		Optima_Cards_Admin::init();
+		// Once: the card switch and the card's words move to People (after Optima Team's own move on init 20).
+		add_action( 'init', array( 'Optima_Cards_Settings', 'move_to_people' ), 30 );
 	},
 	20
 );
