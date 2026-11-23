@@ -112,7 +112,7 @@ final class Optima_Sitecheck_Report {
 		if ( ! is_email( $to ) ) {
 			return false;
 		}
-		$notify  = Optima_Sitecheck::settings()['notify'];
+		$notify  = Optima_Sitecheck::notify_to();
 		$headers = array( 'Content-Type: text/html; charset=UTF-8' );
 		if ( is_email( $notify ) ) {
 			$headers[] = 'Reply-To: ' . self::from_name() . ' <' . $notify . '>';
@@ -195,7 +195,7 @@ final class Optima_Sitecheck_Report {
 	/* ---------- the team's copy ---------- */
 
 	public static function notify_team( int $id, bool $unreachable = false ): void {
-		$to = Optima_Sitecheck::settings()['notify'];
+		$to = Optima_Sitecheck::notify_to();
 		if ( ! is_email( $to ) ) {
 			return;
 		}

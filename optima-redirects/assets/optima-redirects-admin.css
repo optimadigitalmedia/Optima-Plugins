@@ -17,9 +17,10 @@ body[class*="optima-redirects"] .sh .button:focus-visible { outline: 2px solid v
 .sr-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sh-accent); flex: none; }
 .sr-stat-num { margin: 8px 0 0; font-size: 40px; line-height: 1; font-weight: 600; letter-spacing: -.03em; color: var(--sh-text); font-variant-numeric: tabular-nums; }
 
-/* Two columns: the redirect list and the watch panels */
+/* One column (.sr-stack): what needs doing first, then the redirect list.
+   .sr-layout is the older two-column frame, kept for any screen still using it. */
 .sr-layout { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 16px; align-items: start; }
-.sr-layout > .sh-box, .sr-side > .sh-box { margin-top: 16px; }
+.sr-layout > .sh-box, .sr-side > .sh-box, .sr-stack > .sh-box { margin-top: 16px; }
 .sr-side { min-width: 0; }
 @media (max-width: 1400px) { .sr-layout { grid-template-columns: 1fr; gap: 0; } }
 

@@ -20,7 +20,7 @@ final class Optima_Accessibility_Admin {
 		add_filter( 'plugin_action_links_' . plugin_basename( OPTIMA_ACCESSIBILITY_FILE ), array( __CLASS__, 'action_link' ) );
 		add_filter( 'optima_admin_nav_hint', array( __CLASS__, 'nav_hint' ), 10, 2 );
 		add_action( 'admin_init', array( 'Optima_Accessibility', 'migrate' ), 3 ); // Release 3: the phone moves to Details once.
-		foreach ( array( 'statement', 'run', 'launch', 'footer', 'menu_add' ) as $action ) {
+		foreach ( array( 'statement', 'run', 'launch', 'footer', 'menu_add', 'alt' ) as $action ) {
 			add_action( 'admin_post_optima_a11y_' . $action, array( __CLASS__, 'handle_' . $action ) );
 		}
 	}
@@ -203,6 +203,61 @@ final class Optima_Accessibility_Admin {
 		self::back( 'menu', 'sa-footer' );
 	}
 
+	/** Save a featured image's description from the Weekly checks row, then clear it from the results. */
+	public static function handle_alt(): void {
+		self::guard( 'alt' );
+		$att = isset( $_POST['attachment'] ) ? absint( $_POST['attachment'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- guard() checked it.
+		$alt = isset( $_POST['alt'] ) ? trim( sanitize_text_field( wp_unslash( $_POST['alt'] ) ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- guard() checked it.
+		if ( ! $att || 'attachment' !== get_post_type( $att ) || ! current_user_can( 'edit_post', $att ) || '' === $alt ) {
+			self::back( 'alt_fail', 'sa-weekly' );
+		}
+		update_post_meta( $att, '_wp_attachment_image_alt', $alt );
+
+		$results = Optima_Accessibility_Checks::results();
+		if ( ! empty( $results['images'] ) ) {
+			$results['images'] = self::clear_featured( (array) $results['images'], $att );
+			update_option( Optima_Accessibility_Checks::RESULTS, $results, false );
+		}
+		self::back( 'alt', 'sa-weekly' );
+	}
+
+	/**
+	 * The image results with one attachment's featured-image miss cleared. A page
+	 * left with nothing to fix drops out of the list. Public for the tests.
+	 *
+	 * @param array<int,array<string,int>> $images Weekly image results.
+	 * @param int                          $att    The attachment that now has a description.
+	 * @return array<int,array<string,int>>
+	 */
+	public static function clear_featured( array $images, int $att ): array {
+		$keep = array();
+		foreach ( $images as $hit ) {
+			if ( ! empty( $hit['featured'] ) && (int) get_post_thumbnail_id( (int) $hit['id'] ) === $att ) {
+				$hit['featured'] = 0;
+			}
+			if ( ! empty( $hit['count'] ) || ! empty( $hit['featured'] ) ) {
+				$keep[] = $hit;
+			}
+		}
+		return $keep;
+	}
+
+	/** One featured image with no description: the image, a box to describe it, and Save. Escaped HTML. */
+	private static function alt_form( int $post_id ): string {
+		$att = (int) get_post_thumbnail_id( $post_id );
+		if ( ! $att || ! current_user_can( 'edit_post', $att ) ) {
+			return '';
+		}
+		$field = 'sa-alt-' . $att;
+		return '<form class="sa-alt" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">'
+			. wp_get_attachment_image( $att, 'thumbnail', false, array( 'alt' => '', 'class' => 'sa-alt-img' ) )
+			. '<span class="sa-alt-field"><label for="' . esc_attr( $field ) . '">' . esc_html__( 'Describe the image', 'optima-accessibility' ) . '</label>'
+			. '<input type="text" id="' . esc_attr( $field ) . '" name="alt" required maxlength="250" placeholder="' . esc_attr__( 'What it shows, in one sentence', 'optima-accessibility' ) . '"></span>'
+			. '<input type="hidden" name="action" value="optima_a11y_alt"><input type="hidden" name="attachment" value="' . esc_attr( (string) $att ) . '">'
+			. wp_nonce_field( 'optima_a11y_alt', '_wpnonce', true, false )
+			. '<button type="submit" class="button">' . esc_html__( 'Save', 'optima-accessibility' ) . '</button></form>';
+	}
+
 	/** Keep the statement row current after a change on this screen. */
 	private static function refresh_statement_result(): void {
 		$results = Optima_Accessibility_Checks::results();
@@ -225,6 +280,8 @@ final class Optima_Accessibility_Admin {
 			'menu'         => array( 'success', __( 'The Accessibility page was added to that menu.', 'optima-accessibility' ) ),
 			'menu_already' => array( 'info', __( 'That menu already links to the Accessibility page.', 'optima-accessibility' ) ),
 			'menu_fail'    => array( 'error', __( 'Pick a menu, and create the Accessibility page first.', 'optima-accessibility' ) ),
+			'alt'          => array( 'success', __( 'Saved. The image now has a description.', 'optima-accessibility' ) ),
+			'alt_fail'     => array( 'error', __( 'Type a description first.', 'optima-accessibility' ) ),
 		);
 		if ( isset( $list[ $msg ] ) ) {
 			printf( '<div class="notice notice-%1$s is-dismissible"><p>%2$s</p></div>', esc_attr( $list[ $msg ][0] ), esc_html( $list[ $msg ][1] ) );
@@ -245,8 +302,9 @@ final class Optima_Accessibility_Admin {
 	 * @param string $state   pass, fix or none.
 	 * @param string $detail  One line under the name.
 	 * @param array  $items   Lines for the details list (already escaped HTML).
+	 * @param bool   $forms   True when the lines carry this screen's own forms, built from escaped parts.
 	 */
-	private static function row( string $title, string $state, string $detail, array $items = array() ): void {
+	private static function row( string $title, string $state, string $detail, array $items = array(), bool $forms = false ): void {
 		$pill = array(
 			'pass' => array( 'is-done', __( 'Pass', 'optima-accessibility' ) ),
 			'fix'  => array( 'is-received', __( 'Fix', 'optima-accessibility' ) ),
@@ -263,7 +321,7 @@ final class Optima_Accessibility_Admin {
 						<summary><?php esc_html_e( 'Show where', 'optima-accessibility' ); ?></summary>
 						<ul>
 							<?php foreach ( $items as $line ) : ?>
-								<li><?php echo wp_kses_post( $line ); ?></li>
+								<li><?php echo $forms ? $line : wp_kses_post( $line ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- alt_form() escapes every part. ?></li>
 							<?php endforeach; ?>
 						</ul>
 					</details>
@@ -400,10 +458,10 @@ final class Optima_Accessibility_Admin {
 						if ( $hit['featured'] ) {
 							$bits[] = __( 'the featured image has no description', 'optima-accessibility' );
 						}
-						$lines[] = self::edit_link( (int) $hit['id'] ) . ': ' . esc_html( implode( ', ', $bits ) );
+						$lines[] = self::edit_link( (int) $hit['id'] ) . ': ' . esc_html( implode( ', ', $bits ) ) . ( $hit['featured'] ? self::alt_form( (int) $hit['id'] ) : '' );
 					}
 					/* translators: 1: images, 2: pages */
-					self::row( __( 'Image descriptions', 'optima-accessibility' ), 'fix', sprintf( _n( '%1$d image on %2$d page has no alt text', '%1$d images on %2$d pages have no alt text', $total, 'optima-accessibility' ), $total, count( $results['images'] ) ), $lines );
+					self::row( __( 'Image descriptions', 'optima-accessibility' ), 'fix', sprintf( _n( '%1$d image on %2$d page has no alt text', '%1$d images on %2$d pages have no alt text', $total, 'optima-accessibility' ), $total, count( $results['images'] ) ), $lines, true );
 				} else {
 					self::row( __( 'Image descriptions', 'optima-accessibility' ), 'pass', __( 'Every image has alt text, or is marked as decorative', 'optima-accessibility' ) );
 				}

@@ -331,7 +331,7 @@ final class Optima_Sitecheck_Admin {
 				<h2 class="sh-title"><?php esc_html_e( 'Who follows up', 'optima-sitecheck' ); ?></h2>
 				<table class="form-table" role="presentation">
 					<?php
-					self::row( __( 'Email new checks to', 'optima-sitecheck' ), self::text( 'notify', $s['notify'], get_option( 'admin_email' ), 'email' ), __( 'Gets a copy of every check, and is the reply address on the report.', 'optima-sitecheck' ) );
+					self::row( __( 'Email new checks to', 'optima-sitecheck' ), self::text( 'notify', $s['notify'], Optima_Sitecheck::notify_to(), 'email' ), __( 'Gets a copy of every check, and is the reply address on the report. Leave blank to use the address shown.', 'optima-sitecheck' ) );
 					self::row( __( 'Who follows up', 'optima-sitecheck' ), self::text( 'lead_name', $s['lead_name'], 'Your account lead' ), __( 'The report says "Reply to this email and your account lead will walk you through them." Blank: "we\'ll walk you through them." Only name someone who has agreed to follow up.', 'optima-sitecheck' ) );
 					self::row( __( 'Their photo', 'optima-sitecheck' ), self::text( 'lead_photo', $s['lead_photo'], 'https://', 'url' ), __( 'Optional. A JPG or PNG link (email apps can\'t show WebP). Shows next to the follow-up line.', 'optima-sitecheck' ) );
 					self::row( __( 'Booking page', 'optima-sitecheck' ), self::text( 'book_url', $s['book_url'], Optima_Sitecheck::book_url(), 'url' ), __( 'Where "Book a call" goes. Blank uses the site\'s booking page, or Contact.', 'optima-sitecheck' ) );
