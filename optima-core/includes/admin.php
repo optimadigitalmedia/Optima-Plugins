@@ -80,7 +80,7 @@ final class Optima_Core_Admin {
 	public static function menu() {
 		$label = Optima_Admin_UI::branded() ? 'Optima' : 'Site Build';
 		$icon  = 'data:image/svg+xml;base64,' . base64_encode(
-			'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#1272C4" d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>'
+			'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#1272C4" d="M7.2 0H24v16.8l-5.28-5.28L5.28 24 0 18.72 12.48 5.28Z"/></svg>'
 		);
 		// A theme's own Build menu (Optima Build, Recon Build) comes first: the
 		// screens join it so the site has one Optima menu, not two. The page slug

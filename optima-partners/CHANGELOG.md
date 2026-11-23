@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2.13 (2026-11-23)
+
+- The admin menu icon is now Optima's tilted arrow (the logo's arrow), replacing a lightning bolt that was never Optima's mark.
+
 ## 0.1.2.12 (2026-11-20)
 
 - A partner click counts at most once a day per visitor per partner, using a salted hash of the IP address and browser that is deleted after a day.

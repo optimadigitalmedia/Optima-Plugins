@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.14.3.13 (2026-11-23)
+
+- The admin menu icon is now Optima's tilted arrow (the logo's arrow), replacing a lightning bolt that was never Optima's mark.
+
 ## 0.14.3.12 (2026-11-20)
 
 - The ticket QR image no longer calls imagedestroy(), which PHP 8.5 deprecates; the image frees itself.

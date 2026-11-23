@@ -59,7 +59,7 @@ final class Optima_Events_Admin {
 		if ( ! Optima_Admin_UI::branded() ) {
 			return 'dashicons-calendar-alt';
 		}
-		$svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#1272C4" d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>';
+		$svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#1272C4" d="M7.2 0H24v16.8l-5.28-5.28L5.28 24 0 18.72 12.48 5.28Z"/></svg>';
 		return 'data:image/svg+xml;base64,' . base64_encode( $svg ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- menu icon data URI.
 	}
 

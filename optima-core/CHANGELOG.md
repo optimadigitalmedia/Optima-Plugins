@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.15.0.2 (2026-11-23)
+
+- The admin menu icon is now Optima's tilted arrow (the logo's arrow), replacing a lightning bolt that was never Optima's mark.
+
 ## 1.15.0.1 (2026-11-20)
 
 # optima-core: changelog bullets (INV-2611-01, 02, 07, 10)
