@@ -2,8 +2,9 @@
 /**
  * The Security group on Site health (plugin-first rule 19, the security
  * baseline): failed logins limited, XML-RPC off, file editing off, admins
- * limited to named people with two-step login, daily backups, and the
- * browser security headers.
+ * limited to named people with two-step login, daily backups, the
+ * browser security headers (missing or sent twice), and where the visitor's
+ * address comes from (Optima Core's optima_client_ip()).
  *
  * Every row only reads. The switches live in Optima Core (Spam protection,
  * Optima_Core_Protection, includes/protection.php); this reads them when
@@ -24,7 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class Optima_Hub_Security {
 
-	const HEADERS    = 'optima_hub_security_headers'; // Transient: { at, ok, missing[] }.
+	const HEADERS    = 'optima_hub_security_headers'; // Transient: { at, ok, local?, missing[], twice[] }.
 	const HOOK       = 'optima_hub_security_headers';
 	const LAST_LOGIN = 'optima_hub_last_login';       // User meta on administrators: time of the last sign-in.
 	const SINCE      = 'optima_hub_security_since';   // When sign-ins started being noted here.
@@ -107,7 +108,17 @@ final class Optima_Hub_Security {
 		$out[]  = self::admins_row( $admins, time(), self::since() );
 		$out[]  = self::two_step_row( $admins, self::two_step_plugins() );
 		$out[]  = self::backups_row( self::backups_by() );
-		$out[]  = self::headers_row( self::headers_scan(), time(), $core, $core && Optima_Core_Protection::on( 'browser_headers' ), self::protect_url() );
+		$scan   = self::headers_scan();
+		$out[]  = self::headers_row( $scan, time(), $core, $core && Optima_Core_Protection::on( 'browser_headers' ), self::protect_url() );
+		$twice  = self::twice_row( $scan, $core && Optima_Core_Protection::on( 'browser_headers' ), self::protect_url() );
+		if ( $twice ) {
+			$out[] = $twice;
+		}
+		$out[] = self::visitor_ip_row(
+			function_exists( 'optima_client_ip_source' ) ? optima_client_ip_source() : null,
+			class_exists( 'Optima_Core_Client_IP' ) && Optima_Core_Client_IP::header_ignored(),
+			class_exists( 'Optima_Core_Client_IP' ) ? Optima_Core_Client_IP::CLOUDFLARE_READ : ''
+		);
 		return $out;
 	}
 
@@ -414,18 +425,76 @@ final class Optima_Hub_Security {
 		return array_keys( array_filter( $has, static fn( $v ) => ! $v ) );
 	}
 
-	/** Load the home page's headers once and keep what is missing for 12 hours. Only reads. */
+	/**
+	 * Which of the four headers the response carries twice: the same header
+	 * line sent twice (the host or CDN adds one after PHP sent its own), or one
+	 * line whose value repeats ("nosniff, nosniff"). A comma inside
+	 * Strict-Transport-Security, X-Content-Type-Options or X-Frame-Options is
+	 * always a join of two values; Referrer-Policy may list fallbacks, so only
+	 * a repeated value counts there.
+	 *
+	 * @param array<string,string|string[]> $headers Header names in any case; a header sent twice is an array.
+	 * @return string[]
+	 */
+	public static function header_twice( array $headers ): array {
+		$h   = array_change_key_case( $headers, CASE_LOWER );
+		$out = array();
+		foreach ( self::HEADER_NAMES as $name ) {
+			$key = strtolower( $name );
+			if ( ! isset( $h[ $key ] ) ) {
+				continue;
+			}
+			$value = $h[ $key ];
+			if ( is_array( $value ) ) {
+				if ( count( $value ) > 1 ) {
+					$out[] = $name;
+				}
+				continue;
+			}
+			$parts = array_values( array_filter( array_map( static fn( $p ) => strtolower( trim( $p ) ), explode( ',', (string) $value ) ), 'strlen' ) );
+			if ( count( $parts ) < 2 ) {
+				continue;
+			}
+			if ( 'Referrer-Policy' !== $name || count( $parts ) !== count( array_unique( $parts ) ) ) {
+				$out[] = $name;
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * Load the live home page's headers once a day and keep what is missing and
+	 * what arrives twice. Only reads. The host and the CDN (WP Engine,
+	 * Cloudflare) add their headers after PHP has sent the page, so only this
+	 * outside look sees what a visitor's browser gets. Skipped on a copy on
+	 * someone's own computer, where no host or CDN sits in front.
+	 */
 	public static function scan_headers(): void {
-		$r = wp_remote_head( home_url( '/' ), array( 'timeout' => 5, 'redirection' => 3, 'sslverify' => Optima_Hub_Health::self_sslverify() ) );
-		if ( is_wp_error( $r ) || ! (int) wp_remote_retrieve_response_code( $r ) ) {
-			set_transient( self::HEADERS, array( 'at' => time(), 'ok' => false, 'missing' => array() ), HOUR_IN_SECONDS );
+		if ( Optima_Hub_Health::is_local_host() ) {
+			set_transient( self::HEADERS, array( 'at' => time(), 'ok' => false, 'local' => true, 'missing' => array(), 'twice' => array() ), DAY_IN_SECONDS );
 			return;
 		}
-		$h = array();
-		foreach ( wp_remote_retrieve_headers( $r ) as $name => $value ) {
-			$h[ strtolower( (string) $name ) ] = is_array( $value ) ? implode( ', ', $value ) : (string) $value;
+		$r = wp_safe_remote_head( home_url( '/' ), array( 'timeout' => 5, 'redirection' => 3, 'sslverify' => Optima_Hub_Health::self_sslverify() ) );
+		if ( is_wp_error( $r ) || ! (int) wp_remote_retrieve_response_code( $r ) ) {
+			set_transient( self::HEADERS, array( 'at' => time(), 'ok' => false, 'missing' => array(), 'twice' => array() ), HOUR_IN_SECONDS );
+			return;
 		}
-		set_transient( self::HEADERS, array( 'at' => time(), 'ok' => true, 'missing' => self::header_gaps( $h ) ), 12 * HOUR_IN_SECONDS );
+		$h   = array();
+		$raw = array();
+		foreach ( wp_remote_retrieve_headers( $r ) as $name => $value ) {
+			$h[ strtolower( (string) $name ) ]   = is_array( $value ) ? implode( ', ', $value ) : (string) $value;
+			$raw[ strtolower( (string) $name ) ] = is_array( $value ) ? array_map( 'strval', $value ) : (string) $value;
+		}
+		set_transient(
+			self::HEADERS,
+			array(
+				'at'      => time(),
+				'ok'      => true,
+				'missing' => self::header_gaps( $h ),
+				'twice'   => self::header_twice( $raw ),
+			),
+			DAY_IN_SECONDS
+		);
 	}
 
 	/** The last header check, or null while the first one runs in the background. */
@@ -451,6 +520,13 @@ final class Optima_Hub_Security {
 		if ( null === $scan ) {
 			return $row + array( 'value' => __( 'Checking', 'optima-build' ), 'state' => 'good', 'note' => __( 'Checking the home page now. Reload in a minute.', 'optima-build' ) );
 		}
+		if ( ! empty( $scan['local'] ) ) {
+			return $row + array(
+				'value' => __( 'Not checked here', 'optima-build' ),
+				'state' => 'good',
+				'note'  => __( 'This copy runs on someone\'s own computer, with no host or CDN in front, so there is nothing to check. The live site and staging are checked once a day.', 'optima-build' ),
+			);
+		}
 		if ( empty( $scan['ok'] ) ) {
 			return $row + array(
 				'value' => __( 'Couldn\'t check', 'optima-build' ),
@@ -474,5 +550,86 @@ final class Optima_Hub_Security {
 			/* translators: %s: header names */
 			'note'  => sprintf( __( 'Missing: %s.', 'optima-build' ), implode( ', ', $missing ) ) . ' ' . $fix . ' ' . $when,
 		) + ( $core && ! $core_sends ? array( 'link' => $protect, 'link_text' => __( 'Spam protection', 'optima-build' ) ) : array() );
+	}
+
+	/**
+	 * Headers the home page sends twice. A browser may read a doubled header
+	 * wrongly or ignore it, so one side should send each header: the host or
+	 * CDN, or Optima Core's "Send basic browser protections" switch. Null when
+	 * the daily check has no answer yet (the headers row already says so).
+	 *
+	 * @param array|null $scan       From headers_scan().
+	 * @param bool       $core_sends Optima Core's "Send basic browser protections" is on.
+	 */
+	public static function twice_row( ?array $scan, bool $core_sends, string $protect ): ?array {
+		if ( null === $scan || empty( $scan['ok'] ) ) {
+			return null;
+		}
+		$row   = array( 'label' => __( 'Headers sent twice', 'optima-build' ) );
+		$twice = array_values( (array) ( $scan['twice'] ?? array() ) );
+		if ( ! $twice ) {
+			return $row + array(
+				'value' => __( 'None', 'optima-build' ),
+				'state' => 'good',
+				'note'  => __( 'Each browser protection arrives once.', 'optima-build' ),
+			);
+		}
+		return $row + array(
+			/* translators: %d: number of headers */
+			'value' => sprintf( _n( '%d header', '%d headers', count( $twice ), 'optima-build' ), count( $twice ) ),
+			'state' => 'warn',
+			/* translators: %s: header names */
+			'note'  => sprintf( __( 'Sent twice: %s. Pick one owner: the host/CDN or Optima Core\'s switch.', 'optima-build' ), implode( ', ', $twice ) )
+				. ( $core_sends ? ' ' . __( 'Optima Core\'s "Send basic browser protections" is on, and the host or CDN adds the same header after it.', 'optima-build' ) : '' ),
+		) + ( $core_sends && '' !== $protect ? array( 'link' => $protect, 'link_text' => __( 'Spam protection', 'optima-build' ) ) : array() );
+	}
+
+	/**
+	 * Where the visitor's address comes from, for this request: Cloudflare's
+	 * header (only when the request came from Cloudflare's published ranges),
+	 * a proxy the site added, or the server. Failed logins, chat, the site
+	 * check and the other rate limits all count by that address.
+	 *
+	 * @param string|null $source  From optima_client_ip_source(), null without Optima Core.
+	 * @param bool        $ignored A Cloudflare header arrived from outside Cloudflare's ranges.
+	 * @param string      $read    The date Cloudflare's ranges were read.
+	 */
+	public static function visitor_ip_row( ?string $source, bool $ignored, string $read ): array {
+		$row   = array( 'label' => __( 'Visitor address', 'optima-build' ) );
+		/* translators: %s: date */
+		$dated = '' !== $read ? ' ' . sprintf( __( 'Cloudflare\'s address list was read on %s.', 'optima-build' ), $read ) : '';
+		if ( null === $source ) {
+			return $row + array(
+				'value' => __( 'From the server', 'optima-build' ),
+				'state' => 'warn',
+				'note'  => __( 'Optima Core finds the real visitor behind Cloudflare, and this site does not run a version that does. Behind Cloudflare, every visitor would count as the same few addresses. Update Optima Core.', 'optima-build' ),
+			);
+		}
+		if ( 'cloudflare' === $source ) {
+			return $row + array(
+				'value' => __( 'From Cloudflare\'s header', 'optima-build' ),
+				'state' => 'good',
+				'note'  => __( 'This request came through Cloudflare, so each visitor is counted by their own address, read from Cloudflare\'s header.', 'optima-build' ) . $dated,
+			);
+		}
+		if ( 'proxy' === $source ) {
+			return $row + array(
+				'value' => __( 'From the proxy\'s forwarded list', 'optima-build' ),
+				'state' => 'good',
+				'note'  => __( 'This request came through a proxy the site named (optima_core_proxy_ranges), so each visitor is counted by the address it forwarded.', 'optima-build' ),
+			);
+		}
+		if ( $ignored ) {
+			return $row + array(
+				'value' => __( 'From the server', 'optima-build' ),
+				'state' => 'warn',
+				'note'  => __( 'A Cloudflare header came from an address outside Cloudflare\'s ranges, so it was not trusted. If another proxy sits between Cloudflare and the site, add its ranges with the optima_core_proxy_ranges filter.', 'optima-build' ) . $dated,
+			);
+		}
+		return $row + array(
+			'value' => __( 'From the server', 'optima-build' ),
+			'state' => 'good',
+			'note'  => __( 'This request came straight to the server, so each visitor is counted by the address the server sees.', 'optima-build' ),
+		);
 	}
 }

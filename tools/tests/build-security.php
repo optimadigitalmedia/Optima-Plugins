@@ -64,8 +64,32 @@ ok( 'warn' === $r['state'] && '/p' === $r['link'], 'a missing header with Optima
 $r = $X::headers_row( array( 'ok' => true, 'at' => $now, 'missing' => array( 'Referrer-Policy' ) ), $now, true, true, '/p' );
 ok( ! isset( $r['link'] ) && false !== strpos( $r['note'], 'host' ), 'a missing header with the switch on: ask the host' );
 
+// Headers sent twice (the host or CDN adds one after PHP sent its own).
+ok( array() === $X::header_twice( array( 'Strict-Transport-Security' => 'max-age=31536000; includeSubDomains', 'X-Content-Type-Options' => 'nosniff', 'X-Frame-Options' => 'SAMEORIGIN', 'Referrer-Policy' => 'no-referrer, strict-origin-when-cross-origin' ) ), 'one of each, and a Referrer-Policy fallback list: nothing twice' );
+ok( array( 'X-Content-Type-Options' ) === $X::header_twice( array( 'x-content-type-options' => array( 'nosniff', 'nosniff' ) ) ), 'the same header line sent twice is named' );
+ok( array( 'Strict-Transport-Security', 'X-Frame-Options' ) === $X::header_twice( array( 'strict-transport-security' => 'max-age=31536000, max-age=63072000', 'x-frame-options' => 'SAMEORIGIN, SAMEORIGIN' ) ), 'two values joined by a comma are named' );
+ok( array( 'Referrer-Policy' ) === $X::header_twice( array( 'Referrer-Policy' => 'strict-origin-when-cross-origin, strict-origin-when-cross-origin' ) ), 'a Referrer-Policy value repeated is named' );
+ok( null === $X::twice_row( null, true, '/p' ) && null === $X::twice_row( array( 'ok' => false ), true, '/p' ), 'no answer yet: no row (the headers row says so)' );
+ok( 'good' === $X::twice_row( array( 'ok' => true, 'twice' => array() ), true, '/p' )['state'], 'nothing twice: ok' );
+$r = $X::twice_row( array( 'ok' => true, 'twice' => array( 'X-Frame-Options' ) ), true, '/p' );
+ok( 'warn' === $r['state'] && false !== strpos( $r['note'], 'X-Frame-Options' ) && false !== strpos( $r['note'], 'Pick one owner: the host/CDN or Optima Core\'s switch' ), 'a doubled header is a look that names it and says to pick one owner' );
+ok( '/p' === $r['link'], 'with Optima Core sending it, the row links to the switch' );
+ok( 'good' === $X::headers_row( array( 'ok' => false, 'local' => true ), $now, true, true, '/p' )['state'], 'a copy on someone\'s own computer is not checked and not a look' );
+$scan_src = (string) file_get_contents( dirname( __DIR__, 2 ) . '/optima-build/includes/class-optima-hub-security.php' );
+ok( false !== strpos( $scan_src, 'wp_safe_remote_head( home_url(' ) && false !== strpos( $scan_src, 'Optima_Hub_Health::is_local_host()' ), 'the daily check uses the safe request and skips local copies' );
+
+// Visitor address.
+$r = $X::visitor_ip_row( 'cloudflare', false, '2026-11-23' );
+ok( 'good' === $r['state'] && 'From Cloudflare\'s header' === $r['value'] && false !== strpos( $r['note'], '2026-11-23' ), 'through Cloudflare: from Cloudflare\'s header, with the date the ranges were read' );
+$r = $X::visitor_ip_row( 'server', false, '2026-11-23' );
+ok( 'good' === $r['state'] && 'From the server' === $r['value'], 'straight to the server: from the server' );
+$r = $X::visitor_ip_row( 'server', true, '2026-11-23' );
+ok( 'warn' === $r['state'] && false !== strpos( $r['note'], 'optima_core_proxy_ranges' ), 'a Cloudflare header from outside its ranges: a look naming the proxy filter' );
+ok( 'good' === $X::visitor_ip_row( 'proxy', false, '' )['state'], 'through an added proxy: ok' );
+ok( 'warn' === $X::visitor_ip_row( null, false, '' )['state'], 'without Optima Core\'s helper: a look' );
+
 // Nothing is ever a fix.
-foreach ( array( $X::xmlrpc_row( true, false, true, '/p' ), $X::file_edit_row( false ), $X::backups_row( '' ), $X::two_step_row( array(), array() ) ) as $row ) {
+foreach ( array( $X::xmlrpc_row( true, false, true, '/p' ), $X::file_edit_row( false ), $X::backups_row( '' ), $X::two_step_row( array(), array() ), $X::twice_row( array( 'ok' => true, 'twice' => array( 'Referrer-Policy' ) ), false, '' ), $X::visitor_ip_row( 'server', true, '' ) ) as $row ) {
 	ok( 'bad' !== $row['state'], $row['label'] . ' is never red' );
 }
 

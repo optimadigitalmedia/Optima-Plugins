@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.7.0 (2026-11-23)
+
+Brought in from 0.2.4 to 0.3.7:
+- "Email new questions to" is an optional override. When it is blank, new chats go to the site's admin email (or the site's shared notice address once Optima Core has one). Before, a field saved blank sent nothing. An address already saved here keeps working.
+- The booking link is never empty: when the booking page is missing or was removed, the chat's booking link and the Booking page placeholder use the Contact page.
+- The chat's message limit now count each visitor by their real address behind Cloudflare (Optima Core's `optima_client_ip()`), instead of Cloudflare's server address. Without Optima Core it works as before.
+
 ## 0.2.4.12 (2026-11-20)
 
 - Ships visitor-data.json, so Optima Core's privacy draft lists what the chat keeps: contact details and conversations (90 days by default, deleted with the plugin), the law-firm short form, questions sent to the AI server, the hashed IP limit kept 10 minutes, the analytics events, and the two tab-only browser storage items.

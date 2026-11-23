@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.22.0 (2026-11-23)
+
+Brought in from 0.1.12 to 0.1.22:
+- Describe a featured image right on Weekly checks. When a featured image has no description, Show where now shows the image, a "Describe the image" box and Save. Saving writes the image's alt text in the Media Library and clears it from the results at once, with no new run. Images inside the page content still link to the editor. Only someone who can edit that image can save it.
+- A classic theme can say a template prints no page title with the new optima_accessibility_template_prints_title filter (for example a private partner page whose pasted block carries the page's one H1). The weekly heading check then reads that page's own H1 as its title instead of flagging a second H1.
+- The statement's contact buttons and "last reviewed" line read the theme's DESIGN.md accent, button corner and muted text (the --optima-* variables Optima Build prints) when the theme does not set --optima-a11y-*. Sites that set them, or set neither, look exactly the same.
+- Shorter help on the at-launch color contrast and keyboard checks.
+- Ships visitor-data.json, so Optima Core's privacy draft notes that the statement page and footer link collect nothing and set no cookies.
+
 ## 0.1.12.12 (2026-11-20)
 
 - The Accessibility link is on by default and prints in the theme's footer spot through optima_slot( 'footer' ) (rule 12). A theme without that slot still gets it once at the very end of the page.

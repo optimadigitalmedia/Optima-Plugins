@@ -32,6 +32,7 @@ class WP_Error {
 class WP_User {}
 
 $root = dirname( __DIR__, 2 );
+require $root . '/optima-core/includes/client-ip.php';
 require $root . '/optima-core/includes/protection.php';
 require $root . '/optima-core/includes/login-limit.php';
 
@@ -112,6 +113,12 @@ ok( '203.0.113.50' === $L::ip(), 'a site that trusts Cloudflare uses its header'
 $_SERVER['HTTP_CF_CONNECTING_IP'] = 'not-an-ip';
 ok( '192.0.2.1' === $L::ip(), 'a header that is not an address falls back to REMOTE_ADDR' );
 unset( $GLOBALS['t_filters']['optima_core_login_limit_proxy_header'] );
+$_SERVER['REMOTE_ADDR']           = '162.158.1.20'; // A Cloudflare address.
+$_SERVER['HTTP_CF_CONNECTING_IP'] = '203.0.113.50';
+ok( '203.0.113.50' === $L::ip(), 'by default, Cloudflare\'s header is used when the request came from Cloudflare (optima_client_ip())' );
+$_SERVER['REMOTE_ADDR'] = '192.0.2.1';
+ok( '192.0.2.1' === $L::ip(), 'the same header from outside Cloudflare is still ignored' );
+unset( $_SERVER['HTTP_CF_CONNECTING_IP'] );
 
 // 9. Filters: a lower limit, and the skip filter.
 $GLOBALS['t_trans']                                  = array();

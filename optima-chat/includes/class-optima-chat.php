@@ -320,7 +320,7 @@ final class Optima_Chat {
 
 	/** At most $max requests per visitor IP per 10 minutes, per bucket. */
 	private static function too_many( string $bucket, int $max ): bool {
-		$ip  = (string) ( $_SERVER['REMOTE_ADDR'] ?? '' );
+		$ip  = function_exists( 'optima_client_ip' ) ? optima_client_ip() : (string) ( $_SERVER['REMOTE_ADDR'] ?? '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- hashed, never stored.
 		$key = 'optima_chat_' . $bucket . '_' . md5( $ip . wp_salt( 'nonce' ) );
 		$n   = (int) get_transient( $key );
 		if ( $n >= $max ) {

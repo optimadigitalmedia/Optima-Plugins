@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.17.0 (2026-11-23)
+
+Brought in from 0.1.10 to 0.1.17:
+- **Optima Law's wording is the results disclaimer when Law prints it next to case results.** With Optima Law active and its results line set to show "Next to case results", every result, the grid's opening line and the single-result view print Law's firm-wide wording through the `optima_results_disclaimer` filter. The Disclaimer box on Case results says so and points to Law's Disclaimers screen (Content, Disclaimers).
+- **The Disclaimer card follows the wording the site prints.** When Optima Law is in charge, the card reads "Not approved" until the firm approves that wording in Optima Law, then names the approver and date, with a link to Disclaimers. Without Optima Law, or with its results place unticked, the card and the "Wording approved by" box work exactly as before.
+- New `optima_results_law_disclaimer` filter to turn the handoff off or on.
+- The firm's threshold, the Florida consent date, each result's own approval, the law-site fields (role, gross or net, venue, after the result, consent date) and the state presets are unchanged and still decide what shows.
+- **Result cards read the theme's DESIGN.md.** When the theme does not set `--optima-results-*`, cards use the DESIGN.md surface, line, accent and medium corner (`--optima-surface`, `--optima-line`, `--optima-accent`, `--optima-radius-md`) that Optima Build prints. Sites that set the plugin's own variables, or have no DESIGN.md, look exactly the same.
+
 ## 0.1.10.5 (2026-11-20)
 
 - Deleting the plugin keeps the firm-approved disclaimer wording and its approval record (with the rest of the Results setting) unless a full wipe is set: OPTIMA_PURGE_ON_UNINSTALL in wp-config.php or purge_on_uninstall in the setting.

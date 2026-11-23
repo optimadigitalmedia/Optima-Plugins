@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.2.0 (2026-11-23)
+
+Brought in from 0.1.9 to 0.2.2:
+- **The screen opens on what needs doing.** Broken links on the site's own pages come first, then the missing pages people asked for, then the redirect list with its Add a redirect form. While someone is changing a redirect, the form stays on top. A box with nothing in it waits below the list, and the screen is one column.
+- **The status line turns gold only when a link on the site's own pages is broken,** with a quiet "See the broken links" link down to them. Missing addresses alone are routine and leave it plain.
+- **A missing page said to come from this site, with no real link there,** reads "Came from your page ..." instead of naming the site's own domain, so a faked referrer no longer looks like an outside website. Real broken links still read "Linked from your page ...".
+- The scanner-noise rules, the real-link check for broken links, Site health's checked list and the batched hit counts brought in on Nov 12 are unchanged.
+
 ## 0.1.9.11 (2026-11-20)
 
 - Shared admin kit: the four Optima Law screens are filed in the menu (three under Content, form entries under Build).

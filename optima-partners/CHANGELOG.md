@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2.14 (2026-11-23)
+
+- Partner click counts now count each visitor by their real address behind Cloudflare (Optima Core's `optima_client_ip()`), instead of Cloudflare's server address. Without Optima Core it works as before.
+
 ## 0.1.2.13 (2026-11-23)
 
 - The admin menu icon is now Optima's tilted arrow (the logo's arrow), replacing a lightning bolt that was never Optima's mark.

@@ -367,6 +367,36 @@ final class Optima_Hub_Health {
 		);
 	}
 
+	/**
+	 * A WP Engine install: its must-use plugin is loaded (is_wpe(), the WPE
+	 * constants), or the site's address is a WP Engine one.
+	 */
+	public static function on_wp_engine(): bool {
+		if ( ( function_exists( 'is_wpe' ) && is_wpe() ) || defined( 'WPE_APIKEY' ) || defined( 'PWP_NAME' ) || class_exists( 'WpeCommon' ) ) {
+			return true;
+		}
+		$host = strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) );
+		return '' !== $host && ( str_ends_with( $host, '.wpengine.com' ) || str_ends_with( $host, '.wpenginepowered.com' ) );
+	}
+
+	/**
+	 * On WP Engine, the environment type should be set on every install, so a
+	 * staging copy copied from live (or live copied from staging) is always
+	 * read right by Optima Core's staging guard and by this screen, whatever
+	 * its address. Null when it is set, or off WP Engine. A look, never red.
+	 */
+	public static function environment_type_row( bool $wp_engine, bool $defined ): ?array {
+		if ( ! $wp_engine || $defined ) {
+			return null;
+		}
+		return array(
+			'label' => __( 'Environment type', 'optima-build' ),
+			'value' => __( 'Not set', 'optima-build' ),
+			'state' => 'warn',
+			'note'  => __( 'Set the environment type on this install (production or staging) in WP Engine, so staging copies are always treated as staging.', 'optima-build' ),
+		);
+	}
+
 	/** The repo every Optima plugin updates from (its Update URI). */
 	const REPO = 'optimadigitalmedia/Optima-Plugins';
 
@@ -852,6 +882,10 @@ final class Optima_Hub_Health {
 			'note'  => $https ? __( 'The site loads over HTTPS.', 'optima-build' ) : __( 'The site address is not HTTPS.', 'optima-build' ),
 		);
 		$out[] = self::search_engines();
+		$env   = self::environment_type_row( self::on_wp_engine(), defined( 'WP_ENVIRONMENT_TYPE' ) );
+		if ( $env ) {
+			$out[] = $env;
+		}
 		// The failed-login limit moved to the Security group (Optima_Hub_Security::rows()).
 
 		if ( class_exists( 'Optima_Hub_Mail' ) ) {

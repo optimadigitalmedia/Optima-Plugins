@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.8.1.0 (2026-11-23)
+
+Brought in from 0.5.5 to 0.8.1:
+- Review totals from the theme. The theme's optima-setup.json can carry each platform's rating, review count and profile link with the date they were checked (reviews.totals). The newest check wins: the theme's totals apply only when their date is a real date, not in the future, and newer than the last check of that platform. A save on the Reviews screen counts as a check, so a newer typed number stays. Totals apply whatever the rating, so a low rating is never held back.
+- Each platform remembers when it was checked. A save on the Reviews screen, a Google sync, the daily Google check and the theme each stamp the rows they write, so a fresh Google number no longer makes an old Yelp number look fresh. The "as of" date beside the Google rating uses that platform's own check date. Rows saved before this release use the old single date until they are next saved.
+- Reviews from the theme (reviews.items) are added once each, matched on source, reviewer and date. Reviews already on the site, hidden ones and ones in the trash are never edited, removed or brought back. While Google is connected and syncing, Google's own numbers and reviews win.
+- On a law site a review from the theme is never published by code: it goes in as a draft and waits in the Review inbox for a person to approve it, whatever its stars, and the North Carolina money check applies there as for every other review.
+- A reviewer name with "&" is no longer added twice: WordPress can store it as "&amp;", so names are compared as plain text.
+- Check Google every day (off until a key is saved). The Reviews screen has a new box with a Google place ID and a Google API key (Places API, New). With both set, the site asks Google once a day for the rating and review count and puts them in the Google row under Platforms. Check Google now runs one check on demand, and saving the box runs the first one. No sign-in is needed and no reviews are brought in. Without a key nothing is scheduled and no request is made; the key is set per site.
+- The key is kept safe: stored encrypted with the site's own security keys, shown only as "Saved" with a Replace button, and it can be set as OPTIMA_REVIEWS_PLACES_KEY in wp-config.php instead. It never goes in optima-setup.json, logs or REST output. If the site's security keys change, the box says the key can't be read and asks for it again.
+- When a check fails, nothing changes. The last reason is kept in plain words (never the key, never Google's raw reply) and shown in the box. While the Business Profile sign-in is connected, its sync keeps the Google numbers and the daily check stands down. Deleting the plugin removes the key, the place ID and the daily check.
+- Private notes go to "Send private notes to" when it is filled in, else to the site's shared notice address (the site admin email until Optima Core has its own notice address). An address already saved keeps getting the notes.
+- Review cards read the theme's DESIGN.md colors, line, muted text, label font and corner (the --optima-* variables Optima Build prints) when the theme's own --surface, --line and the rest are not set. Sites that set them look exactly the same.
+- The review note limit now count each visitor by their real address behind Cloudflare (Optima Core's `optima_client_ip()`), instead of Cloudflare's server address. Without Optima Core it works as before.
+
 ## 0.5.5.14 (2026-11-20)
 
 - Ships visitor-data.json, so Optima Core's privacy draft lists private notes, the hashed note limit, review page visit totals, copied Google and hand-added reviews, and what Google sees when reviewer photos and review page fonts load.

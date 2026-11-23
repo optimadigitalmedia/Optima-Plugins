@@ -196,7 +196,7 @@ final class Optima_Reviews_Notes {
 	}
 
 	private static function under_limit(): bool {
-		$ip  = (string) ( $_SERVER['REMOTE_ADDR'] ?? '' );
+		$ip  = function_exists( 'optima_client_ip' ) ? optima_client_ip() : (string) ( $_SERVER['REMOTE_ADDR'] ?? '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- hashed, never stored.
 		$key = 'srn_' . substr( hash_hmac( 'sha256', $ip, wp_salt( 'nonce' ) ), 0, 20 );
 		$n   = (int) get_transient( $key );
 		if ( $n >= 5 ) {

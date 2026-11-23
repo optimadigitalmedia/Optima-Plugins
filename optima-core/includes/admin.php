@@ -456,6 +456,10 @@ final class Optima_Core_Admin {
 			$month = method_exists( 'Optima_Forms_Guard', 'blocked' ) ? (int) Optima_Forms_Guard::blocked() : 0;
 			echo '<div class="sh-status"><span class="sh-dot" aria-hidden="true"></span><p class="sh-value">On. Every form checks each message invisibly, with no puzzle for real visitors.</p></div>';
 			echo '<p class="sh-note">' . esc_html( $month ? sprintf( _n( '%d spam submission blocked this month.', '%d spam submissions blocked this month.', $month, 'optima-core' ), $month ) : 'Nothing blocked yet this month.' ) . '</p>';
+			if ( method_exists( 'Optima_Forms_Guard', 'turnstile_status' ) ) {
+				$turnstile = (array) Optima_Forms_Guard::turnstile_status();
+				echo '<p class="sh-note"><strong>' . esc_html( (string) ( $turnstile['label'] ?? '' ) . ': ' . (string) ( $turnstile['value'] ?? '' ) ) . '.</strong> ' . esc_html( (string) ( $turnstile['note'] ?? '' ) ) . '</p>';
+			}
 		} else {
 			echo '<div class="sh-status is-off"><span class="sh-dot" aria-hidden="true"></span><p class="sh-value">Off. Turn on Spam protection for forms on Build, Features.</p></div>';
 		}

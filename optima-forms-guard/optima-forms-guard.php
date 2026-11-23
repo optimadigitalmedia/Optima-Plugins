@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name:       Optima Forms Guard
- * Description:       In-house spam protection for Gravity Forms: a hidden honeypot, a time trap, and a signed token. Also refuses files sent to File Upload fields set to Hidden and list answers that carry hidden code (two reported Gravity Forms security flaws), and names the upload fields for you to fix. No reCAPTCHA, no Akismet, no third-party calls.
- * Version:           0.3.7.1
+ * Description:       In-house spam protection for Gravity Forms: a hidden honeypot, a time trap, and a signed token. Also refuses files sent to File Upload fields set to Hidden and list answers that carry hidden code (two reported Gravity Forms security flaws), and names the upload fields for you to fix. No reCAPTCHA, no Akismet, and no third-party calls unless the optional Cloudflare Turnstile keys are set in wp-config.php.
+ * Version:           0.3.7.2
  * Requires at least: 6.5
  * Requires PHP:      8.0
  * Requires Plugins:  gravityforms
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OPTIMA_FORMS_GUARD_VERSION', '0.3.7.1' );
+define( 'OPTIMA_FORMS_GUARD_VERSION', '0.3.7.2' );
 
 // Self-updating from the Optima Plugins releases (see includes/class-optima-plugin-updater.php).
 // Loaded on plugins_loaded, after every plugin's own file, so older Optima
@@ -36,6 +36,9 @@ add_action(
 // registered before plugins_loaded fires.
 require_once __DIR__ . '/includes/class-optima-forms-guard-uploads.php';
 Optima_Forms_Guard_Uploads::boot();
+
+// Cloudflare Turnstile, the optional extra layer: off unless wp-config.php names both keys.
+require_once __DIR__ . '/includes/class-optima-forms-guard-turnstile.php';
 
 define( 'OPTIMA_FORMS_GUARD_FILE', __FILE__ );
 if ( is_admin() ) {
@@ -60,6 +63,15 @@ final class Optima_Forms_Guard {
 		add_filter( 'gform_validation_message', array( __CLASS__, 'message' ), 10, 2 );
 		add_filter( 'gform_entry_is_spam', array( __CLASS__, 'content_spam' ), 10, 3 );
 		add_filter( 'gform_pre_validation', array( __CLASS__, 'fix_website_urls' ) );
+		Optima_Forms_Guard_Turnstile::boot();
+	}
+
+	/**
+	 * The optional Cloudflare Turnstile layer, for the Spam protection screen
+	 * (label, value, state, note).
+	 */
+	public static function turnstile_status(): array {
+		return Optima_Forms_Guard_Turnstile::status();
 	}
 
 	/**

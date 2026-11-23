@@ -4,7 +4,8 @@
  *
  * Read-only. It lists what the existing screens already keep: change requests
  * that are not done (Request a change), chat questions not yet answered (Chat
- * questions), new reviews and notes from the review page (Review inbox). Each
+ * questions), new reviews and notes from the review page (Review inbox),
+ * people who sent their details by link (People, Optima Team). Each
  * row links to the screen that handles it; nothing is stored here. The total
  * shows as one count on the Inbox link in the sidebar.
  *
@@ -226,6 +227,35 @@ final class Optima_Hub_Inbox {
 			);
 		}
 
+		// People who sent their details through their link and wait for an OK (Optima Team).
+		if ( class_exists( 'Optima_Team_Link' ) && method_exists( 'Optima_Team_Link', 'waiting' ) ) {
+			$sent = array_values( array_filter( array_map( 'intval', (array) Optima_Team_Link::waiting() ) ) );
+			if ( $sent ) {
+				$rows = array();
+				foreach ( array_slice( $sent, 0, self::SHOW ) as $id ) {
+					$pending = method_exists( 'Optima_Team_Link', 'pending' ) ? (array) Optima_Team_Link::pending( $id ) : array();
+					$when    = (int) ( $pending['sent'] ?? 0 );
+					$rows[]  = array(
+						'title' => get_the_title( $id ),
+						'note'  => $when
+							/* translators: %s: date */
+							? sprintf( __( 'Sent %s · waiting for an OK', 'optima-build' ), wp_date( 'M j, Y', $when ) )
+							: __( 'Waiting for an OK', 'optima-build' ),
+						'url'   => (string) get_edit_post_link( $id, 'raw' ),
+					);
+				}
+				$kinds['team_details'] = array(
+					'label' => __( 'Sent their details', 'optima-build' ),
+					'who'   => 'optima',
+					'count' => count( $sent ),
+					'url'   => class_exists( 'Optima_Team_Admin' ) && method_exists( 'Optima_Team_Admin', 'url' ) ? Optima_Team_Admin::url() : admin_url( 'edit.php?post_type=' . ( class_exists( 'Optima_Team' ) ? Optima_Team::POST_TYPE : 'optima_team' ) ),
+					'link'  => __( 'Open People', 'optima-build' ),
+					'cap'   => 'manage_options',
+					'rows'  => $rows,
+				);
+			}
+		}
+
 		if ( class_exists( 'Optima_Law_Inbox' ) ) {
 			$kinds = array_merge( $kinds, Optima_Law_Inbox::kinds() );
 		}
@@ -312,7 +342,7 @@ final class Optima_Hub_Inbox {
 		$kinds = array_filter( self::kinds(), static fn( $k ) => $k['count'] > 0 );
 		Optima_Admin_UI::open(
 			__( 'Inbox', 'optima-build' ),
-			__( 'Everything waiting on a person: chat questions, new reviews, notes from the review page and pages that need a reviewer. Each one opens the screen that handles it. Change requests are on Request a change.', 'optima-build' )
+			__( 'Everything waiting on a person: chat questions, new reviews, notes from the review page, people who sent their details and pages that need a reviewer. Each one opens the screen that handles it. Change requests are on Request a change.', 'optima-build' )
 		);
 		if ( ! $kinds ) {
 			echo '<section class="sh-box"><p class="sh-value" style="margin:0">' . esc_html__( 'Nothing waiting.', 'optima-build' ) . '</p></section>';

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.14.0 (2026-11-23)
+
+Brought in from 0.2.4 to 0.2.14:
+- **One FAQ system in the schema.** With Optima Core active, a page's questions and answers now go into Core's schema graph (the `optima_schema_graph` filter) instead of a second FAQPage block in the footer. On a page Core already describes as an FAQ page (the FAQ hub or an editable page), the questions join Core's FAQPage, skipping any it already asks, so a page never carries two FAQPage entries. The FAQ entry also carries the page's name, its about and isPartOf links, and its published and last-changed dates. Without Optima Core, or when a theme writes its own head, the separate block prints exactly as before, still encoded with JSON_HEX_TAG. The answers visitors see do not change.
+- **Page titles as plain text in the schema.** The FAQ entry's name is the title as typed, so an apostrophe or quote no longer reaches Google as an HTML entity (`New Year&#8217;s Eve`). A password-protected page uses Optima Core's private title instead of its own.
+- **Every staging address Optima Core knows counts as staging.** The check that keeps robots.txt, /llms.txt and IndexNow off staging copies now reads Optima Core's list of hosting staging addresses (WP Engine, Kinsta, Flywheel, Pantheon and Cloudways) instead of its own shorter list. Without Optima Core it keeps the WP Engine pair. Local and private addresses are treated as before. Live sites see no change.
+- **Plain labels.** "Guide for AI tools" is now "AI guide page", and its links read "View the AI guide page" and "View search engine rules". Same setting, same links.
+- The /llms.txt rebuild (final addresses only, current descriptions, leftover pages left out) is unchanged.
+
 ## 0.2.4.12 (2026-11-20)
 
 - Shared admin kit: the four Optima Law screens are filed in the menu (three under Content, form entries under Build).

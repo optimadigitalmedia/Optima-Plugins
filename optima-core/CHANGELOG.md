@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.15.0.3 (2026-11-23)
+
+- New: the real visitor address behind Cloudflare. `optima_client_ip()` trusts Cloudflare's CF-Connecting-IP header only when the request came from Cloudflare's published address ranges (read 2026-11-23). Anything else uses the server's address, so a faked header is ignored.
+- New: a site behind another proxy (a host load balancer) can name its ranges with the `optima_core_proxy_ranges` filter. The address is then taken from X-Forwarded-For, right to left, skipping trusted proxies. The `optima_core_client_ip` filter has the last word.
+- Failed-login limit: now counts by `optima_client_ip()`, so a site behind Cloudflare locks out the real guesser, not Cloudflare. The `optima_core_login_limit_proxy_header` filter still works.
+- Cache purge after a theme or Optima plugin update now calls every WP Engine purge method the install has (object cache, CDN, page cache, and the full page cache purge where present).
+- New, optional: Cloudflare purge by URL. Set `OPTIMA_CF_ZONE_ID` and `OPTIMA_CF_PURGE_TOKEN` in wp-config.php (never stored, never shown). After an update Core drops the home page and the theme's style and script files from Cloudflare; after Optima Optimize rewrites an image, or a file is replaced in place with Enable Media Replace, it drops that image's addresses. 30 addresses per call, own domain only, never on staging, a failure logged once an hour.
+- Any plugin can ask for a Cloudflare purge with `do_action( 'optima_core_purge_urls', $urls, $why )`.
+- Spam protection tab: shows whether the optional Cloudflare Turnstile check is on.
+- Fixed two comments that said host and Cloudflare security headers were seen and kept. They are added after WordPress and cannot be seen; Site health now checks the live page for doubles.
+
 ## 1.15.0.2 (2026-11-23)
 
 - The admin menu icon is now Optima's tilted arrow (the logo's arrow), replacing a lightning bolt that was never Optima's mark.

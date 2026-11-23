@@ -59,6 +59,15 @@ optima-core/includes/protection.php | public static function xmlrpc_needed() | o
 optima-core/includes/protection.php | public static function editor_locked() | optima-build (Security group)
 optima-core/includes/protection.php | 'browser_headers' | optima-build (Security group)
 optima-core/includes/login-limit.php | final class Optima_Core_Login_Limit | optima-build (Site health row: Failed-login limit)
+optima-core/includes/client-ip.php | function optima_client_ip(): string | optima-chat (rate limit), optima-sitecheck (limits), optima-reviews (notes limit), optima-partners (click count), optima-core login-limit (visitor address)
+optima-core/includes/client-ip.php | function optima_client_ip_source(): string | optima-build (Security group: Visitor address row)
+optima-core/includes/client-ip.php | public static function header_ignored(): bool | optima-build (Security group: Visitor address row)
+optima-core/includes/client-ip.php | const CLOUDFLARE_READ | optima-build (Security group: the date the Cloudflare ranges were read)
+optima-core/optima-core.php | includes/client-ip.php | optima-chat, optima-sitecheck, optima-reviews, optima-partners, optima-build (optima_client_ip() is loaded on every site)
+optima-core/includes/cache-purge.php | add_action( 'optima_core_purge_urls', array( __CLASS__, 'queue_urls' ), 10, 2 ) | optima-optimize (rewritten images ask Core to purge Cloudflare by URL)
+optima-team/includes/class-optima-team-link.php | public static function waiting(): array | optima-build (Inbox: Sent their details)
+optima-team/includes/class-optima-team-link.php | public static function pending( int $post_id ): array | optima-build (Inbox: the day details were sent)
+optima-forms-guard/optima-forms-guard.php | public static function turnstile_status(): array | optima-core (Spam protection tab: the Turnstile line)
 CONTRACT
 
 exit "$fail"

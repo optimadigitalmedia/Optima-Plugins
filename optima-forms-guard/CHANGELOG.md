@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.7.2 (2026-11-23)
+
+- New, optional and off by default: Cloudflare Turnstile as an extra check on Gravity Forms. Set `OPTIMA_TURNSTILE_SITE_KEY` and `OPTIMA_TURNSTILE_SECRET` in wp-config.php to turn it on.
+- Cloudflare's script loads deferred, only on pages with a form. Visitors see a box to tick only when Cloudflare is unsure.
+- A missing or failed answer sends the entry to the form's Spam folder, like the wording check. It never stops a form with an error. If Cloudflare can't be reached, the entry goes through.
+- The check passes the visitor's real address from Optima Core.
+- Spam protection screen shows whether Turnstile is on and how to turn it on.
+- visitor-data.json lists what Turnstile sends to Cloudflare and notes that it is a functional security check, not tracking, so it runs without cookie consent.
+
 ## 0.3.7.1 (2026-11-20)
 
 - Ships visitor-data.json, so Optima Core's privacy draft says plainly that Forms Guard keeps no visitor information: only a monthly count of blocked submissions for 13 months, with spam left in Gravity Forms' own Spam folder.

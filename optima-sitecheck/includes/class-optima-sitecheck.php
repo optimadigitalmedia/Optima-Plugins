@@ -332,7 +332,7 @@ final class Optima_Sitecheck {
 		if ( ! is_email( $email ) ) {
 			return new WP_Error( 'optima_ssc_email', __( 'Add your email so we can send the full report.', 'optima-sitecheck' ), array( 'status' => 400 ) );
 		}
-		$ip     = (string) ( $_SERVER['REMOTE_ADDR'] ?? '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- hashed, never stored.
+		$ip     = function_exists( 'optima_client_ip' ) ? optima_client_ip() : (string) ( $_SERVER['REMOTE_ADDR'] ?? '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- hashed, never stored.
 		$limits = array(
 			// Per visitor first, so someone over their own limit never uses up the site's allowance.
 			array( 'ip' . $ip, 3, HOUR_IN_SECONDS ),

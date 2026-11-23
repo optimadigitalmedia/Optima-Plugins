@@ -126,6 +126,51 @@ final class Optima_Optimize_Pipeline {
 		$summary = $processor->process( $original_path, $size_paths, $mime_type, $generate_webp, $generate_avif );
 		update_post_meta( (int) $attachment_id, self::META_KEY, $summary );
 
+		// An image older than a few minutes had its files rewritten in place (a
+		// replaced file, regenerated sizes): ask Optima Core to drop Cloudflare's
+		// copies. A fresh upload has nothing cached yet.
+		$created = (int) strtotime( (string) get_post_field( 'post_date_gmt', (int) $attachment_id ) . ' UTC' );
+		if ( $created && $created < time() - 10 * MINUTE_IN_SECONDS ) {
+			do_action( 'optima_core_purge_urls', self::urls( (string) $uploads['baseurl'], $metadata, $generate_webp, $generate_avif ), 'image' );
+		}
+
 		return $metadata;
+	}
+
+	/**
+	 * Every address of one image: the file, its scaled original, each size,
+	 * and the WebP and AVIF twins this plugin writes beside them.
+	 *
+	 * @param string $baseurl  The uploads base URL.
+	 * @param array  $metadata Attachment metadata (file, sizes, original_image).
+	 * @return string[]
+	 */
+	public static function urls( string $baseurl, array $metadata, bool $webp, bool $avif ): array {
+		if ( empty( $metadata['file'] ) ) {
+			return array();
+		}
+		$base  = rtrim( $baseurl, '/' ) . '/';
+		$dir   = dirname( (string) $metadata['file'] );
+		$dir   = '.' === $dir ? '' : $dir . '/';
+		$files = array( $base . $metadata['file'] );
+		if ( ! empty( $metadata['original_image'] ) ) {
+			$files[] = $base . $dir . $metadata['original_image'];
+		}
+		foreach ( (array) ( $metadata['sizes'] ?? array() ) as $size ) {
+			if ( ! empty( $size['file'] ) ) {
+				$files[] = $base . $dir . $size['file'];
+			}
+		}
+		$out = array();
+		foreach ( array_unique( $files ) as $url ) {
+			$out[] = $url;
+			if ( $webp ) {
+				$out[] = $url . '.webp';
+			}
+			if ( $avif ) {
+				$out[] = $url . '.avif';
+			}
+		}
+		return $out;
 	}
 }

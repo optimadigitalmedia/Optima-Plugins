@@ -62,5 +62,17 @@ ok( false === verify( 'https://192.168.1.20', 'production' ), 'self-check, priva
 ok( false === verify( 'https://example-firm.com', 'development' ), 'self-check, environment development: does not verify' );
 ok( true === verify( 'https://8.8.8.8', 'production' ), 'self-check, public IP: verifies' );
 
+// WP Engine install with no environment type set: a look, never red.
+$r = Optima_Hub_Health::environment_type_row( true, false );
+ok( is_array( $r ) && 'warn' === $r['state'] && false !== strpos( $r['note'], 'Set the environment type on this install (production or staging) in WP Engine' ), 'WP Engine without WP_ENVIRONMENT_TYPE: a look that says to set it' );
+ok( null === Optima_Hub_Health::environment_type_row( true, true ), 'WP Engine with the environment type set: no row' );
+ok( null === Optima_Hub_Health::environment_type_row( false, false ), 'not WP Engine: no row' );
+$GLOBALS['t_home'] = 'https://firmstage.wpengine.com';
+ok( Optima_Hub_Health::on_wp_engine(), 'a *.wpengine.com address counts as WP Engine' );
+$GLOBALS['t_home'] = 'https://firm.wpenginepowered.com';
+ok( Optima_Hub_Health::on_wp_engine(), 'a *.wpenginepowered.com address counts as WP Engine' );
+$GLOBALS['t_home'] = 'https://example-firm.com';
+ok( ! Optima_Hub_Health::on_wp_engine(), 'another host without the WP Engine plugin does not' );
+
 echo $fail ? "$fail failed\n" : "All passed\n";
 exit( $fail ? 1 : 0 );
