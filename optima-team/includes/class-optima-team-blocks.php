@@ -76,7 +76,7 @@ final class Optima_Team_Blocks {
 			return;
 		}
 		$variant = in_array( (string) ( $args['variant'] ?? '' ), array( 'card', 'split' ), true ) ? (string) $args['variant'] : 'card';
-		$p       = Optima_Team::profile( $id );
+		$p       = Optima_Team::public_profile( Optima_Team::profile( $id ) );
 		$s       = Optima_Team::settings();
 		$law     = Optima_Team::is_law() && Optima_Team::is_attorney( $p );
 		$name    = '' !== $p['bar_name'] && $law ? $p['bar_name'] : wp_strip_all_tags( get_the_title( $id ) );

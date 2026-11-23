@@ -1147,12 +1147,12 @@ final class Optima_Team {
 		}
 	}
 
-	/** Profiles that forward to a bio page stay out of the sitemap. */
+	/** Profiles that forward to a bio page, and profile pages switched off, stay out of the sitemap. */
 	public static function sitemap_skip( $args, $post_type ) {
 		if ( self::POST_TYPE !== $post_type ) {
 			return $args;
 		}
-		$skip = array_keys( self::bio_pages() );
+		$skip = array_merge( array_keys( self::bio_pages() ), self::hidden_profiles() );
 		if ( $skip ) {
 			$args['post__not_in'] = array_values( array_unique( array_merge( array_map( 'intval', (array) ( $args['post__not_in'] ?? array() ) ), $skip ) ) );
 		}

@@ -50,14 +50,18 @@ final class Optima_Team_Schema {
 	 * @param int $post_id Team member post ID.
 	 */
 	public static function person( int $post_id ): array {
-		$p    = Optima_Team::profile( $post_id );
-		$url  = Optima_Team::public_url( $post_id );
+		// Only what the public may see: no card only data, no credential line without a source.
+		$p    = Optima_Team::public_profile( Optima_Team::profile( $post_id ) );
+		$url  = Optima_Team::profile_url( $post_id );
 		$node = array(
 			'@type' => 'Person',
 			'@id'   => self::person_id( $post_id ),
 			'name'  => html_entity_decode( wp_strip_all_tags( get_the_title( $post_id ) ), ENT_QUOTES, 'UTF-8' ),
-			'url'   => $url,
 		);
+		// A person whose profile page is off has no address to give.
+		if ( '' !== $url ) {
+			$node['url'] = $url;
+		}
 		if ( '' !== $p['role'] ) {
 			$node['jobTitle'] = $p['role'];
 		}
@@ -249,16 +253,26 @@ final class Optima_Team_Schema {
 				}
 			}
 		}
-		// A post whose byline names a profile (release 2): that Person is the author, no login needed.
-		$byline = is_singular() && isset( $graph['article'] ) && class_exists( 'Optima_Team_Byline' ) ? Optima_Team_Byline::get( (int) get_queried_object_id() ) : 0;
+		// A post whose byline names people (release 2, more than one since this
+		// release): each Person is an author, no login needed.
+		$byline = is_singular() && isset( $graph['article'] ) && class_exists( 'Optima_Team_Byline' ) ? Optima_Team_Byline::people( (int) get_queried_object_id() ) : array();
 		if ( $byline ) {
-			$graph['article']['author'] = array(
-				'@id'  => self::person_id( $byline ),
-				'@type' => 'Person',
-				'name' => html_entity_decode( wp_strip_all_tags( get_the_title( $byline ) ), ENT_QUOTES, 'UTF-8' ),
-				'url'  => Optima_Team::public_url( $byline ),
-			);
-			return self::add_person( $graph, $byline );
+			$authors = array();
+			foreach ( $byline as $member ) {
+				$author = array(
+					'@id'   => self::person_id( $member ),
+					'@type' => 'Person',
+					'name'  => Optima_Team::name( $member ),
+				);
+				$url = Optima_Team::profile_url( $member );
+				if ( '' !== $url ) {
+					$author['url'] = $url;
+				}
+				$authors[] = $author;
+				$graph     = self::add_person( $graph, $member );
+			}
+			$graph['article']['author'] = 1 === count( $authors ) ? $authors[0] : $authors;
+			return $graph;
 		}
 		// A blog post by a linked author: the author is the full Person.
 		if ( is_singular( 'post' ) && isset( $graph['article'] ) && Optima_Team::settings()['bylines'] ) {

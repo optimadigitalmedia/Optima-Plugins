@@ -1,8 +1,13 @@
 <?php
 /**
  * The front end: the profile on each /team/<name>/ page, the [optima_team]
- * grid, excerpts from the short bio, and author links that point at the
- * person's profile.
+ * grid, excerpts from the short bio, author links that point at the person's
+ * profile, and what the REST API shows of people to visitors.
+ *
+ * Everything a visitor sees goes through Optima_Team::public_profile(), so
+ * card only contact and credential lines without a source never print here.
+ * A person whose profile page is switched off answers "not found" to
+ * visitors; people who can edit them still see it, marked noindex.
  *
  * Everything prints inside the theme's own template (through the_content),
  * so it works on classic and block themes and inherits the site's fonts and
@@ -25,6 +30,9 @@ final class Optima_Team_Front {
 
 	/** Set once the stylesheet printed beside a block that rendered after the head. */
 	private static $printed = false;
+
+	/** The person whose photo a theme is printing, for the alt text default. */
+	private static $alt_name = '';
 
 	/**
 	 * The at-a-glance card already printed on this page (release 2): the
@@ -61,6 +69,15 @@ final class Optima_Team_Front {
 	}
 
 	public static function boot(): void {
+		add_action( 'template_redirect', array( __CLASS__, 'guard_profile' ), 0 );
+		add_action( 'pre_get_posts', array( __CLASS__, 'archive_query' ) );
+		add_action( 'pre_get_posts', array( __CLASS__, 'search_query' ) );
+		add_action( 'begin_fetch_post_thumbnail_html', array( __CLASS__, 'photo_begin' ), 10, 2 );
+		add_action( 'end_fetch_post_thumbnail_html', array( __CLASS__, 'photo_end' ) );
+		add_filter( 'wp_get_attachment_image_attributes', array( __CLASS__, 'photo_alt' ), 10, 2 );
+		add_filter( 'rest_' . Optima_Team::POST_TYPE . '_query', array( __CLASS__, 'rest_query' ), 10, 2 );
+		add_filter( 'rest_prepare_' . Optima_Team::POST_TYPE, array( __CLASS__, 'rest_prepare' ), 10, 2 );
+		add_filter( 'rest_post_search_query', array( __CLASS__, 'rest_search' ), 10, 2 );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'assets' ) );
 		add_filter( 'the_content', array( __CLASS__, 'profile' ), 20 );
 		add_filter( 'post_thumbnail_html', array( __CLASS__, 'drop_theme_photo' ), 10, 2 );
@@ -79,6 +96,97 @@ final class Optima_Team_Front {
 		if ( is_singular() && $post && has_shortcode( (string) $post->post_content, 'optima_team' ) ) {
 			wp_enqueue_style( 'optima-team' );
 		}
+	}
+
+	/* ---------- who can see what ---------- */
+
+	/**
+	 * Profile page switched off: visitors get the theme's "not found" page.
+	 * Someone who can edit the person still sees it, so they can check it, and
+	 * search engines are told not to list it. Runs before the bio forward, so
+	 * a hidden profile is never forwarded either.
+	 */
+	public static function guard_profile(): void {
+		if ( ! is_singular( Optima_Team::POST_TYPE ) ) {
+			return;
+		}
+		$id = (int) get_queried_object_id();
+		if ( ! $id || Optima_Team::shows( Optima_Team::profile( $id ), 'bio' ) ) {
+			return;
+		}
+		if ( current_user_can( 'edit_post', $id ) ) {
+			add_filter( 'wp_robots', 'wp_robots_no_robots' );
+			return;
+		}
+		global $wp_query;
+		$wp_query->set_404();
+		status_header( 404 );
+		nocache_headers();
+	}
+
+	/** The /team/ list shows the team page: no one whose page is off or who is not on the team page. */
+	public static function archive_query( $query ): void {
+		if ( is_admin() || ! $query->is_main_query() || ! $query->is_post_type_archive( Optima_Team::POST_TYPE ) ) {
+			return;
+		}
+		$ids = get_posts(
+			array(
+				'post_type'      => Optima_Team::POST_TYPE,
+				'post_status'    => 'publish',
+				'posts_per_page' => 500,
+				'fields'         => 'ids',
+				'no_found_rows'  => true,
+			)
+		);
+		$out = array();
+		foreach ( $ids as $id ) {
+			$id = (int) $id;
+			if ( ! Optima_Team::on_team_page( $id ) || ! Optima_Team::shows( Optima_Team::profile( $id ), 'bio' ) ) {
+				$out[] = $id;
+			}
+		}
+		if ( $out ) {
+			$query->set( 'post__not_in', array_merge( (array) $query->get( 'post__not_in' ), $out ) );
+		}
+	}
+
+	/** Profile pages that are switched off stay out of the site's own search results too. */
+	public static function search_query( $query ): void {
+		if ( is_admin() || ! $query->is_main_query() || ! $query->is_search() ) {
+			return;
+		}
+		$hidden = Optima_Team::hidden_profiles();
+		if ( $hidden ) {
+			$query->set( 'post__not_in', array_merge( (array) $query->get( 'post__not_in' ), $hidden ) );
+		}
+	}
+
+	/* ---------- photo alt text ---------- */
+
+	/** A theme is about to print a person's photo: remember the name. */
+	public static function photo_begin( $post_id, $thumb_id ): void {
+		unset( $thumb_id );
+		self::$alt_name = ( ! is_admin() && ! self::$rendering && Optima_Team::POST_TYPE === get_post_type( (int) $post_id ) ) ? wp_strip_all_tags( get_the_title( (int) $post_id ) ) : '';
+	}
+
+	public static function photo_end(): void {
+		self::$alt_name = '';
+	}
+
+	/**
+	 * A person's photo with no alt text set reads as their name. Only fills an
+	 * empty alt that came from the media library; this plugin's own markup
+	 * already chooses its alt text.
+	 */
+	public static function photo_alt( $attr, $attachment ) {
+		if ( '' === self::$alt_name || ! is_array( $attr ) || '' !== (string) ( $attr['alt'] ?? '' ) ) {
+			return $attr;
+		}
+		$id = is_object( $attachment ) ? (int) $attachment->ID : 0;
+		if ( $id && '' === trim( (string) get_post_meta( $id, '_wp_attachment_image_alt', true ) ) ) {
+			$attr['alt'] = self::$alt_name;
+		}
+		return $attr;
 	}
 
 	/* ---------- the profile page ---------- */
@@ -106,7 +214,7 @@ final class Optima_Team_Front {
 	}
 
 	private static function render_profile( int $id, string $content ): string {
-		$p        = Optima_Team::profile( $id );
+		$p        = Optima_Team::public_profile( Optima_Team::profile( $id ) );
 		$s        = Optima_Team::settings();
 		$name     = get_the_title( $id );
 		$military = Optima_Team::military_line( $p );
@@ -321,10 +429,11 @@ final class Optima_Team_Front {
 
 		$cols    = min( 4, max( 1, absint( $atts['columns'] ) ) );
 		$heading = in_array( $atts['heading'], array( 'h2', 'h3', 'h4' ), true ) ? $atts['heading'] : 'h3';
+		$limit   = (int) $atts['limit'];
 		$args    = array(
 			'post_type'      => Optima_Team::POST_TYPE,
 			'post_status'    => 'publish',
-			'posts_per_page' => (int) $atts['limit'] ? (int) $atts['limit'] : -1,
+			'posts_per_page' => -1,
 			'orderby'        => array(
 				'menu_order' => 'ASC',
 				'title'      => 'ASC',
@@ -337,6 +446,21 @@ final class Optima_Team_Front {
 			$args['orderby']  = 'post__in';
 		}
 		$people = get_posts( $args );
+		// Without ids: the team page, everyone live with Team page switched on.
+		// With ids: those people, in that order.
+		if ( ! $ids ) {
+			$people = array_values(
+				array_filter(
+					$people,
+					static function ( $person ) {
+						return Optima_Team::on_team_page( (int) $person->ID );
+					}
+				)
+			);
+		}
+		if ( $limit > 0 ) {
+			$people = array_slice( $people, 0, $limit );
+		}
 		if ( ! $people ) {
 			return '';
 		}
@@ -392,17 +516,25 @@ final class Optima_Team_Front {
 	 * @param bool    $bio     Show the short bio.
 	 */
 	public static function card( WP_Post $person, string $heading = 'h3', bool $bio = true ): string {
-		$p    = Optima_Team::profile( (int) $person->ID );
+		$p    = Optima_Team::public_profile( Optima_Team::profile( (int) $person->ID ) );
 		$name = get_the_title( $person );
-		$url  = get_permalink( $person );
+		// A person whose profile page is off shows without a link.
+		$url  = Optima_Team::shows( $p, 'bio' ) ? get_permalink( $person ) : '';
 		$h    = '<li class="optima-team-card">';
 		if ( has_post_thumbnail( $person ) ) {
-			$h .= '<a class="optima-team-card__photo" href="' . esc_url( $url ) . '" tabindex="-1" aria-hidden="true" data-optima-track="team_profile_click" data-optima-label="' . esc_attr( wp_strip_all_tags( $name ) ) . '">';
-			$h .= get_the_post_thumbnail( $person, 'medium_large', array( 'alt' => '', 'loading' => 'lazy' ) );
-			$h .= '</a>';
+			self::$rendering = true; // This markup sets its own alt text.
+			$img             = get_the_post_thumbnail( $person, 'medium_large', array( 'alt' => '', 'loading' => 'lazy' ) );
+			self::$rendering = false;
+			if ( '' !== $url ) {
+				$h .= '<a class="optima-team-card__photo" href="' . esc_url( $url ) . '" tabindex="-1" aria-hidden="true" data-optima-track="team_profile_click" data-optima-label="' . esc_attr( wp_strip_all_tags( $name ) ) . '">' . $img . '</a>';
+			} else {
+				$h .= '<span class="optima-team-card__photo" aria-hidden="true">' . $img . '</span>';
+			}
 		}
 		$h .= '<div class="optima-team-card__text">';
-		$h .= '<' . esc_html( $heading ) . ' class="optima-team-card__name"><a href="' . esc_url( $url ) . '" data-optima-track="team_profile_click">' . esc_html( wp_strip_all_tags( $name ) ) . '</a></' . esc_html( $heading ) . '>';
+		$h .= '' !== $url
+			? '<' . esc_html( $heading ) . ' class="optima-team-card__name"><a href="' . esc_url( $url ) . '" data-optima-track="team_profile_click">' . esc_html( wp_strip_all_tags( $name ) ) . '</a></' . esc_html( $heading ) . '>'
+			: '<' . esc_html( $heading ) . ' class="optima-team-card__name">' . esc_html( wp_strip_all_tags( $name ) ) . '</' . esc_html( $heading ) . '>';
 		if ( '' !== $p['role'] ) {
 			$h .= '<p class="optima-team-card__role">' . esc_html( $p['role'] ) . '</p>';
 		}
@@ -431,6 +563,109 @@ final class Optima_Team_Front {
 			return $link;
 		}
 		$member = Optima_Team::member_for_user( (int) $author_id );
-		return $member ? (string) get_permalink( $member ) : $link;
+		// No profile page to send readers to: keep WordPress's own author link.
+		$url = $member ? Optima_Team::profile_url( $member ) : '';
+		return '' !== $url ? $url : $link;
+	}
+
+	/* ---------- the REST API ---------- */
+
+	/** Someone who may see every profile through the REST API: editors and the block editor. */
+	private static function rest_trusted(): bool {
+		return current_user_can( 'edit_posts' );
+	}
+
+	/**
+	 * The people list in the REST API (/wp-json/wp/v2/optima_team): for anyone
+	 * who cannot edit posts, only live people whose own page is on.
+	 *
+	 * @param array $args WP_Query arguments.
+	 */
+	public static function rest_query( $args, $request = null ) {
+		unset( $request );
+		if ( ! is_array( $args ) || self::rest_trusted() ) {
+			return $args;
+		}
+		$args['post_status'] = 'publish';
+		return self::without_hidden( $args, Optima_Team::hidden_profiles() );
+	}
+
+	/**
+	 * Leave hidden profiles out of a query. A list of IDs (post__in) wins over
+	 * post__not_in in WP_Query, so hidden IDs are taken out of it directly.
+	 *
+	 * @param array $args   WP_Query arguments.
+	 * @param int[] $hidden Hidden profile IDs.
+	 */
+	public static function without_hidden( array $args, array $hidden ): array {
+		if ( ! $hidden ) {
+			return $args;
+		}
+		if ( ! empty( $args['post__in'] ) ) {
+			$keep             = array_values( array_diff( array_map( 'intval', (array) $args['post__in'] ), $hidden ) );
+			$args['post__in'] = $keep ? $keep : array( 0 );
+			return $args;
+		}
+		$args['post__not_in'] = array_merge( isset( $args['post__not_in'] ) ? (array) $args['post__not_in'] : array(), $hidden );
+		return $args;
+	}
+
+	/**
+	 * One person in the REST API. For anyone who cannot edit posts, a person
+	 * whose own page is off, or who is not live, is "not found", the same as
+	 * their page. Card only data, details waiting for an OK and link data are
+	 * never sent to them, whatever registered it.
+	 *
+	 * @param WP_REST_Response $response The response.
+	 * @param WP_Post          $post     The person.
+	 */
+	public static function rest_prepare( $response, $post ) {
+		if ( self::rest_trusted() || ! $post instanceof WP_Post ) {
+			return $response;
+		}
+		if ( 'publish' !== $post->post_status || ! Optima_Team::shows( Optima_Team::profile( (int) $post->ID ), 'bio' ) ) {
+			return new WP_Error( 'rest_post_invalid_id', __( 'Invalid post ID.', 'optima-team' ), array( 'status' => 404 ) );
+		}
+		if ( is_object( $response ) && method_exists( $response, 'get_data' ) && method_exists( $response, 'set_data' ) ) {
+			$response->set_data( self::rest_public_data( (array) $response->get_data() ) );
+		}
+		return $response;
+	}
+
+	/** Keys that never go to the public REST API, at the top level or under meta. */
+	public static function rest_private_keys(): array {
+		return array_merge(
+			array( Optima_Team::META, Optima_Team::PENDING, '_optima_team_link', '_optima_team_link_hash', 'optima_team', 'pending', 'link' ),
+			Optima_Team::card_keys()
+		);
+	}
+
+	/**
+	 * A person's REST data with the private keys taken out.
+	 *
+	 * @param array $data Response data.
+	 */
+	public static function rest_public_data( array $data ): array {
+		foreach ( self::rest_private_keys() as $key ) {
+			unset( $data[ $key ] );
+			if ( isset( $data['meta'] ) && is_array( $data['meta'] ) ) {
+				unset( $data['meta'][ $key ] );
+			}
+		}
+		return $data;
+	}
+
+	/**
+	 * The REST search (/wp-json/wp/v2/search): hidden profiles stay out for
+	 * anyone who cannot edit posts, the same as the site's own search.
+	 *
+	 * @param array $args WP_Query arguments.
+	 */
+	public static function rest_search( $args, $request = null ) {
+		unset( $request );
+		if ( ! is_array( $args ) || self::rest_trusted() ) {
+			return $args;
+		}
+		return self::without_hidden( $args, Optima_Team::hidden_profiles() );
 	}
 }

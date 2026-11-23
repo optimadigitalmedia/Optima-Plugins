@@ -94,13 +94,13 @@ final class Optima_Team_Editor {
 	private static function facts( array $p, bool $law ): void {
 		$lines = array();
 		foreach ( $p['education'] as $r ) {
-			$lines['education'][] = trim( implode( ', ', array_filter( array( $r['school'] ?? '', $r['degree'] ?? '', $r['year'] ?? '' ) ) ) );
+			$lines['education'][] = self::sourced( trim( implode( ', ', array_filter( array( $r['school'] ?? '', $r['degree'] ?? '', $r['year'] ?? '' ) ) ) ), $r );
 		}
 		foreach ( $p['bar'] as $r ) {
-			$lines['bar'][] = trim( implode( ', ', array_filter( array( $r['state'] ?? '', $r['year'] ?? '', ! empty( $r['number'] ) ? '#' . $r['number'] : '' ) ) ) );
+			$lines['bar'][] = self::sourced( trim( implode( ', ', array_filter( array( $r['state'] ?? '', $r['year'] ?? '', ! empty( $r['number'] ) ? '#' . $r['number'] : '' ) ) ) ), $r );
 		}
 		foreach ( $p['awards'] as $r ) {
-			$line = Optima_Team::award_line( $r );
+			$line = self::sourced( Optima_Team::award_line( $r ), $r );
 			if ( '' !== (string) ( $r['standards_url'] ?? '' ) ) {
 				$line .= ' (' . __( 'with a How this is awarded link', 'optima-team' ) . ')';
 			}
@@ -112,7 +112,7 @@ final class Optima_Team_Editor {
 			$lines['awards'][] = $line;
 		}
 		foreach ( (array) $p['certifications'] as $r ) {
-			$lines['certifications'][] = Optima_Team::certification_line( $r );
+			$lines['certifications'][] = self::sourced( Optima_Team::certification_line( $r ), $r );
 		}
 		if ( '' !== (string) $p['bar_name'] ) {
 			$lines['bar_name'] = array( $p['bar_name'] );
@@ -133,7 +133,7 @@ final class Optima_Team_Editor {
 		}
 		$refill = class_exists( 'Optima_Hub_Admin' ) ? Optima_Hub_Admin::url( 'updates' ) . '#sh-up-fill' : '';
 		echo '<fieldset class="st-group st-facts"><legend>' . esc_html__( 'Credentials', 'optima-team' ) . '</legend>';
-		echo '<p class="sh-note">' . esc_html__( 'Facts come from the setup file (exported from the client\'s Knowledge Hub), never typed here. Change them in the Hub, release the theme, then fill from theme again.', 'optima-team' );
+		echo '<p class="sh-note">' . esc_html__( 'Facts come from the setup file (exported from the client\'s Knowledge Hub), never typed here. Change them in the Hub, release the theme, then fill from theme again. Each line shows its source; a line with an empty source stays off the site.', 'optima-team' );
 		if ( '' !== $refill ) {
 			echo ' <a href="' . esc_url( $refill ) . '">' . esc_html__( 'Fill from theme again', 'optima-team' ) . ' &rsaquo;</a>';
 		}
@@ -150,6 +150,89 @@ final class Optima_Team_Editor {
 			echo '<input type="hidden" name="optima_team[attorney]" value="' . esc_attr( (string) $p['attorney'] ) . '">';
 		}
 		echo '</fieldset>';
+	}
+
+	/**
+	 * A credential line with its source, as the Credentials box shows it.
+	 *
+	 * @param string $line The line.
+	 * @param array  $row  The credential row.
+	 */
+	private static function sourced( string $line, array $row ): string {
+		if ( ! Optima_Team::sourced( $row ) ) {
+			return $line . ' (' . __( 'no source: hidden on the site', 'optima-team' ) . ')';
+		}
+		/* translators: %s: where the line can be checked. */
+		return $line . ' (' . sprintf( __( 'source: %s', 'optima-team' ), (string) $row['source'] ) . ')';
+	}
+
+	/**
+	 * Shows on: where this person appears. Each switch is the one place that
+	 * choice is made (the card switch included; Optima Cards reads it).
+	 *
+	 * @param array $p The profile.
+	 */
+	private static function shows_on( array $p ): void {
+		$labels = array(
+			'bio'    => array( __( 'Their own profile page', 'optima-team' ), __( 'Off: visitors get "page not found", and the page leaves the sitemap, the team list and search.', 'optima-team' ) ),
+			'team'   => array( __( 'The team page', 'optima-team' ), __( 'The team grid lists them.', 'optima-team' ) ),
+			'card'   => array( __( 'A business card', 'optima-team' ), class_exists( 'Optima_Cards_Settings' ) ? __( 'A digital card at the card address, from Optima Cards.', 'optima-team' ) : __( 'Needs Optima Cards to show.', 'optima-team' ) ),
+			'byline' => array( __( 'A byline on posts', 'optima-team' ), __( 'Their name on posts that pick them in the Byline box, or that their login wrote.', 'optima-team' ) ),
+		);
+		?>
+		<fieldset class="st-group">
+			<legend><?php esc_html_e( 'Shows on', 'optima-team' ); ?></legend>
+			<input type="hidden" name="optima_team[shows][sent]" value="1">
+			<?php foreach ( Optima_Team::show_keys() as $key ) : ?>
+				<p class="st-check"><label><input type="checkbox" name="optima_team[shows][<?php echo esc_attr( $key ); ?>]" value="1" <?php checked( Optima_Team::shows( $p, $key ) ); ?>> <?php echo esc_html( $labels[ $key ][0] ); ?></label>
+					<span class="description"><?php echo esc_html( $labels[ $key ][1] ); ?></span></p>
+			<?php endforeach; ?>
+		</fieldset>
+		<?php
+	}
+
+	/**
+	 * The business card's own words and contact, typed once here and read by
+	 * Optima Cards. Never on the profile page, the team page, the schema or the
+	 * REST API.
+	 *
+	 * @param array $p The profile.
+	 */
+	private static function business_card( array $p ): void {
+		?>
+		<fieldset class="st-group">
+			<legend><?php esc_html_e( 'Business card', 'optima-team' ); ?></legend>
+			<p class="sh-note"><?php esc_html_e( 'Business card only. Never on their page, the team page or in search.', 'optima-team' ); ?></p>
+			<p class="st-field">
+				<label for="st-card-intro"><?php esc_html_e( 'Intro', 'optima-team' ); ?></label>
+				<textarea id="st-card-intro" name="optima_team[card_intro]" rows="2"><?php echo esc_textarea( $p['card_intro'] ); ?></textarea>
+				<span class="description"><?php esc_html_e( 'One or two sentences in their own voice, on their card.', 'optima-team' ); ?></span>
+			</p>
+			<div class="st-grid">
+				<p class="st-field">
+					<label for="st-card-why"><?php esc_html_e( 'Why talk to them', 'optima-team' ); ?></label>
+					<input id="st-card-why" type="text" name="optima_team[card_why]" value="<?php echo esc_attr( $p['card_why'] ); ?>">
+					<span class="description"><?php esc_html_e( 'One line under their name on the main card.', 'optima-team' ); ?></span>
+				</p>
+				<p class="st-field">
+					<label for="st-card-tags"><?php esc_html_e( 'Tags', 'optima-team' ); ?></label>
+					<input id="st-card-tags" type="text" name="optima_team[card_tags]" value="<?php echo esc_attr( $p['card_tags'] ); ?>">
+					<span class="description"><?php esc_html_e( 'Comma separated, two to four short topics.', 'optima-team' ); ?></span>
+				</p>
+			</div>
+			<div class="st-grid">
+				<p class="st-field">
+					<label for="st-card-phone"><?php esc_html_e( 'Card phone (optional)', 'optima-team' ); ?></label>
+					<input id="st-card-phone" type="tel" name="optima_team[card_phone]" value="<?php echo esc_attr( $p['card_phone'] ); ?>">
+				</p>
+				<p class="st-field">
+					<label for="st-card-email"><?php esc_html_e( 'Card email (optional)', 'optima-team' ); ?></label>
+					<input id="st-card-email" type="email" name="optima_team[card_email]" value="<?php echo esc_attr( $p['card_email'] ); ?>">
+				</p>
+			</div>
+			<p class="description"><?php esc_html_e( 'Blank card phone uses the business phone; blank card email uses their email above, then the business email.', 'optima-team' ); ?></p>
+		</fieldset>
+		<?php
 	}
 
 	/**
@@ -264,6 +347,8 @@ final class Optima_Team_Editor {
 				</div>
 			</fieldset>
 
+			<?php self::shows_on( $p ); ?>
+
 			<?php self::facts( $p, $law ); ?>
 
 			<?php self::practice_areas( $p ); ?>
@@ -319,6 +404,8 @@ final class Optima_Team_Editor {
 					<p class="description"><?php esc_html_e( 'Email and phone go into the schema only. Turn on "Show email and phone" in Team settings to print them on the profile.', 'optima-team' ); ?></p>
 				<?php endif; ?>
 			</fieldset>
+
+			<?php self::business_card( $p ); ?>
 		</div>
 		<?php
 	}
