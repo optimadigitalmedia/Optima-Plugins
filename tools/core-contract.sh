@@ -54,6 +54,10 @@ optima-build/includes/class-optima-hub-access.php | public static function is_op
 optima-core/includes/offices.php | public static function language_nodes() | optima-hours (availableLanguage on the intake ContactPoint)
 optima-hours/includes/class-optima-hours-schema.php | public static function properties(): array | optima-core offices (office nodes take the Optima Hours schedule while it owns the hours job)
 optima-core/includes/protection.php | 'login_limit' | optima-build (Site health row: Failed-login limit)
+optima-core/includes/protection.php | public static function forced_off() | optima-build (Security group)
+optima-core/includes/protection.php | public static function xmlrpc_needed() | optima-build (Security group)
+optima-core/includes/protection.php | public static function editor_locked() | optima-build (Security group)
+optima-core/includes/protection.php | 'browser_headers' | optima-build (Security group)
 optima-core/includes/login-limit.php | final class Optima_Core_Login_Limit | optima-build (Site health row: Failed-login limit)
 CONTRACT
 

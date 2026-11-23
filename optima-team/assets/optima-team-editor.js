@@ -48,6 +48,27 @@
 		}
 	} );
 
+	// Send them a link: copy a new link.
+	document.addEventListener( 'click', function ( e ) {
+		var copy = e.target.closest( '[data-st-copy]' );
+		if ( ! copy ) {
+			return;
+		}
+		var field = document.getElementById( copy.getAttribute( 'data-st-copy' ) );
+		if ( ! field ) {
+			return;
+		}
+		field.select();
+		var done = function () {
+			copy.textContent = copy.getAttribute( 'data-st-done' ) || copy.textContent;
+		};
+		if ( navigator.clipboard && navigator.clipboard.writeText ) {
+			navigator.clipboard.writeText( field.value ).then( done, function () {} );
+		} else if ( document.execCommand && document.execCommand( 'copy' ) ) {
+			done();
+		}
+	} );
+
 	document.addEventListener( 'change', function ( e ) {
 		var t = e.target.closest( '[data-st-toggle]' );
 		if ( ! t ) {

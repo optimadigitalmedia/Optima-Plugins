@@ -115,8 +115,11 @@ final class Optima_Team_Offboard {
 			)
 		) : array();
 		// Posts whose Byline box names the person count as posts under their byline too.
+		// A post written with someone else stays: only their name comes off it.
+		$shared = array();
 		if ( class_exists( 'Optima_Team_Byline' ) ) {
-			$posts = array_values( array_unique( array_merge( array_map( 'intval', $posts ), array_map( 'intval', Optima_Team_Byline::posts_for( $person ) ) ) ) );
+			$shared = Optima_Team_Byline::shared_posts_for( $person );
+			$posts  = array_values( array_diff( array_unique( array_merge( array_map( 'intval', $posts ), Optima_Team_Byline::posts_for( $person ) ) ), $shared ) );
 		}
 		$results = post_type_exists( 'optima_result' ) ? get_posts(
 			array(
@@ -154,6 +157,12 @@ final class Optima_Team_Offboard {
 				'ids'    => array_map( 'intval', $posts ),
 				/* translators: %s: the blog address */
 				'action' => sprintf( __( 'Deleted, each 301 to %s', 'optima-team' ), wp_make_link_relative( $blog ) ),
+			),
+			'shared'   => array(
+				'label'  => __( 'Posts they wrote with someone else', 'optima-team' ),
+				'count'  => count( $shared ),
+				'ids'    => array_map( 'intval', $shared ),
+				'action' => __( 'Kept; their name comes off the byline', 'optima-team' ),
 			),
 			'results'  => array(
 				'label'  => __( 'Case results naming them', 'optima-team' ),
@@ -196,6 +205,12 @@ final class Optima_Team_Offboard {
 		$p     = Optima_Team::profile( $person );
 		$name  = strtolower( trim( get_the_title( $person ) ) );
 		$email = strtolower( trim( $p['email'] ) );
+		foreach ( (array) ( Optima_Cards_Settings::get()['people'] ?? array() ) as $i => $card ) {
+			$card = (array) $card;
+			if ( (int) ( $card['profile'] ?? 0 ) === $person ) {
+				return (string) $i;
+			}
+		}
 		foreach ( (array) ( Optima_Cards_Settings::get()['people'] ?? array() ) as $i => $card ) {
 			$card = (array) $card;
 			if ( strtolower( trim( (string) ( $card['name'] ?? '' ) ) ) === $name || ( '' !== $email && strtolower( trim( (string) ( $card['email'] ?? '' ) ) ) === $email ) ) {
@@ -433,6 +448,10 @@ final class Optima_Team_Offboard {
 			if ( wp_delete_post( $id, true ) ) {
 				++$n['results'];
 			}
+		}
+		// Posts written with someone else stay; the name comes off their byline.
+		if ( class_exists( 'Optima_Team_Byline' ) ) {
+			Optima_Team_Byline::release( $person );
 		}
 		// Reviewed pages keep their date, lose the name.
 		$n['reviewed'] = Optima_Team_Reviewed::release( $person );

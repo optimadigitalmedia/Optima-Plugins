@@ -645,20 +645,35 @@ final class Optima_Hub_Health {
 	 * in on Review settings) were last saved. Optima Reviews 0.5.5 stamps each
 	 * save. a client site site showed 17 Google reviews while Google showed 20. Null
 	 * when Optima Reviews is not running or no totals are entered.
+	 *
+	 * With Optima Reviews' daily Google check on (an API key and a place ID,
+	 * Optima_Reviews_Places::status()): when it works the note says so, and when
+	 * it has failed for three days it is a look with the reason and a link to
+	 * Review settings. While the check is off, nothing changes.
 	 */
 	public static function review_totals(): ?array {
 		if ( ! class_exists( 'Optima_Reviews_Settings' ) ) {
 			return null;
+		}
+		$link = array(
+			'link'      => admin_url( 'admin.php?page=optima-reviews-settings' ),
+			'link_text' => __( 'Review settings', 'optima-build' ),
+		);
+		$auto = class_exists( 'Optima_Reviews_Places' ) && method_exists( 'Optima_Reviews_Places', 'status' ) ? (array) Optima_Reviews_Places::status() : array( 'on' => false );
+		if ( ! empty( $auto['on'] ) && (int) ( $auto['failing_days'] ?? 0 ) >= 3 ) {
+			return array(
+				'label' => __( 'Review totals', 'optima-build' ),
+				'value' => __( 'Google check failing', 'optima-build' ),
+				'state' => 'warn',
+				/* translators: 1: number of days, 2: what went wrong, in plain words. */
+				'note'  => trim( sprintf( __( 'The daily Google check has not worked for %1$d days. %2$s', 'optima-build' ), (int) $auto['failing_days'], (string) ( $auto['error'] ?? '' ) ) ),
+			) + $link;
 		}
 		$profiles = (array) ( Optima_Reviews_Settings::get()['profiles'] ?? array() );
 		$counted  = array_filter( $profiles, static fn( $p ) => is_array( $p ) && (int) ( $p['count'] ?? 0 ) > 0 );
 		if ( ! $counted ) {
 			return null;
 		}
-		$link  = array(
-			'link'      => admin_url( 'admin.php?page=optima-reviews-settings' ),
-			'link_text' => __( 'Review settings', 'optima-build' ),
-		);
 		$stamp = (int) get_option( 'optima_reviews_totals_updated', 0 );
 		if ( ! $stamp ) {
 			return array(
@@ -675,7 +690,7 @@ final class Optima_Hub_Health {
 			/* translators: %d: days */
 			'value' => 0 === $days ? __( 'Today', 'optima-build' ) : sprintf( _n( '%d day ago', '%d days ago', $days, 'optima-build' ), $days ),
 			'state' => $old ? 'warn' : 'good',
-			'note'  => $old ? __( 'The review counts on the site have not been updated in over a month. Check each platform and type in its current rating and count.', 'optima-build' ) : __( 'The review counts on the site were updated in the last month.', 'optima-build' ),
+			'note'  => $old ? __( 'The review counts on the site have not been updated in over a month. Check each platform and type in its current rating and count.', 'optima-build' ) : ( ! empty( $auto['working'] ) ? __( 'Google is checked every day.', 'optima-build' ) : __( 'The review counts on the site were updated in the last month.', 'optima-build' ) ),
 		) + ( $old ? $link : array() );
 	}
 
@@ -837,10 +852,19 @@ final class Optima_Hub_Health {
 			'note'  => $https ? __( 'The site loads over HTTPS.', 'optima-build' ) : __( 'The site address is not HTTPS.', 'optima-build' ),
 		);
 		$out[] = self::search_engines();
-		$out[] = self::login_limit();
+		// The failed-login limit moved to the Security group (Optima_Hub_Security::rows()).
 
 		if ( class_exists( 'Optima_Hub_Mail' ) ) {
-			$out[] = Optima_Hub_Mail::check();
+			// A saved token or password the site's security keys can no longer read is a fix, not "Host mail".
+			$out[] = class_exists( 'Optima_Hub_Secret' ) && Optima_Hub_Secret::UNREADABLE === Optima_Hub_Secret::mail_state()
+				? Optima_Hub_Secret::mail_row( Optima_Hub_Mail::url() )
+				: Optima_Hub_Mail::check();
+		}
+		if ( class_exists( 'Optima_Hub_Themes' ) && method_exists( 'Optima_Hub_Themes', 'health_row' ) ) {
+			$theme = Optima_Hub_Themes::health_row();
+			if ( $theme ) {
+				$out[] = $theme;
+			}
 		}
 
 		// Hidden upload fields, from Optima Forms Guard 0.3.0+.
@@ -852,7 +876,23 @@ final class Optima_Hub_Health {
 		if ( $forms ) {
 			$out[] = $forms;
 		}
+		// Whether the form emails actually went out, and the nightly form test.
+		if ( class_exists( 'Optima_Hub_Form_Mail' ) ) {
+			$sent = Optima_Hub_Form_Mail::row();
+			if ( $sent ) {
+				$out[] = $sent;
+			}
+		}
+		if ( class_exists( 'Optima_Hub_Form_Test' ) ) {
+			$test = Optima_Hub_Form_Test::row();
+			if ( $test ) {
+				$out[] = $test;
+			}
+		}
 		$out[]   = self::test_builds();
+		if ( class_exists( 'Optima_Hub_Plugins' ) ) {
+			$out[] = Optima_Hub_Plugins::check();
+		}
 		$channel = self::release_channel();
 		if ( $channel ) {
 			$out[] = $channel;
@@ -863,26 +903,29 @@ final class Optima_Hub_Health {
 		}
 		$out[] = self::page_tree();
 
-		$health = json_decode( (string) get_transient( 'health-check-site-status-result' ), true );
-		if ( is_array( $health ) ) {
-			$critical = (int) ( $health['critical'] ?? 0 );
-			$advised  = (int) ( $health['recommended'] ?? 0 );
-			$out[]    = array(
-				'label' => __( 'Site Health', 'optima-build' ),
-				'value' => $critical ? __( 'Needs attention', 'optima-build' ) : __( 'Good', 'optima-build' ),
-				'state' => $critical ? 'bad' : ( $advised > 3 ? 'warn' : 'good' ),
-				/* translators: 1: critical count, 2: recommended count */
-				'note'  => sprintf( __( '%1$d critical, %2$d recommended (WordPress Site Health).', 'optima-build' ), $critical, $advised ),
-			);
-		} else {
-			$out[] = array(
-				'label' => __( 'Site Health', 'optima-build' ),
-				'value' => __( 'Not checked yet', 'optima-build' ),
-				'state' => 'warn',
-				'note'  => __( 'Open Tools, Site Health once to run WordPress\'s own check.', 'optima-build' ),
-			);
-		}
+		// WordPress's own Site Health, run daily by Optima Build and listed by name (Optima_Hub_WP_Health).
+		$out[] = class_exists( 'Optima_Hub_WP_Health' ) ? Optima_Hub_WP_Health::row() : array(
+			'label' => __( 'WordPress checks', 'optima-build' ),
+			'value' => __( 'Not checked yet', 'optima-build' ),
+			'state' => 'warn',
+			'note'  => __( 'Open Tools, Site Health once to run WordPress\'s own check.', 'optima-build' ),
+		);
 		return $out;
+	}
+
+	/**
+	 * The Security group (rule 19): Optima Core's switches and the rest of the
+	 * baseline, for people who can manage the site. Empty for anyone else.
+	 *
+	 * @return array<int, array{label:string, value:string, state:string, note:string, link?:string, link_text?:string}>
+	 */
+	public static function security_checks(): array {
+		return class_exists( 'Optima_Hub_Security' ) ? Optima_Hub_Security::visible_rows() : array( self::login_limit() );
+	}
+
+	/** Every check on Site health, all groups (Basics, Security, AI search), for the status line and Updates. */
+	public static function every_check(): array {
+		return array_merge( self::checks(), self::security_checks(), self::ai_checks() );
 	}
 
 	/**

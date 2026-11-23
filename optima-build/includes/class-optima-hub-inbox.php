@@ -230,6 +230,31 @@ final class Optima_Hub_Inbox {
 			$kinds = array_merge( $kinds, Optima_Law_Inbox::kinds() );
 		}
 
+		// Forms the nightly test found not sending, two nights or more in a row.
+		if ( class_exists( 'Optima_Hub_Form_Test' ) ) {
+			$failing = Optima_Hub_Form_Test::failing();
+			if ( $failing ) {
+				$rows = array();
+				foreach ( array_slice( $failing, 0, self::SHOW, true ) as $id => $f ) {
+					$rows[] = array(
+						'title' => $f['title'],
+						/* translators: 1: nights in a row, 2: the reason */
+						'note'  => sprintf( _n( 'Did not send %1$d night in a row: %2$s', 'Did not send %1$d nights in a row: %2$s', $f['nights'], 'optima-build' ), $f['nights'], $f['why'] ),
+						'url'   => admin_url( 'admin.php?page=gf_edit_forms&view=settings&subview=notification&id=' . (int) $id ),
+					);
+				}
+				$kinds['form_test'] = array(
+					'label' => __( 'Forms not sending', 'optima-build' ),
+					'who'   => 'optima',
+					'count' => count( $failing ),
+					'url'   => Optima_Hub_Admin::url( 'health' ),
+					'link'  => __( 'Open Site health', 'optima-build' ),
+					'cap'   => 'manage_options',
+					'rows'  => $rows,
+				);
+			}
+		}
+
 		self::$kinds = $kinds;
 		return $kinds;
 	}

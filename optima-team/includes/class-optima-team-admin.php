@@ -77,6 +77,8 @@ final class Optima_Team_Admin {
 	public static function assets( string $hook ): void {
 		if ( false !== strpos( $hook, self::SLUG ) ) {
 			Optima_Admin_UI::enqueue( OPTIMA_TEAM_URL . 'assets/optima-admin.css' );
+			// Copy the link a person fills in their own words with.
+			wp_enqueue_script( 'optima-team-editor', OPTIMA_TEAM_URL . 'assets/optima-team-editor.js', array(), OPTIMA_TEAM_VERSION, true );
 		}
 	}
 
@@ -136,6 +138,50 @@ final class Optima_Team_Admin {
 		<?php
 	}
 
+	/** A link made a moment ago from this screen, shown once with its Copy button. */
+	private static function new_link_box(): void {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- display only.
+		$note   = isset( $_GET[ Optima_Team_Link::QUERY ] ) ? sanitize_key( wp_unslash( $_GET[ Optima_Team_Link::QUERY ] ) ) : '';
+		$person = isset( $_GET['person'] ) ? absint( $_GET['person'] ) : 0;
+		// phpcs:enable
+		if ( 'link' !== $note || ! $person || Optima_Team::POST_TYPE !== get_post_type( $person ) || ! Optima_Team_Link::can_manage( $person ) ) {
+			return;
+		}
+		?>
+		<section class="sh-box">
+			<h2 class="sh-title"><?php /* translators: %s: person's name. */ echo esc_html( sprintf( __( 'A link for %s', 'optima-team' ), Optima_Team::name( $person ) ) ); ?></h2>
+			<?php echo Optima_Team_Link::link_html( $person, 'people' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in link_html(). ?>
+		</section>
+		<?php
+	}
+
+	/**
+	 * Problems first (rule 52): people who sent their details through their
+	 * link, waiting for an OK. Approve here (with the firm's approval when
+	 * Optima Law asks for it) or Discard.
+	 */
+	private static function pending_box(): void {
+		$waiting = array_values( array_filter( Optima_Team_Link::waiting(), array( 'Optima_Team_Link', 'can_manage' ) ) );
+		if ( ! $waiting ) {
+			return;
+		}
+		?>
+		<section class="sh-box">
+			<h2 class="sh-title"><?php esc_html_e( 'Sent their details, waiting for your OK', 'optima-team' ); ?></h2>
+			<p><?php esc_html_e( 'Nothing changes on the site until it is approved.', 'optima-team' ); ?></p>
+			<?php foreach ( $waiting as $id ) : ?>
+				<div class="sh-box" id="otd-pending-<?php echo (int) $id; ?>">
+					<p class="sh-label"><a href="<?php echo esc_url( (string) get_edit_post_link( $id ) ); ?>"><?php echo esc_html( Optima_Team::name( $id ) ); ?></a></p>
+					<?php
+					echo Optima_Team_Link::diff_table( $id ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in diff_table().
+					echo Optima_Team_Link::review_form( $id ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in review_form().
+					?>
+				</div>
+			<?php endforeach; ?>
+		</section>
+		<?php
+	}
+
 	public static function render(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
@@ -173,12 +219,44 @@ final class Optima_Team_Admin {
 		$law     = Optima_Team::is_law();
 		$archive = get_post_type_archive_link( Optima_Team::POST_TYPE );
 
+		// Who needs a look comes first (rule 52), then everyone else, each part in team page order.
+		$look = array();
+		foreach ( $people as $person ) {
+			$look[ (int) $person->ID ] = Optima_Team::needs_look( (int) $person->ID );
+		}
+		$by_id = array();
+		foreach ( $people as $person ) {
+			$by_id[ (int) $person->ID ] = $person;
+		}
+		$people = array_map( static fn( $id ) => $by_id[ $id ], Optima_Team::look_first( array_keys( $by_id ), $look ) );
+
+		// Filter by team group (Attorneys first, then the others).
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- a list filter, read only.
+		$group  = isset( $_GET['group'] ) ? sanitize_key( wp_unslash( $_GET['group'] ) ) : '';
+		$groups = array();
+		foreach ( $people as $person ) {
+			$g = Optima_Team::group_of( Optima_Team::profile( (int) $person->ID ) );
+			if ( '' !== $g ) {
+				$groups[ $g ] = ( $groups[ $g ] ?? 0 ) + 1;
+			}
+		}
+		$listed = $people;
+		if ( 'look' === $group ) {
+			$listed = array_values( array_filter( $people, static fn( $p ) => ! empty( $look[ (int) $p->ID ] ) ) );
+		} elseif ( isset( Optima_Team::team_groups()[ $group ] ) ) {
+			$listed = array_values( array_filter( $people, static fn( $p ) => Optima_Team::group_of( Optima_Team::profile( (int) $p->ID ) ) === $group ) );
+		} else {
+			$group = '';
+		}
+
 		Optima_Admin_UI::open(
 			__( 'People', 'optima-team' ),
 			__( 'One profile per person. It feeds the team page, the profile page, bylines and the Person schema, so a name, title or photo changes in one place. Real people with real credentials are what visitors and search engines look for first.', 'optima-team' ),
 			__( 'People', 'optima-team' )
 		);
 		settings_errors( $o );
+		self::new_link_box();
+		self::pending_box();
 		self::reviews_box();
 		?>
 		<div class="sh-grid sh-grid-3">
@@ -218,12 +296,29 @@ final class Optima_Team_Admin {
 
 		<section class="sh-box">
 			<h2 class="sh-title"><?php esc_html_e( 'The team', 'optima-team' ); ?></h2>
-			<p><?php esc_html_e( 'People show in order of the Order number on each profile, lowest first, then by name. Open a person to fill in their credentials.', 'optima-team' ); ?></p>
+			<p><?php esc_html_e( 'People who need a look come first. Then everyone in order of the Order number on each profile, lowest first, then by name.', 'optima-team' ); ?></p>
 			<?php if ( $people ) : ?>
+				<p class="sh-chips">
+					<?php
+					$chips = array( '' => __( 'Everyone', 'optima-team' ) );
+					foreach ( Optima_Team::team_groups() as $key => $label ) {
+						if ( ! empty( $groups[ $key ] ) ) {
+							$chips[ $key ] = $label;
+						}
+					}
+					if ( array_filter( $look ) ) {
+						$chips['look'] = __( 'Needs a look', 'optima-team' );
+					}
+					foreach ( $chips as $key => $label ) {
+						$url = '' === $key ? self::url() : add_query_arg( 'group', $key, self::url() );
+						echo '<a class="button' . ( $group === $key ? ' button-primary' : ' sh-quiet' ) . '" href="' . esc_url( $url ) . '"' . ( $group === $key ? ' aria-current="page"' : '' ) . '>' . esc_html( $label ) . '</a> ';
+					}
+					?>
+				</p>
 				<div class="sh-scroll"><table class="widefat striped">
-					<thead><tr><th scope="col"><?php esc_html_e( 'Name', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Role', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Feeds', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Trust signals', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Status', 'optima-team' ); ?></th></tr></thead>
+					<thead><tr><th scope="col"><?php esc_html_e( 'Name', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Role', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Shows on', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Feeds', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Trust signals', 'optima-team' ); ?></th><th scope="col"><?php esc_html_e( 'Status', 'optima-team' ); ?></th></tr></thead>
 					<tbody>
-					<?php foreach ( $people as $person ) : ?>
+					<?php foreach ( $listed as $person ) : ?>
 						<?php
 						$checks = Optima_Team::checks( (int) $person->ID );
 						$done   = count( array_filter( wp_list_pluck( $checks, 2 ) ) );
@@ -245,9 +340,33 @@ final class Optima_Team_Admin {
 						/* translators: %d: reviewed pages */
 						$feeds[] = '<a href="' . esc_url( $u['reviewed'] ) . '">' . esc_html( sprintf( _n( '%d reviewed page', '%d reviewed pages', $c['reviewed'], 'optima-team' ), $c['reviewed'] ) ) . '</a>';
 						?>
+						<?php
+						$prof  = Optima_Team::profile( (int) $person->ID );
+						$where = array();
+						$names = array(
+							'bio'    => __( 'profile page', 'optima-team' ),
+							'team'   => __( 'team page', 'optima-team' ),
+							'card'   => __( 'card', 'optima-team' ),
+							'byline' => __( 'byline', 'optima-team' ),
+						);
+						foreach ( Optima_Team::show_keys() as $key ) {
+							if ( Optima_Team::shows( $prof, $key ) ) {
+								$where[] = $names[ $key ];
+							}
+						}
+						$reasons = $look[ (int) $person->ID ] ?? array();
+						?>
 						<tr>
-							<td><a href="<?php echo esc_url( (string) get_edit_post_link( $person->ID ) ); ?>"><strong><?php echo esc_html( '' !== $person->post_title ? $person->post_title : __( '(no name)', 'optima-team' ) ); ?></strong></a></td>
-							<td><?php echo esc_html( Optima_Team::profile( (int) $person->ID )['role'] ); ?></td>
+							<td><a href="<?php echo esc_url( (string) get_edit_post_link( $person->ID ) ); ?>"><strong><?php echo esc_html( '' !== $person->post_title ? $person->post_title : __( '(no name)', 'optima-team' ) ); ?></strong></a>
+								<?php if ( $reasons ) : ?>
+									<span class="description" style="display:block"><?php /* translators: %s: what needs a look. */ echo esc_html( sprintf( __( 'Needs a look: %s', 'optima-team' ), strtolower( implode( ', ', $reasons ) ) ) ); ?></span>
+								<?php endif; ?>
+								<?php if ( class_exists( 'Optima_Team_Link' ) && Optima_Team_Link::can_manage( (int) $person->ID ) && ! Optima_Team_Link::active( (int) $person->ID ) ) : ?>
+									<a class="sh-quiet" href="<?php echo esc_url( Optima_Team_Link::action_url( (int) $person->ID, 'new', 'people' ) ); ?>"><?php esc_html_e( 'Send them a link', 'optima-team' ); ?></a>
+								<?php endif; ?>
+							</td>
+							<td><?php echo esc_html( $prof['role'] ); ?></td>
+							<td><?php echo esc_html( $where ? ucfirst( implode( ', ', $where ) ) : __( 'Nowhere', 'optima-team' ) ); ?></td>
 							<td><?php echo wp_kses_post( implode( ' · ', $feeds ) ); ?></td>
 							<td>
 								<span class="sh-pill <?php echo $done === count( $checks ) ? 'is-done' : 'is-received'; ?>">
