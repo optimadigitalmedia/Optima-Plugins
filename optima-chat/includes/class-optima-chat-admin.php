@@ -384,9 +384,9 @@ final class Optima_Chat_Admin {
 				<h2 class="sh-title"><?php esc_html_e( 'Where it sends people', 'optima-chat' ); ?></h2>
 				<table class="form-table" role="presentation">
 					<?php
-					self::row( __( 'Email new questions to', 'optima-chat' ), self::text( 'notify', $s['notify'], get_option( 'admin_email' ), 'email' ) );
+					self::row( __( 'Email new questions to', 'optima-chat' ), self::text( 'notify', $s['notify'], Optima_Chat::notify_to(), 'email' ), __( 'Leave blank to use the address shown.', 'optima-chat' ) );
 					self::row( __( 'Text me new questions', 'optima-chat' ), self::text( 'alert', $s['alert'], '9195551234@vtext.com', 'email' ), __( 'A short text with the question and the number to text back. Use your cell number at your carrier: @vtext.com (Verizon), @tmomail.net (T-Mobile), @msg.fi.google.com (Google Fi). AT&T stopped this in 2025. Blank: no text.', 'optima-chat' ) );
-					self::row( __( 'Booking page', 'optima-chat' ), self::text( 'book_url', $s['book_url'], function_exists( 'optima_booking_url' ) ? optima_booking_url() : home_url( '/contact/' ), 'url' ), __( 'Blank uses the site\'s booking page, or Contact.', 'optima-chat' ) );
+					self::row( __( 'Booking page', 'optima-chat' ), self::text( 'book_url', $s['book_url'], Optima_Chat::site_booking_url(), 'url' ), __( 'Blank uses the site\'s booking page, or Contact.', 'optima-chat' ) );
 					self::row( __( 'Our work page', 'optima-chat' ), self::text( 'work_url', $s['work_url'], 'https://', 'url' ), __( 'Blank hides "Show me your work".', 'optima-chat' ) );
 					?>
 				</table>

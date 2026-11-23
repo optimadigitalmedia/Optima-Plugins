@@ -79,7 +79,34 @@ final class Optima_Hub_Themes {
 		if ( defined( 'OPTIMA_THEME_TOKEN' ) && '' !== (string) OPTIMA_THEME_TOKEN ) {
 			return (string) OPTIMA_THEME_TOKEN;
 		}
-		return self::decrypt( (string) get_option( self::OPTION, '' ) );
+		return self::stored_key()['plain'];
+	}
+
+	/**
+	 * The saved key, read through the shared secret helper: state none, ok or
+	 * unreadable (the site's security keys changed since it was saved).
+	 *
+	 * @return array{state:string,plain:string}
+	 */
+	private static function stored_key(): array {
+		return Optima_Hub_Secret::read( 'theme', (string) get_option( self::OPTION, '' ), static fn( string $v ): string => self::decrypt( $v ) );
+	}
+
+	/** saved, none, or unreadable (a key is saved but can't be read: paste it again). */
+	public static function key_state(): string {
+		if ( defined( 'OPTIMA_THEME_TOKEN' ) && '' !== (string) OPTIMA_THEME_TOKEN ) {
+			return 'saved';
+		}
+		$state = self::stored_key()['state'];
+		return Optima_Hub_Secret::OK === $state ? 'saved' : ( Optima_Hub_Secret::UNREADABLE === $state ? 'unreadable' : 'none' );
+	}
+
+	/** The Theme updates row for Site health, only while the saved key can't be read; null otherwise. */
+	public static function health_row(): ?array {
+		if ( 'unreadable' !== self::key_state() || ! self::source() ) {
+			return null;
+		}
+		return Optima_Hub_Secret::theme_row( Optima_Hub_Admin::url( 'updates' ) . '#sh-theme' );
 	}
 
 	public static function save_key(): void {
@@ -90,8 +117,10 @@ final class Optima_Hub_Themes {
 		$key = isset( $_POST['optima_theme_key'] ) ? trim( sanitize_text_field( wp_unslash( $_POST['optima_theme_key'] ) ) ) : '';
 		if ( ! empty( $_POST['forget'] ) ) {
 			delete_option( self::OPTION );
+			Optima_Hub_Secret::forgot( 'theme' );
 		} elseif ( '' !== $key ) {
 			update_option( self::OPTION, self::encrypt( $key ), false );
+			Optima_Hub_Secret::saved( 'theme' );
 			$src = self::source();
 			if ( $src ) {
 				self::auto_update( $src['stylesheet'] );
@@ -283,7 +312,9 @@ final class Optima_Hub_Themes {
 		$updates = get_site_transient( 'update_themes' );
 		$ready   = is_object( $updates ) && isset( $updates->response[ $src['stylesheet'] ]['new_version'] ) ? (string) $updates->response[ $src['stylesheet'] ]['new_version'] : '';
 		echo '<p><strong>' . esc_html( $src['name'] ) . '</strong> ' . esc_html( $src['version'] ) . ' ';
-		if ( ! $has_key ) {
+		if ( ! $has_key && 'unreadable' === self::key_state() ) {
+			echo '<span class="sh-tag is-update">' . esc_html__( 'The saved key can\'t be read anymore. Paste it again.', 'optima-build' ) . '</span>';
+		} elseif ( ! $has_key ) {
 			echo '<span class="sh-tag is-update">' . esc_html__( 'Needs its key to update itself', 'optima-build' ) . '</span>';
 		} elseif ( $rel && 'key' === $rel['error'] ) {
 			echo '<span class="sh-tag is-update">' . esc_html__( 'GitHub turned the key down', 'optima-build' ) . '</span>';
@@ -319,33 +350,12 @@ final class Optima_Hub_Themes {
 
 	/* ---------- storing the key ---------- */
 
-	private static function cipher_key(): string {
-		return hash( 'sha256', wp_salt( 'auth' ) . 'optima-theme', true );
-	}
-
+	/** The cipher lives in Optima_Hub_Secret, in the same format as before. */
 	private static function encrypt( string $plain ): string {
-		if ( ! function_exists( 'openssl_encrypt' ) ) {
-			return 'p:' . base64_encode( $plain ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
-		}
-		$iv = random_bytes( 16 );
-		return 'e:' . base64_encode( $iv . openssl_encrypt( $plain, 'aes-256-cbc', self::cipher_key(), OPENSSL_RAW_DATA, $iv ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+		return Optima_Hub_Secret::seal( $plain, 'optima-theme' );
 	}
 
 	private static function decrypt( string $stored ): string {
-		if ( '' === $stored ) {
-			return '';
-		}
-		$raw = base64_decode( substr( $stored, 2 ), true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
-		if ( false === $raw ) {
-			return '';
-		}
-		if ( 0 === strpos( $stored, 'p:' ) ) {
-			return $raw;
-		}
-		if ( ! function_exists( 'openssl_decrypt' ) || strlen( $raw ) < 17 ) {
-			return '';
-		}
-		$out = openssl_decrypt( substr( $raw, 16 ), 'aes-256-cbc', self::cipher_key(), OPENSSL_RAW_DATA, substr( $raw, 0, 16 ) );
-		return false === $out ? '' : $out;
+		return Optima_Hub_Secret::open( $stored, 'optima-theme' );
 	}
 }

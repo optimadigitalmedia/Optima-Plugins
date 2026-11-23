@@ -41,11 +41,13 @@ require_once OPTIMA_REVIEWS_DIR . 'includes/class-optima-reviews-sources.php';
 require_once OPTIMA_REVIEWS_DIR . 'includes/class-optima-reviews-post-type.php';
 require_once OPTIMA_REVIEWS_DIR . 'includes/class-optima-reviews-settings.php';
 require_once OPTIMA_REVIEWS_DIR . 'includes/class-optima-reviews-law.php';
+require_once OPTIMA_REVIEWS_DIR . 'includes/class-optima-reviews-theme.php';
 require_once OPTIMA_REVIEWS_DIR . 'includes/class-optima-reviews-query.php';
 require_once OPTIMA_REVIEWS_DIR . 'includes/class-optima-reviews-render.php';
 require_once OPTIMA_REVIEWS_DIR . 'includes/class-optima-reviews-google.php';
 require_once OPTIMA_REVIEWS_DIR . 'includes/class-optima-reviews-google-sync.php';
 require_once OPTIMA_REVIEWS_DIR . 'includes/class-optima-reviews-google-admin.php';
+require_once OPTIMA_REVIEWS_DIR . 'includes/class-optima-reviews-places.php';
 require_once OPTIMA_REVIEWS_DIR . 'includes/class-optima-reviews-topics.php';
 require_once OPTIMA_REVIEWS_DIR . 'includes/class-optima-reviews-inbox.php';
 require_once OPTIMA_REVIEWS_DIR . 'includes/class-optima-reviews-brand.php';
@@ -59,6 +61,7 @@ add_action( 'admin_init', array( 'Optima_Reviews_Settings', 'register' ) );
 add_action( 'admin_menu', array( 'Optima_Reviews_Settings', 'menu' ), Optima_Reviews_Menu::PRIORITY + 3 );
 
 Optima_Reviews_Google_Sync::boot();
+Optima_Reviews_Places::boot();
 Optima_Reviews_Topics::boot();
 Optima_Reviews_Requests::boot();
 Optima_Reviews_Notes::boot();
@@ -71,14 +74,21 @@ if ( is_admin() ) {
 	Optima_Reviews_Inbox::boot();
 }
 
-// The daily Google sync stops with the plugin and resumes when it comes back.
-register_deactivation_hook( __FILE__, array( 'Optima_Reviews_Google_Sync', 'unschedule' ) );
+// The daily Google sync and the daily Google check stop with the plugin and resume when it comes back.
+register_deactivation_hook(
+	__FILE__,
+	static function () {
+		Optima_Reviews_Google_Sync::unschedule();
+		Optima_Reviews_Places::unschedule();
+	}
+);
 register_activation_hook(
 	__FILE__,
 	static function () {
 		if ( Optima_Reviews_Google::is_ready() ) {
 			Optima_Reviews_Google_Sync::schedule();
 		}
+		Optima_Reviews_Places::keep_scheduled(); // Only with a saved key and a place ID.
 		delete_option( Optima_Reviews_Requests::ROUTES ); // Re-add the /review/ address on the next load.
 	}
 );

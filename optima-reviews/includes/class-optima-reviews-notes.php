@@ -243,7 +243,7 @@ final class Optima_Reviews_Notes {
 			sprintf( __( 'Read it in your inbox: %s', 'optima-reviews' ), Optima_Reviews_Inbox::url() ),
 		);
 		wp_mail(
-			(string) apply_filters( 'optima_reviews_note_recipient', '' !== Optima_Reviews_Requests::get()['note_email'] ? Optima_Reviews_Requests::get()['note_email'] : get_option( 'admin_email' ) ),
+			(string) apply_filters( 'optima_reviews_note_recipient', Optima_Reviews_Requests::note_recipient() ),
 			__( 'New note from your review page', 'optima-reviews' ),
 			implode( "\n", $lines )
 		);

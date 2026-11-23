@@ -188,17 +188,31 @@ final class Optima_Results_Admin {
 				<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php echo esc_html( sprintf( /* translators: %d: number */ _n( '%d result', '%d results', $counts['waiting'], 'optima-results' ), $counts['waiting'] ) ); ?></p>
 				<p class="sh-note"><?php esc_html_e( 'A result goes live once the firm ticks "Approved by the firm" and adds the approver\'s name.', 'optima-results' ); ?></p>
 			</section>
-			<?php $flagged = Optima_Results::disclaimer_flagged(); ?>
+			<?php
+			$disc    = Optima_Results::disclaimer_state();
+			$flagged = $disc['flagged'];
+			$law_url = ( 'law' === $disc['source'] && class_exists( 'Optima_Law_Admin' ) && method_exists( 'Optima_Law_Admin', 'url' ) ) ? Optima_Law_Admin::url() : '';
+			?>
 			<section class="sh-box sh-check is-<?php echo $flagged ? 'warn' : 'good'; ?>">
 				<p class="sh-label"><?php esc_html_e( 'Disclaimer', 'optima-results' ); ?></p>
 				<p class="sh-value"><span class="sh-dot" aria-hidden="true"></span><?php echo esc_html( $flagged ? __( 'Not approved', 'optima-results' ) : __( 'On every result', 'optima-results' ) ); ?></p>
 				<p class="sh-note">
 					<?php
-					if ( $flagged ) {
+					if ( 'law' === $disc['source'] ) {
+						if ( $disc['approved'] ) {
+							/* translators: 1: approver name, 2: date */
+							echo esc_html( sprintf( __( 'Set in Optima Law and approved by %1$s, %2$s. Printed above the results and on every result.', 'optima-results' ), $disc['by'], $disc['on'] ) );
+						} else {
+							esc_html_e( 'Optima Law prints its wording next to every result. Approve that wording on its Disclaimers screen.', 'optima-results' );
+						}
+						if ( $law_url ) {
+							echo ' <a href="' . esc_url( $law_url ) . '">' . esc_html__( 'Open Disclaimers', 'optima-results' ) . '</a>';
+						}
+					} elseif ( $flagged ) {
 						esc_html_e( 'This state\'s wording is a placeholder marked [VERIFY: counsel]. Put in the wording the firm\'s counsel gives you, type the approver\'s name and save.', 'optima-results' );
-					} elseif ( Optima_Results::disclaimer_approved() ) {
+					} elseif ( $disc['approved'] ) {
 						/* translators: 1: approver name, 2: date */
-						echo esc_html( sprintf( __( 'Approved by %1$s, %2$s. Printed above the results and on every result.', 'optima-results' ), $s['approver'], $s['approved_on'] ) );
+						echo esc_html( sprintf( __( 'Approved by %1$s, %2$s. Printed above the results and on every result.', 'optima-results' ), $disc['by'], $disc['on'] ) );
 					} else {
 						esc_html_e( 'Printed above the results, before the first amount, and on every result. It cannot be switched off for a single result.', 'optima-results' );
 					}
@@ -245,6 +259,9 @@ final class Optima_Results_Admin {
 						<td>
 							<textarea id="sr-disclaimer" class="large-text" rows="5" name="<?php echo esc_attr( $o ); ?>[disclaimer]" placeholder="<?php echo esc_attr( Optima_Results::default_disclaimer( $s['state'] ) ); ?>"><?php echo esc_textarea( $s['disclaimer'] ); ?></textarea>
 							<p class="description"><?php esc_html_e( 'Leave blank to use the state\'s starting wording shown in gray. A blank disclaimer is never printed; the starting wording is used instead.', 'optima-results' ); ?></p>
+							<?php if ( Optima_Results::law_disclaimer() ) : ?>
+								<p class="description"><strong><?php esc_html_e( 'Optima Law is on, so the wording on its Disclaimers screen (Content, Disclaimers) shows next to every result instead of this box.', 'optima-results' ); ?></strong></p>
+							<?php endif; ?>
 						</td>
 					</tr>
 					<tr>

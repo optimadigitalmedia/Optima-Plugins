@@ -168,8 +168,11 @@ final class Optima_Hub_Updates {
 		$updates = get_site_transient( 'update_themes' );
 		$ready   = is_object( $updates ) && isset( $updates->response[ $src['stylesheet'] ]['new_version'] ) ? (string) $updates->response[ $src['stylesheet'] ]['new_version'] : '';
 		$newer   = '' !== $ready ? $ready : ( ( $rel && '' === $rel['error'] && version_compare( $rel['version'], $src['version'], '>' ) ) ? $rel['version'] : '' );
-		$problem = '';
-		if ( ! $has_key ) {
+		$problem    = '';
+		$unreadable = ! $has_key && 'unreadable' === Optima_Hub_Themes::key_state();
+		if ( $unreadable ) {
+			$problem = __( 'The saved key can\'t be read anymore. Paste it again.', 'optima-build' );
+		} elseif ( ! $has_key ) {
 			$problem = __( 'It needs its read-only key to update itself.', 'optima-build' );
 		} elseif ( $rel && 'key' === $rel['error'] ) {
 			$problem = __( 'GitHub turned the key down. Save a new one.', 'optima-build' );
@@ -181,7 +184,7 @@ final class Optima_Hub_Updates {
 		echo '<p><strong>' . esc_html( $src['name'] . ' ' . $src['version'] ) . '</strong>. ';
 		/* translators: %s: owner/repo */
 		echo esc_html( sprintf( __( 'Repo: %s.', 'optima-build' ), $src['repo'] ) ) . ' ';
-		echo esc_html( $has_key ? __( 'Key saved.', 'optima-build' ) : __( 'No key yet.', 'optima-build' ) ) . ' ';
+		echo esc_html( $has_key ? __( 'Key saved.', 'optima-build' ) : ( $unreadable ? __( 'Key can\'t be read.', 'optima-build' ) : __( 'No key yet.', 'optima-build' ) ) ) . ' ';
 		if ( '' !== $problem ) {
 			echo esc_html( $problem );
 		} elseif ( '' !== $newer ) {
@@ -347,7 +350,7 @@ final class Optima_Hub_Updates {
 	/* 8. What Site health flags ----------------------------------------- */
 
 	private static function health_block(): void {
-		$flags = array_values( array_filter( array_merge( Optima_Hub_Health::checks(), Optima_Hub_Health::ai_checks() ), static fn( $c ) => 'good' !== $c['state'] ) );
+		$flags = array_values( array_filter( Optima_Hub_Health::every_check(), static fn( $c ) => 'good' !== $c['state'] ) );
 		self::open_block( __( 'Site health says', 'optima-build' ), $flags ? 'needs' : 'done', 'sh-up-health' );
 		if ( ! $flags ) {
 			echo '<p>' . esc_html__( 'Every check passes.', 'optima-build' ) . '</p>';
