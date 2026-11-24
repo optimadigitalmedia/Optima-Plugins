@@ -117,7 +117,8 @@ final class Optima_Hub_Security {
 		$out[] = self::visitor_ip_row(
 			function_exists( 'optima_client_ip_source' ) ? optima_client_ip_source() : null,
 			class_exists( 'Optima_Core_Client_IP' ) && Optima_Core_Client_IP::header_ignored(),
-			class_exists( 'Optima_Core_Client_IP' ) ? Optima_Core_Client_IP::CLOUDFLARE_READ : ''
+			class_exists( 'Optima_Core_Client_IP' ) ? Optima_Core_Client_IP::CLOUDFLARE_READ : '',
+			class_exists( 'Optima_Core_Client_IP' ) && method_exists( 'Optima_Core_Client_IP', 'seen' ) ? Optima_Core_Client_IP::seen() : array()
 		);
 		return $out;
 	}
@@ -594,7 +595,7 @@ final class Optima_Hub_Security {
 	 * @param bool        $ignored A Cloudflare header arrived from outside Cloudflare's ranges.
 	 * @param string      $read    The date Cloudflare's ranges were read.
 	 */
-	public static function visitor_ip_row( ?string $source, bool $ignored, string $read ): array {
+	public static function visitor_ip_row( ?string $source, bool $ignored, string $read, array $seen = array() ): array {
 		$row   = array( 'label' => __( 'Visitor address', 'optima-build' ) );
 		/* translators: %s: date */
 		$dated = '' !== $read ? ' ' . sprintf( __( 'Cloudflare\'s address list was read on %s.', 'optima-build' ), $read ) : '';
@@ -623,7 +624,7 @@ final class Optima_Hub_Security {
 			return $row + array(
 				'value' => __( 'From the server', 'optima-build' ),
 				'state' => 'warn',
-				'note'  => __( 'A Cloudflare header came from an address outside Cloudflare\'s ranges, so it was not trusted. If another proxy sits between Cloudflare and the site, add its ranges with the optima_core_proxy_ranges filter.', 'optima-build' ) . $dated,
+				'note'  => __( 'A Cloudflare header came from an address outside Cloudflare\'s ranges, so it was not trusted. If another proxy sits between Cloudflare and the site, add its ranges with the optima_core_proxy_ranges filter.', 'optima-build' ) . self::seen_text( $seen ) . $dated,
 			);
 		}
 		return $row + array(
@@ -631,5 +632,27 @@ final class Optima_Hub_Security {
 			'state' => 'good',
 			'note'  => __( 'This request came straight to the server, so each visitor is counted by the address the server sees.', 'optima-build' ),
 		);
+	}
+
+	/**
+	 * The addresses this visit showed, so the report says what sits between Cloudflare and the site.
+	 *
+	 * @param array $seen From Optima_Core_Client_IP::seen(): remote, remote_cf, hop, hop_cf.
+	 */
+	public static function seen_text( array $seen ): string {
+		if ( empty( $seen['remote'] ) ) {
+			return '';
+		}
+		$cf   = __( 'Cloudflare', 'optima-build' );
+		$not  = __( 'not Cloudflare', 'optima-build' );
+		/* translators: 1: address, 2: Cloudflare or not Cloudflare */
+		$text = ' ' . sprintf( __( 'This visit: the server saw %1$s (%2$s)', 'optima-build' ), $seen['remote'], ! empty( $seen['remote_cf'] ) ? $cf : $not );
+		if ( ! empty( $seen['hop'] ) ) {
+			/* translators: 1: address, 2: Cloudflare or not Cloudflare */
+			$text .= sprintf( __( ', and the address that reached the host was %1$s (%2$s).', 'optima-build' ), $seen['hop'], ! empty( $seen['hop_cf'] ) ? $cf : $not );
+		} else {
+			$text .= __( ', and no forwarded address was listed.', 'optima-build' );
+		}
+		return $text;
 	}
 }

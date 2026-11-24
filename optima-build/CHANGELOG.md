@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.11.9 (2026-11-24)
+
+- Site health, Visitor address: when Cloudflare's header is not trusted, the note now says which addresses this visit came through (the server's, and the one that reached the host, and whether each is Cloudflare's), so the report shows what sits in between. Needs Optima Core 1.15.0.4.
+
 ## 0.7.11.8 (2026-11-23)
 
 Brought in from upstream Build 0.8 to 0.17:

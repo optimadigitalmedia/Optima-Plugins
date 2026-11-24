@@ -11,6 +11,12 @@
  * (https://www.cloudflare.com/ips-v4 and /ips-v6, read on the date in
  * CLOUDFLARE_READ). Anything else uses REMOTE_ADDR.
  *
+ * Behind a host's own proxy (WP Engine and most managed hosts), REMOTE_ADDR is
+ * an internal address and the host adds the address that reached it to
+ * X-Forwarded-For; when that address is Cloudflare's, Cloudflare's header is
+ * trusted too (1.15.0.4, after Collier staging on WP Engine showed the header
+ * ignored).
+ *
  * Another proxy in front of the site (a host's own load balancer, for
  * example) is added with the `optima_core_proxy_ranges` filter (string[] of
  * CIDR ranges). When REMOTE_ADDR is one of those, the address is the
@@ -128,6 +134,18 @@ final class Optima_Core_Client_IP {
 				return array( $cf, self::FROM_CLOUDFLARE );
 			}
 		}
+		// The host's own proxy (WP Engine and most managed hosts): REMOTE_ADDR is an internal address no visitor
+		// can connect from, and that proxy adds the address that reached it to X-Forwarded-For. When that
+		// address is Cloudflare's, Cloudflare's header is trusted the same as a direct Cloudflare request.
+		if ( self::internal( $remote ) ) {
+			$hop = self::first_public_hop( (string) ( $server['HTTP_X_FORWARDED_FOR'] ?? '' ) );
+			if ( '' !== $hop && self::in_any( $hop, self::CLOUDFLARE ) ) {
+				$cf = self::valid( (string) ( $server['HTTP_CF_CONNECTING_IP'] ?? '' ) );
+				if ( '' !== $cf ) {
+					return array( $cf, self::FROM_CLOUDFLARE );
+				}
+			}
+		}
 		$extra = self::extra_ranges();
 		if ( $extra && self::in_any( $remote, $extra ) ) {
 			$trusted = array_merge( self::CLOUDFLARE, $extra );
@@ -143,6 +161,47 @@ final class Optima_Core_Client_IP {
 			}
 		}
 		return array( $remote, self::FROM_SERVER );
+	}
+
+	/** A private, loopback or other reserved address: the host's own network, never a visitor on the internet. */
+	public static function internal( string $ip ): bool {
+		$ip = self::valid( $ip );
+		return '' !== $ip && false === filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE );
+	}
+
+	/**
+	 * The right-most address in X-Forwarded-For that is not on the host's own network: the address that
+	 * reached the host. '' when the list is empty or an entry is broken.
+	 */
+	public static function first_public_hop( string $xff ): string {
+		foreach ( array_reverse( array_map( 'trim', explode( ',', $xff ) ) ) as $hop ) {
+			$hop = self::valid( $hop );
+			if ( '' === $hop ) {
+				return '';
+			}
+			if ( ! self::internal( $hop ) ) {
+				return $hop;
+			}
+		}
+		return '';
+	}
+
+	/**
+	 * What this request showed, for Site health when the Cloudflare header was not trusted: the address PHP
+	 * saw, the address that reached the host (from X-Forwarded-For), and whether each is Cloudflare's.
+	 * Operators only; the visitor here is the operator looking at the screen.
+	 *
+	 * @return array{remote:string, remote_cf:bool, hop:string, hop_cf:bool}
+	 */
+	public static function seen(): array {
+		$remote = self::valid( (string) ( $_SERVER['REMOTE_ADDR'] ?? '' ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- validated as an IP.
+		$hop    = self::first_public_hop( (string) ( $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '' ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- validated as an IP.
+		return array(
+			'remote'    => $remote,
+			'remote_cf' => '' !== $remote && self::in_any( $remote, self::CLOUDFLARE ),
+			'hop'       => $hop,
+			'hop_cf'    => '' !== $hop && self::in_any( $hop, self::CLOUDFLARE ),
+		);
 	}
 
 	/** Where this request's address came from: cloudflare, proxy or server. */

@@ -54,6 +54,22 @@ ok( '198.51.100.9' === optima_client_ip() && ! $C::header_ignored(), 'no proxy: 
 $_SERVER = array( 'REMOTE_ADDR' => 'garbage' );
 ok( '' === optima_client_ip(), 'no valid address: empty' );
 
+// 3b. Behind the host's own proxy (WP Engine): REMOTE_ADDR is internal, X-Forwarded-For ends with the address that reached the host.
+$_SERVER = array( 'REMOTE_ADDR' => '127.0.0.1', 'HTTP_X_FORWARDED_FOR' => '203.0.113.5, 162.158.1.20', 'HTTP_CF_CONNECTING_IP' => '203.0.113.5' );
+ok( '203.0.113.5' === optima_client_ip() && 'cloudflare' === optima_client_ip_source() && ! $C::header_ignored(), 'host proxy on loopback, Cloudflare reached the host: Cloudflare\'s header is used' );
+$_SERVER = array( 'REMOTE_ADDR' => '10.4.0.7', 'HTTP_X_FORWARDED_FOR' => '6.6.6.6, 172.70.1.2, 10.4.0.9', 'HTTP_CF_CONNECTING_IP' => '203.0.113.5' );
+ok( '203.0.113.5' === optima_client_ip(), 'internal hops on the right are skipped to find the Cloudflare hop' );
+$_SERVER = array( 'REMOTE_ADDR' => '10.4.0.7', 'HTTP_X_FORWARDED_FOR' => '162.158.1.20, 198.51.100.9', 'HTTP_CF_CONNECTING_IP' => '203.0.113.5' );
+ok( '10.4.0.7' === optima_client_ip() && $C::header_ignored(), 'a visitor who reached the host directly cannot spoof Cloudflare by writing its address first' );
+$_SERVER = array( 'REMOTE_ADDR' => '10.4.0.7', 'HTTP_CF_CONNECTING_IP' => '203.0.113.5' );
+ok( '10.4.0.7' === optima_client_ip() && $C::header_ignored(), 'an internal sender with no forwarded list is not trusted' );
+$_SERVER = array( 'REMOTE_ADDR' => '198.51.100.9', 'HTTP_X_FORWARDED_FOR' => '162.158.1.20', 'HTTP_CF_CONNECTING_IP' => '203.0.113.5' );
+ok( '198.51.100.9' === optima_client_ip(), 'a public sender\'s forwarded list is never read' );
+$_SERVER = array( 'REMOTE_ADDR' => '10.4.0.7', 'HTTP_X_FORWARDED_FOR' => '203.0.113.5, 162.158.1.20' );
+$seen = $C::seen();
+ok( '10.4.0.7' === $seen['remote'] && ! $seen['remote_cf'] && '162.158.1.20' === $seen['hop'] && $seen['hop_cf'], 'seen() reports the server address and the hop that reached the host' );
+ok( $C::internal( '127.0.0.1' ) && $C::internal( '10.0.0.1' ) && $C::internal( 'fd00::1' ) && ! $C::internal( '162.158.1.20' ) && ! $C::internal( 'x' ), 'internal() knows private, loopback and IPv6 local addresses' );
+
 // 4. An added proxy (optima_core_proxy_ranges): the right-most untrusted forwarded address.
 $GLOBALS['t_filters']['optima_core_proxy_ranges'] = array( '10.0.0.0/8' );
 $_SERVER = array( 'REMOTE_ADDR' => '10.1.2.3', 'HTTP_X_FORWARDED_FOR' => '6.6.6.6, 203.0.113.8, 162.158.1.20' );
