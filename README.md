@@ -12,11 +12,11 @@ a theme never orphans content.
 | `optima-accessibility` | 0.1.22.0 |
 | `optima-aeo` | 0.2.14.0 |
 | `optima-analytics` | 0.1.24.0 |
-| `optima-build` | 0.7.11.8 |
+| `optima-build` | 0.7.11.9 |
 | `optima-cards` | 1.2.1.0 |
 | `optima-chat` | 0.3.7.0 |
 | `optima-contact` | 0.1.11.14 |
-| `optima-core` | 1.15.0.3 |
+| `optima-core` | 1.15.0.4 |
 | `optima-crm` | 0.1.1.6 |
 | `optima-events` | 0.14.3.13 |
 | `optima-forms-guard` | 0.3.7.2 |
