@@ -85,6 +85,9 @@ $r = $X::visitor_ip_row( 'server', false, '2026-11-23' );
 ok( 'good' === $r['state'] && 'From the server' === $r['value'], 'straight to the server: from the server' );
 $r = $X::visitor_ip_row( 'server', true, '2026-11-23' );
 ok( 'warn' === $r['state'] && false !== strpos( $r['note'], 'optima_core_proxy_ranges' ), 'a Cloudflare header from outside its ranges: a look naming the proxy filter' );
+$r = $X::visitor_ip_row( 'server', true, '2026-11-23', array( 'remote' => '10.4.0.7', 'remote_cf' => false, 'hop' => '198.51.100.9', 'hop_cf' => false ) );
+ok( false !== strpos( $r['note'], 'the server saw 10.4.0.7 (not Cloudflare)' ) && false !== strpos( $r['note'], 'reached the host was 198.51.100.9 (not Cloudflare)' ), 'an ignored header shows the addresses this visit came through' );
+ok( '' === $X::seen_text( array() ) && false !== strpos( $X::seen_text( array( 'remote' => '10.0.0.1' ) ), 'no forwarded address' ), 'no addresses: no line; no forwarded list: says so' );
 ok( 'good' === $X::visitor_ip_row( 'proxy', false, '' )['state'], 'through an added proxy: ok' );
 ok( 'warn' === $X::visitor_ip_row( null, false, '' )['state'], 'without Optima Core\'s helper: a look' );
 

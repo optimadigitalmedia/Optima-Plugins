@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.15.0.4 (2026-11-24)
+
+- Fixed: the real visitor address behind a host's own proxy. On WP Engine (and most managed hosts) the request reaches WordPress from an internal address, so Cloudflare's header was ignored and every visitor counted as one address. Now, when the server's address is internal (private or loopback) and the address that reached the host, the right-most public entry in X-Forwarded-For, is one of Cloudflare's, CF-Connecting-IP is trusted. A visitor who reaches the host directly still cannot fake it. Found on Collier staging, 2026-11-24.
+- New: `Optima_Core_Client_IP::seen()` (the server's address and the address that reached the host) for Site health.
+
 ## 1.15.0.3 (2026-11-23)
 
 - New: the real visitor address behind Cloudflare. `optima_client_ip()` trusts Cloudflare's CF-Connecting-IP header only when the request came from Cloudflare's published address ranges (read 2026-11-23). Anything else uses the server's address, so a faked header is ignored.
